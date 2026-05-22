@@ -2,10 +2,10 @@
 
 MODEL_ID="meta-llama/Llama-3.1-8B-Instruct"
 DEVICE="cuda:0"
-BATCH_SIZE=1
+BATCH_SIZE=100
 SOURCE="lie"
 BASE="truth"
-PATCH_ALGO="acp"
+PATCH_ALGO="atp"
 SEED=42
 
 PATCH_MODEL=true
