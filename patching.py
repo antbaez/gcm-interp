@@ -54,12 +54,12 @@ class Patching:
             net_effects = []
             for idx in range(len(model.model.layers)):
                 attn_desired_effects.append(
-                    base_desired_attn[idx].grad * 
-                    (source_q_des_attn[idx] - base_desired_attn[idx])
+                    base_desired_attn[idx].value.grad *
+                    (source_q_des_attn[idx].value - base_desired_attn[idx].value)
                 )
                 attn_undesired_effects.append(
-                    base_undesired_attn[idx].grad * 
-                    (source_q_undes_attn[idx] - base_undesired_attn[idx])
+                    base_undesired_attn[idx].value.grad *
+                    (source_q_undes_attn[idx].value - base_undesired_attn[idx].value)
                 )
 
                 net_effects.append(attn_desired_effects[idx].sum(dim=1) + attn_undesired_effects[idx].sum(dim=1))
