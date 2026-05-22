@@ -2,13 +2,13 @@
 
 MODEL_ID="meta-llama/Llama-3.1-8B-Instruct"
 DEVICE="cuda:0"
-BATCH_SIZE=5
-SOURCE="truth"
-BASE="lie"
+BATCH_SIZE=1
+SOURCE="lie"
+BASE="truth"
 PATCH_ALGO="acp"
 SEED=42
 
-PATCH_MODEL=false
+PATCH_MODEL=true
 EVAL_MODEL=false
 STEERING=false
 

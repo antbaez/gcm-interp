@@ -94,9 +94,9 @@ class Config:
         eval_test_dir = self.args.eval_test.split('/')[-2] if isinstance(self.args.eval_test, str) else ''
         steering_dir = self.args.steering_add_path.split('/')[-2] if self.args.steering_add_path else ''
         if self.args.patch_model:
-            self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}/"
+            self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}"
         if self.args.eval_model:
-            self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}/{eval_test_dir}_eval/{steering_dir}_steer/"
+            self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}/{eval_test_dir}_eval/{steering_dir}_steer"
         print("op prefix ", self.output_prefix)
         return self.output_prefix
     
