@@ -2,8 +2,8 @@
 
 MODEL_ID="meta-llama/Llama-3.1-8B-Instruct"
 BASE_ID=""
-SOURCE="hate"
-BASE="love"
+SOURCE="lie"
+BASE="truth"
 NUM_SAMPLES=100
 DEVICE="cuda:0"
 BATCH_SIZE=100

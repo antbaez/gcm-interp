@@ -184,8 +184,8 @@ if config.gen_data:
                 q_index = i + j
                 responses[gen]["desired"].append(r)
                 file.write(json.dumps({
-                    "question": qs[q_index],
-                    "response": r
+                    "id": q_index,
+                    "prompt": qs[q_index] + [{"role": "assistant", "content": r}]
                 }))
                 file.write('\n')
 
@@ -193,6 +193,7 @@ if config.gen_data:
                 file.flush()
 
         file.close()
+
 
         # Maps each task to the single-token string swap that flips source↔base in the prompt
         replacements = {
@@ -205,6 +206,10 @@ if config.gen_data:
                 'with': f'I {other} this haiku'
             },
             'harmful': {
+                'replace': f'',
+                'with': f''
+            },
+            'lie': {
                 'replace': f'',
                 'with': f''
             }
@@ -221,15 +226,8 @@ if config.gen_data:
 
         with open(other_file, 'w') as file:
             for data in dataset:
-                if len(data['question']) == 1:
-                    data['question'][0]['content'] = data['question'][0]['content'].replace(
-                        replacements[source]['replace'], replacements[source]['with']
-                    )
-                elif len(data['question']) == 2:
-                    data['question'][1]['content'] = data['question'][1]['content'].replace(
-                        replacements[source]['replace'], replacements[source]['with']
-                    )
-                    data['question'][0]['content'] = data['question'][0]['content'].replace(
+                for msg in data['prompt']:
+                    msg['content'] = msg['content'].replace(
                         replacements[source]['replace'], replacements[source]['with']
                     )
                 file.write(json.dumps(data))
@@ -295,28 +293,3 @@ def get_gen_accuracy_from_judge(self, prompt_responses, logit_metric, reps_type,
     with open(f"{self.config.get_output_prefix()}/eval/{self.config.args.eval_type}/{logit_metric}/{reps_type}_{self.config.args.ablation_type}_{logit_metric}_{topk}_gen_accuracy.json", 'w') as f:
         json.dump(accuracy, f)
     return accuracy
-
-if config.gen_logits:
-    # Compute DPO-style logits over the desired/undesired response pairs for each condition
-    for gen in [base, source]:
-        print(f'Generating logits for {gen} responses')
-        class Args:
-            model_id = config.model_id
-            base_id = config.base_id,
-            source = config.source
-            desired_file = f"./data/{MODEL_NAME.split('/')[-1]}/{source}/new-{gen}-desired.jsonl"
-            undesired_file = f"./data/{MODEL_NAME.split('/')[-1]}/{source}/new-{gen}-undesired.jsonl"
-            device = config.device
-            dpo = True
-            rm_type = "causal_lm"
-            use_flash = False
-            batch_size = 4
-            max_length = True
-            min_length = False
-
-        logits_config = gen_logits.Config(args=Args())
-        # Scores each desired/undesired pair under the model and saves logits for downstream patching
-        gen_logits.main(logits_config)
-        del logits_config
-        gc.collect()
-        torch.cuda.empty_cache()
