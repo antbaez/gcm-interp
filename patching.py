@@ -66,5 +66,5 @@ class Patching:
             net_effects = torch.stack([h for h in net_effects], dim=0).detach().cpu()
             gc.collect()
             torch.cuda.empty_cache()
-            print('net_effects', net_effects.shape)
+            # print('net_effects', net_effects.shape)
             return net_effects

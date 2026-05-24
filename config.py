@@ -40,8 +40,15 @@ class Config:
         parser.add_argument('-base', '--base', type=str, help='Patch to base')
         parser.add_argument('-steering_add_path', '--steering_add_path', type=str, help='steering reps to add')
         parser.add_argument('-steering_sub_path', '--steering_sub_path', type=str, help='steering reps to subtract')
+        parser.add_argument('-steering_batch_size', '--steering_batch_size', type=int, default=9, help='batch size for computing steering vectors')
+        parser.add_argument('-steering_n', '--steering_n', type=int, nargs='+', default=[1, 2, 4, 5, 6, 8, 10], help='steering strength multipliers to sweep')
+        parser.add_argument('-topk_vals', '--topk_vals', type=float, nargs='+', default=[1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5], help='top-k fractions of heads to sweep')
 
         args = parser.parse_args()
+        if isinstance(args.eval_test, str) and args.eval_test.lower() == 'false':
+            args.eval_test = False
+        elif isinstance(args.eval_test, str) and args.eval_test.lower() == 'true':
+            args.eval_test = True
         if not (args.patch_model or args.eval_model):
             parser.error("At least one of -patch_model, -eval_model is required")
         if args.patch_model or args.eval_model:
@@ -53,6 +60,7 @@ class Config:
                 parser.error("-base argument is required when --patch_model is set")
 
         if args.eval_model:
+
             if not args.eval_test:
                 args.eval_train = True
             if isinstance(args.eval_test, str) and not os.path.exists(args.eval_test):
@@ -95,8 +103,11 @@ class Config:
         steering_dir = self.args.steering_add_path.split('/')[-2] if self.args.steering_add_path else ''
         if self.args.patch_model:
             self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}"
-        if self.args.eval_model:
+        elif self.args.eval_model:
             self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}/{eval_test_dir}_eval/{steering_dir}_steer"
+        # old: both were `if`, so eval always overwrote patch prefix when both flags were true
+        # if self.args.eval_model:
+        #     self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}/{eval_test_dir}_eval/{steering_dir}_steer"
         print("op prefix ", self.output_prefix)
         return self.output_prefix
     

@@ -47,7 +47,7 @@ def get_patch_activations(model, data_handler, ablation_type, key='desired', mea
     if ablation_type == 'mean':
         return mean_ablations_cache(model, data_handler, key=key)
     elif ablation_type == 'steer':
-        return steering_reps_cache(model, data_handler, key=key, mean=mean)
+        return steering_reps_cache(model, data_handler, batch_size=data_handler.config.args.steering_batch_size, key=key, mean=mean)
     else:
         raise ValueError(f"Unknown ablation type: {ablation_type}")
 
@@ -95,8 +95,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
 
     if topk_vals is None:
         topk_vals = [1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5]
-    if N is not None:
-        config.args.N = N
+    n_vals = N if N is not None else [1, 2, 4, 5, 6, 8, 10]
     if config.args.patch_algo == 'probes':
         logit_metric = 'probes'
     elif config.args.patch_algo == 'random':
@@ -124,7 +123,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
         original_outputs += op.cpu().numpy().tolist()
         batch_handler.update()
     print('Starting for loop ', config.args)
-    for N in [1, 2, 4, 5, 6, 8, 10]:
+    for N in n_vals:
         config.args.N = N
         for ablation in tqdm(ablations, desc="Ablations"):
             decoded_responses[ablation] = {}
@@ -156,6 +155,9 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
 
                     batch_handler = BatchHandler(config, data_handler)
                     len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
+                    first_batch_toks = select_gen_qs_toks(config, data_handler)
+                    print(f"Generating for shape={first_batch_toks['input_ids'].shape}, normalize=True, steering_type={config.args.steering_type}")
+                    batch_handler = BatchHandler(config, data_handler)
                     for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size)):
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
                         edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_type=config.args.steering_type)

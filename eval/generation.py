@@ -5,7 +5,7 @@ from pathlib import Path
 
 def select_gen_qs_toks(config, batch_handler):
     if config.args.eval_train:
-        print("Evaluating on training set.")
+        # print("Evaluating on training set.")
         return batch_handler.base_qs_toks['desired']
     elif config.args.eval_test:
         print("Evaluating on test set. ", batch_handler.base_qs_toks['test']['input_ids'].shape[0])
@@ -19,7 +19,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     patch_activations = patch_activations['desired'].to(model.device)
     layer_ids = topk_df['layer'].unique()
     head_ids = [topk_df[topk_df['layer'] == layer_idx]['neuron'].unique() for layer_idx in layer_ids]
-    print(f"Generating for ", gen_toks['input_ids'].shape, " with normalization set to ", normalize, " steering type ", steering_type)
+    # print(f"Generating for ", gen_toks['input_ids'].shape, " with normalization set to ", normalize, " steering type ", steering_type)
     with model.generate(
         gen_toks,
         pad_token_id=model.tokenizer.eos_token_id,
@@ -37,13 +37,13 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                 for head_idx in head_ids:
                     sl = slice(DIM * head_idx, DIM * (head_idx + 1))
                     if steering_type == 'last_token':
-                        print('steering on last token')
+                        # print('steering on last token')
                         steering_vector = patch_activations[layer_idx][-1, sl]
                     elif steering_type == 'all_tokens':
-                        print('steering on all tokens')
+                        # print('steering on all tokens')
                         steering_vector = patch_activations[layer_idx][:, sl].mean(dim=0)
                     if normalize:
-                        print('Normalizing')
+                        # print('Normalizing')
                         steering_vector = steering_vector / (torch.norm(steering_vector, dim=-1, keepdim=True) + 1e-12)
                     if ablation_type == 'mean':
                         layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] = N * steering_vector

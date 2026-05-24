@@ -2,7 +2,7 @@
 
 MODEL_ID="meta-llama/Llama-3.1-8B-Instruct"
 BASE_ID=""
-SOURCE="lie"
+SOURCE="lie-long"
 BASE="truth"
 NUM_SAMPLES=100
 DEVICE="cuda:0"

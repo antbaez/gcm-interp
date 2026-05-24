@@ -45,7 +45,7 @@ def main():
         if config.args.pyreft:
             run_eval_pyreft(config, data_handler, model_handler, batch_handler)
         elif config.args.steering:
-            run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads')
+            run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads', topk_vals=config.args.topk_vals, N=config.args.steering_n)
         elif config.args.eval_transfer:
             data_handler.LEN = min(data_handler.LEN, 100)
             run_eval_transfer(config, data_handler, model_handler, batch_handler, patching_utils)

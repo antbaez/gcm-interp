@@ -163,11 +163,6 @@ class DataHandler:
                     'test': self.tokenize_prompts(base_qs['test'], max_length=self.max_len)
                 }
 
-                self.steering_qs_toks = {
-                    "add": self.tokenize_prompts(steering["add_qs"], max_length=self.max_len) if steering["add_qs"] else None,
-                    "sub": self.tokenize_prompts(steering["sub_qs"], max_length=self.max_len) if steering["sub_qs"] else None
-                }
-
             elif self.config.args.ablation == 'pyreft':
                 print('Tokenizing pyreft prompts...')
                 self.pyreft_prompts = self.get_templated_prompts(jsons['base_desired'], _base_completion=jsons['source_desired'], add_generation_prompt=False)
@@ -182,6 +177,12 @@ class DataHandler:
                 self.LEN = min(len(base['desired']), 50)
         else:
             self.LEN = min(len(base['desired']), 100)
+
+        if self.config.args.eval_model:
+            self.steering_qs_toks = {
+                "add": self.tokenize_prompts(steering["add_qs"], max_length=self.max_len) if steering["add_qs"] else None,
+                "sub": self.tokenize_prompts(steering["sub_qs"], max_length=self.max_len) if steering["sub_qs"] else None
+            }
 
         self.truncate_to_len(self.LEN)
     

@@ -1,6 +1,6 @@
 import torch
 
-def mean_ablations_cache(model, data_handler, batch_size=9, key='desired'):
+def mean_ablations_cache(model, data_handler, batch_size=10, key='desired'):
     toks = data_handler.source_qs_toks[key]
     attn_layer_cache = [[] for _ in range(len(model.model.layers))]
     for i in range(0, toks['input_ids'].shape[0], batch_size):
@@ -14,7 +14,7 @@ def mean_ablations_cache(model, data_handler, batch_size=9, key='desired'):
     attn_cache = [torch.cat(attns_in_layer, dim=0).mean(dim=0).to(model.device) for attns_in_layer in attn_layer_cache]
     return torch.stack(attn_cache)
 
-def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=True):
+def steering_reps_cache(model, data_handler, batch_size=10, key='desired', mean=True):
     source_toks = data_handler.steering_qs_toks['add']
     base_toks = data_handler.steering_qs_toks['sub']
     num_layers = len(model.model.layers)
@@ -45,13 +45,13 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
                 base[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
 
     if mean:
-        print('########### Mean steering cache ########### ', source_toks['input_ids'].shape[0], steer[0][0].shape, base[0][0].shape, len(steer[0]), len(base))
+        print('########### Mean steering cache ########### ', f"n_prompts={source_toks['input_ids'].shape[0]}", f"steer_batch_shape={steer[0][0].shape}", f"base_batch_shape={base[0][0].shape}", f"n_batches={len(steer[0])}", f"n_layers={len(base)}")
         cache = [torch.cat(steer[i], dim=0).mean(0) - torch.cat(base[i], dim=0).mean(0) for i in range(num_layers)]
-        print('########### Mean steering cache after ########### ', cache[0].shape)
+        print('########### Mean steering cache after ########### ', f"cache_layer_shape={cache[0].shape}")
     else:
         cache = [torch.cat(steer[i], dim=0) - torch.cat(base[i], dim=0) for i in range(num_layers)]
-        print('########### Steering cache after ########### ', cache[0].shape)
-    print('Stacked steering cache ', torch.stack(cache).shape, model.config)
+        print('########### Steering cache after ########### ', f"cache_layer_shape={cache[0].shape}")
+    print('Stacked steering cache ', f"shape={torch.stack(cache).shape}") # , model.config)
     if key == 'desired':
         filename = f'{data_handler.config.args.model_id.split("/")[0].lower()}_steering_cache_{data_handler.config.args.source}_{"single" if "single" in data_handler.config.args.steering_add_path else "long"}_steer.pt'
         torch.save(torch.stack(cache), filename)

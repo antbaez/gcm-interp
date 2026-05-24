@@ -33,7 +33,7 @@ class Experiment:
                 continue
             start = idx
             stop = min(idx + self.batch_size, self.data_handler.LEN)
-            print(f'Running patching on {self.which_patch} from {start} to {stop}')
+            # print(f'Running patching on {self.which_patch} from {start} to {stop}')
             self.batch_handler.update(start, stop)
             self.patching_logits = self.patching.apply_patching()
             self.save_logits(self.patching_logits, idx)

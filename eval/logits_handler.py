@@ -7,17 +7,17 @@ import matplotlib.pyplot as plt
 import random
 
 def load_logits(config, data_handler, which_patch, model_handler):
-    logits_path = f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{which_patch}"
+    logits_path = f"{config.get_output_prefix()}/{which_patch}"
     # print('Loading logits from:', logits_path)
     all_logits = None
 
     name = 'numerator_1' if config.args.patch_algo != 'probes' else 'probes'
-    print('/'.join(config.get_output_prefix().split('/')[:-3]))
-    if os.path.exists(f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{name}_{which_patch}.pt"):
+    print(config.get_output_prefix())
+    if os.path.exists(f"{config.get_output_prefix()}/{name}_{which_patch}.pt"):
         # print(f"Loading precomputed logits for {name} from {config.get_output_prefix()}/{name}_{which_patch}.pt")
-        all_logits = torch.load(f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{name}_{which_patch}.pt")
+        all_logits = torch.load(f"{config.get_output_prefix()}/{name}_{which_patch}.pt")
     else:
-        print('Path does not exist {}, computing logits afresh.'.format(f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{name}_{which_patch}.pt"))
+        print('Path does not exist {}, computing logits afresh.'.format(f"{config.get_output_prefix()}/{name}_{which_patch}.pt"))
         if config.args.patch_algo != 'probes':
             for i in range(data_handler.LEN):
                 try:
@@ -51,7 +51,7 @@ def load_logits(config, data_handler, which_patch, model_handler):
             logits = [[float(head_val) for head_val in layer_dict.values()] for layer_dict in raw_logits.values()]
             all_logits = torch.tensor(logits)
         plot_logit_metrics(config, model_handler, all_logits, name, which_patch)
-        torch.save(all_logits, f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{name}_{which_patch}.pt")
+        torch.save(all_logits, f"{config.get_output_prefix()}/{name}_{which_patch}.pt")
     return all_logits
 
 def get_top_k_layer_and_head(patches, top_k, patch_algo):

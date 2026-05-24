@@ -62,7 +62,7 @@ class BatchHandler:
         else:
             self.start = start
             self.stop = stop
-        print(f"Updating batch handler: start={self.start}, stop={self.stop}")
+        # print(f"Updating batch handler: start={self.start}, stop={self.stop}")
 
         if self.config.args.patch_model:
             self.base_toks = {
