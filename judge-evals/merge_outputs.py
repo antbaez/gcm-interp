@@ -28,26 +28,44 @@ from config import BASE_DIR, RUNS_DIR, DATA_DIR, GEN_RE
 
 
 def extract_path_metadata(path: str) -> dict:
-    """Pull model/task/method metadata from the directory structure."""
+    """Pull model/task/method metadata from the directory structure.
+
+    Supports two layouts:
+      Deep:    results/{model}/{from_to}/{method}/{eval_sub_dir}/{steer_sub_dir}/eval/{file}
+      Shallow: results/{model}/{from_to}/{method}/eval/{file}
+    """
     parts = Path(path).parts
     runs_idx = parts.index("results")
 
     model_id = parts[runs_idx + 1]
     from_to = parts[runs_idx + 2]
-    _, source, _, base = from_to.split("_")
+    # from_to has format "from_{source}_to_{base}" where source/base may contain hyphens
+    # Use a regex to handle hyphens in source/base names (e.g. "from_lie-long_to_truth")
+    import re as _re
+    _ft_match = _re.match(r"^from_(.+)_to_(.+)$", from_to)
+    if not _ft_match:
+        raise ValueError(f"Cannot parse from_to: {from_to!r}")
+    source, base = _ft_match.group(1), _ft_match.group(2)
 
     method = parts[runs_idx + 3]
     valid_methods = {"acp", "atp", "atp-zero", "probes", "random"}
     if method not in valid_methods:
         raise ValueError(f"Unexpected METHOD: {method} in path: {path}")
 
-    eval_sub_dir = parts[runs_idx + 4]
-    steer_sub_dir = parts[runs_idx + 5]
-    sub_dir = parts[runs_idx + 6]
-    if sub_dir != "eval":
-        raise ValueError(f"Unexpected SUB_DIR: {sub_dir} in path: {path}")
+    # Shallow layout: results/model/from_to/method/eval/filename
+    if parts[runs_idx + 4] == "eval":
+        eval_sub_dir = ""
+        steer_sub_dir = ""
+        filename = parts[runs_idx + 5]
+    else:
+        # Deep layout: results/model/from_to/method/eval_sub/steer_sub/eval/filename
+        eval_sub_dir = parts[runs_idx + 4]
+        steer_sub_dir = parts[runs_idx + 5]
+        sub_dir = parts[runs_idx + 6]
+        if sub_dir != "eval":
+            raise ValueError(f"Unexpected SUB_DIR: {sub_dir} in path: {path}")
+        filename = parts[runs_idx + 7]
 
-    filename = parts[runs_idx + 7]
     m = GEN_RE.match(filename)
     if not m:
         raise ValueError(f"Filename does not match expected pattern: {filename}")
@@ -112,11 +130,17 @@ def discover_gen_files(
 
     gen_files = []
     for algo in algo_parts:
-        pattern = (
+        # Deep layout: results/model/from_to/method/eval_sub/steer_sub/eval/file
+        deep_pattern = (
             f"{runs_dir}/{model_part}/{task_part}/{algo}"
             f"/{eval_part}/{steer_part}/eval/*_gen.json"
         )
-        gen_files.extend(glob.glob(pattern))
+        gen_files.extend(glob.glob(deep_pattern))
+        # Shallow layout: results/model/from_to/method/eval/file
+        shallow_pattern = (
+            f"{runs_dir}/{model_part}/{task_part}/{algo}/eval/*_gen.json"
+        )
+        gen_files.extend(glob.glob(shallow_pattern))
 
     # Deduplicate and filter by filename pattern
     seen = set()

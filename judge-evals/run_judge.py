@@ -212,6 +212,8 @@ def _evaluate_all_workdirs_batched(
     long_items: list[tuple[Path, dict, str]],
     batch_size: int,
     skip_judge: bool,
+    openai_client=None,
+    openai_model: str = None,
 ):
     """
     Collect all prompts from all workdirs into one batch per mode, run vLLM once
@@ -260,12 +262,17 @@ def _evaluate_all_workdirs_batched(
               f"{len({wd for wd, _ in all_rows})} workdirs...")
 
         prompts = [row[prompt_col] for _, row in all_rows]
-        sp = get_sampling_params()
 
         # Single large batched inference
         outputs = []
-        for batch in generate_in_batches(llm, prompts, sp, batch_size):
-            outputs.extend(batch)
+        if openai_client is not None:
+            from evaluator import generate_in_batches_openai
+            for batch in generate_in_batches_openai(openai_client, openai_model, prompts, batch_size):
+                outputs.extend(batch)
+        else:
+            sp = get_sampling_params()
+            for batch in generate_in_batches(llm, prompts, sp, batch_size):
+                outputs.extend(batch)
 
         # Group results back by workdir and write JSONL
         from collections import defaultdict
@@ -294,6 +301,7 @@ def phase2_evaluate(
     data_dir: str,
     batch_size: int,
     skip_judge: bool,
+    openai_model: str = None,
 ) -> list[tuple[Path, dict, str]]:
     """
     Evaluate all files.
@@ -314,10 +322,17 @@ def phase2_evaluate(
 
     # --- Long-eval: load model once, batch all prompts across workdirs ---
     if long_items:
-        print(f"\nPhase 2b: Judge model evaluation for {len(long_items)} long-eval files")
-        from evaluator import make_llm
-        llm = make_llm()
-        _evaluate_all_workdirs_batched(llm, long_items, batch_size, skip_judge)
+        if openai_model:
+            print(f"\nPhase 2b: OpenAI judge ({openai_model}) for {len(long_items)} long-eval files")
+            from openai import OpenAI
+            client = OpenAI()
+            _evaluate_all_workdirs_batched(None, long_items, batch_size, skip_judge,
+                                           openai_client=client, openai_model=openai_model)
+        else:
+            print(f"\nPhase 2b: Judge model evaluation for {len(long_items)} long-eval files")
+            from evaluator import make_llm
+            llm = make_llm()
+            _evaluate_all_workdirs_batched(llm, long_items, batch_size, skip_judge)
 
     return long_items
 
@@ -376,6 +391,9 @@ def parse_args():
     p.add_argument("--force",        action="store_true",
                    help="Re-process even if accuracy files exist")
     p.add_argument("--batch_size",   type=int, default=16)
+    p.add_argument("--openai_model", type=str, default=None,
+                   help="Use OpenAI API instead of local vLLM (e.g. gpt-4o-mini). "
+                        "Requires OPENAI_API_KEY env var.")
     p.add_argument("--plots",        action="store_true")
     p.add_argument("--plots_args",   nargs="*", default=None)
     p.add_argument("--runs_dir",     default=str(RUNS_DIR))
@@ -413,7 +431,8 @@ def main():
         print("\n" + "=" * 60)
         print("  PHASE 2: Evaluate")
         print("=" * 60)
-        long_items = phase2_evaluate(prepared, args.data_dir, args.batch_size, args.skip_judge)
+        long_items = phase2_evaluate(prepared, args.data_dir, args.batch_size, args.skip_judge,
+                                     openai_model=args.openai_model)
 
         # Phase 3: compute per-condition accuracies for long-eval
         if long_items:
