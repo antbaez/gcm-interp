@@ -55,10 +55,15 @@ def get_sampling_params():
 
 def generate_in_batches(llm, prompts, sampling_params, batch_size):
     """Yield decoded output strings batch by batch."""
-    for i in range(0, len(prompts), batch_size):
-        batch = prompts[i : i + batch_size]
-        results = llm.generate(batch, sampling_params)
-        yield [r.outputs[0].text for r in results]
+    from tqdm import tqdm
+    completed = 0
+    with tqdm(total=len(prompts), desc="vLLM judge", unit="prompt") as pbar:
+        for i in range(0, len(prompts), batch_size):
+            batch = prompts[i : i + batch_size]
+            results = llm.generate(batch, sampling_params)
+            completed += len(batch)
+            pbar.update(len(batch))
+            yield [r.outputs[0].text for r in results]
 
 
 # ---------------------------------------------------------------------------
@@ -100,42 +105,55 @@ def _parse_llama_template(formatted_prompt: str) -> dict:
     }
 
 
-def generate_in_batches_openai(client, model: str, prompts: list, batch_size: int):
-    """Yield decoded output strings batch by batch using OpenAI API (single-threaded)."""
+_OPENAI_TIMEOUT_SECS = 30
+_OPENAI_MAX_RETRIES = 10
+
+
+def generate_in_batches_openai(client, model: str, prompts: list, batch_size: int, num_workers: int = 5):
+    """Yield decoded output strings batch by batch using OpenAI API (multi-threaded)."""
+    import openai
     from tqdm import tqdm
-    pbar = tqdm(total=len(prompts), desc="OpenAI judge", unit="prompt")
-    for i in range(0, len(prompts), batch_size):
-        batch = prompts[i : i + batch_size]
-        results = []
-        for prompt in batch:
-            parsed = _parse_llama_template(prompt)
-            input_messages = []
-            if parsed["system"]:
-                input_messages.append({
-                    "role": "developer",
-                    "content": [{"type": "input_text", "text": parsed["system"]}],
-                })
+    from concurrent.futures import ThreadPoolExecutor
+
+    def call_api(args):
+        idx, prompt = args
+        parsed = _parse_llama_template(prompt)
+        input_messages = []
+        if parsed["system"]:
             input_messages.append({
-                "role": "user",
-                "content": [{"type": "input_text", "text": parsed["user"]}],
+                "role": "developer",
+                "content": [{"type": "input_text", "text": parsed["system"]}],
             })
-            # print("\n" + "="*60)
-            # print("[INPUT MESSAGES]")
-            # for msg in input_messages:
-            #     print(f"  role: {msg['role']}")
-            #     for block in msg['content']:
-            #         print(f"  {block['text']}")
-            response = client.responses.create(
-                model=model,
-                input=input_messages,
-                reasoning={"effort": "minimal"},
-                max_output_tokens=1024,
-            )
-            # print(f"[RESPONSE] {response.output_text!r}")
-            # print("="*60)
-            results.append(response.output_text)
-            pbar.update(1)
-        yield results
-    pbar.close()
+        input_messages.append({
+            "role": "user",
+            "content": [{"type": "input_text", "text": parsed["user"]}],
+        })
+        for attempt in range(1, _OPENAI_MAX_RETRIES + 1):
+            try:
+                response = client.responses.create(
+                    model=model,
+                    input=input_messages,
+                    reasoning={"effort": "minimal"},
+                    max_output_tokens=1024,
+                    timeout=_OPENAI_TIMEOUT_SECS,
+                )
+                return response.output_text
+            except openai.APITimeoutError:
+                print(f"  [timeout] prompt {idx} timed out (attempt {attempt}/{_OPENAI_MAX_RETRIES})")
+                if attempt == _OPENAI_MAX_RETRIES:
+                    raise RuntimeError(
+                        f"Prompt {idx} failed after {_OPENAI_MAX_RETRIES} retries — aborting generation."
+                    )
+
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        results = list(tqdm(
+            executor.map(call_api, enumerate(prompts)),
+            total=len(prompts),
+            desc="OpenAI judge",
+            unit="prompt",
+        ))
+
+    for i in range(0, len(results), batch_size):
+        yield results[i : i + batch_size]
 
 

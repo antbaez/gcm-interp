@@ -7,7 +7,6 @@ from tqdm import tqdm
 import argparse
 import gc
 import ast
-import gen_logits
 import re
 
 args = argparse.ArgumentParser()
@@ -19,7 +18,6 @@ args.add_argument('--base', type=str, default='love')
 args.add_argument('--num_samples', type=int, default=500)
 args.add_argument('--device', type=str, default='cuda:0')
 args.add_argument('--gen_data', action='store_true', default=False)
-args.add_argument('--gen_logits', action='store_true', default=False)
 args.add_argument('--batch_size', type=int, default=4)
 
 config = args.parse_args()
@@ -41,10 +39,10 @@ if 'SOLAR' in MODEL_NAME:
     MARKER = '### Assistant:\n'
 
 assert MARKER is not None, "Please set the MARKER variable for your model"
-# Input queries must exist at this path as {source}.jsonl and {base}.jsonl
-queries_path = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/queries"
 source = config.source
 base = config.base
+# Input queries must exist at this path as {source}.jsonl and {base}.jsonl
+queries_path = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}-queries"
 
 
 
@@ -212,11 +210,18 @@ if config.gen_data:
             'lie': {
                 'replace': f'',
                 'with': f''
+            },
+            'lie-capitals': {
+                'replace': f'',
+                'with': f''
             }
+
         }
 
         with open(op_file, 'r') as file:
             dataset = [json.loads(line) for line in file]
+
+        source_key = source.replace('-long', '').replace('-single', '')
 
         # Undesired responses are the desired responses re-paired with the flipped (opposite condition) prompt
         if gen == source:
@@ -228,7 +233,7 @@ if config.gen_data:
             for data in dataset:
                 for msg in data['prompt']:
                     msg['content'] = msg['content'].replace(
-                        replacements[source]['replace'], replacements[source]['with']
+                        replacements[source_key]['replace'], replacements[source_key]['with']
                     )
                 file.write(json.dumps(data))
                 file.write('\n')

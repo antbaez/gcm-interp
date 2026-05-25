@@ -2,8 +2,10 @@
 
 MODEL_ID="meta-llama/Llama-3.1-8B-Instruct"
 BASE_ID=""
-SOURCE="lie-long"
-BASE="truth"
+# SOURCE="lie-long"
+# BASE="truth"
+SOURCE="lie-capitals-long"
+BASE="truth-capitals"
 NUM_SAMPLES=100
 DEVICE="cuda:0"
 BATCH_SIZE=100
@@ -13,7 +15,6 @@ GEN_LOGITS=false
 # Build optional flags
 FLAGS=""
 if [ "$GEN_DATA" = true ]; then FLAGS="$FLAGS --gen_data"; fi
-if [ "$GEN_LOGITS" = true ]; then FLAGS="$FLAGS --gen_logits"; fi
 
 python gen_data.py \
     --model_id "$MODEL_ID" \

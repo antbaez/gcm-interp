@@ -71,10 +71,8 @@ class Config:
             elif isinstance(args.eval_test, bool) and args.steering:
                 args.test_dataset = args.source
 
-            if 'single' in args.test_dataset:
+            if 'single' in args.test_dataset and args.max_new_tokens == 256:
                 args.max_new_tokens = 3
-            elif 'long' in args.test_dataset:
-                args.max_new_tokens = 256
             
             args.steering_type = 'last_token'
 

@@ -415,8 +415,10 @@ def main():
         args.runs_dir, args.model_name, args.source, args.base, args.algos,
         args.eval_subdir, args.steer_subdir,
     )
-    print(f"Found {len(gen_files)} gen files")
-    print(f"Accuracy dir: {ACCURACY_DIR}\n")
+    print(f"Found {len(gen_files)} gen files:")
+    for gf in sorted(gen_files):
+        print(f"  {gf}")
+    print(f"\nAccuracy dir: {ACCURACY_DIR}\n")
 
     # Phase 1: convert + build prompts (fast, no GPU)
     print("=" * 60)
