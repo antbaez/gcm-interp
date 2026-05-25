@@ -240,6 +240,16 @@ if config.gen_data:
 
         file.close()
 
+    # Create test file from first 50 entries of base-desired, stripping the assistant turn
+    base_desired_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{base}-desired-all.jsonl"
+    test_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{base}-test.jsonl"
+    with open(base_desired_file, 'r') as f_in, open(test_file, 'w') as f_out:
+        for line in list(f_in)[:50]:
+            entry = json.loads(line)
+            entry['prompt'] = [m for m in entry['prompt'] if m['role'] != 'assistant']
+            f_out.write(json.dumps(entry) + '\n')
+    print(f"Wrote test file to {test_file}")
+
     del model
     del tokenizer
     torch.cuda.empty_cache()

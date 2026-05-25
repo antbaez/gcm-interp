@@ -109,7 +109,7 @@ _OPENAI_TIMEOUT_SECS = 30
 _OPENAI_MAX_RETRIES = 10
 
 
-def generate_in_batches_openai(client, model: str, prompts: list, batch_size: int, num_workers: int = 5):
+def generate_in_batches_openai(client, model: str, prompts: list, batch_size: int, num_workers: int = 20):
     """Yield decoded output strings batch by batch using OpenAI API (multi-threaded)."""
     import openai
     from tqdm import tqdm

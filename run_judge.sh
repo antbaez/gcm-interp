@@ -1,8 +1,12 @@
 #!/bin/bash
 
 MODEL_NAME="Llama-3.1-8B-Instruct"
-SOURCE="lie-long"
-BASE="truth"
+# SOURCE="lie-long"
+# BASE="truth"
+# SOURCE="lie-capitals-long"
+# BASE="truth-capitals"
+SOURCE="verse-long"
+BASE="prose"
 ALGO="atp"
 BATCH_SIZE=16
 OPENAI_MODEL="gpt-5-mini"  # set to empty string to use local vLLM instead
@@ -20,4 +24,8 @@ cd /root/gcm-interp/judge-evals && python run_judge.py \
 
 echo ""
 echo "Summarizing results..."
-python /root/gcm-interp/judge-evals/accuracy/summarize_results.py
+python /root/gcm-interp/judge-evals/accuracy/summarize_results.py \
+    --model_name "$MODEL_NAME" \
+    --source "$SOURCE" \
+    --base "$BASE" \
+    --algo "$ALGO"

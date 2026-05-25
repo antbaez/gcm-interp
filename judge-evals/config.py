@@ -178,9 +178,12 @@ SOURCE_TO_TEMPLATE = {
     "sycophancy":       "sycophancy",
     "sycophancy-long":  "sycophancy",
     "sycophancy-single":"sycophancy",
-    "lie":       "lie",
-    "lie-long":  "lie",
-    "lie-single":"lie",
+    "lie":                  "lie",
+    "lie-long":             "lie",
+    "lie-single":           "lie",
+    "lie-capitals-long":    "lie",
+    "lie-capitals-single":  "lie",
+    "lie-capitals":         "lie",
 }
 
 # Templates that compare two responses (need old + new)
