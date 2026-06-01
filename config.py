@@ -43,6 +43,8 @@ class Config:
         parser.add_argument('-steering_batch_size', '--steering_batch_size', type=int, default=9, help='batch size for computing steering vectors')
         parser.add_argument('-steering_n', '--steering_n', type=int, nargs='+', default=[1, 2, 4, 5, 6, 8, 10], help='steering strength multipliers to sweep')
         parser.add_argument('-topk_vals', '--topk_vals', type=float, nargs='+', default=[1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5], help='top-k fractions of heads to sweep')
+        parser.add_argument('-steering_pos', '--steering_pos', type=str, default='last_token', choices=['last_token', 'all_tokens'], help='which prompt token positions to apply steering to')
+        parser.add_argument('-steering_type', '--steering_type', type=str, default='mean', choices=['last_token', 'mean', 'positional'], help='how to compute the steering vector from patch_activations')
 
         args = parser.parse_args()
         if isinstance(args.eval_test, str) and args.eval_test.lower() == 'false':
@@ -74,7 +76,8 @@ class Config:
             if 'single' in args.test_dataset and args.max_new_tokens == 256:
                 args.max_new_tokens = 3
             
-            args.steering_type = 'last_token'
+            if args.steering_type == 'positional' and args.steering_pos == 'last_token':
+                parser.error("steering_type='positional' is incompatible with steering_pos='last_token'")
 
         return args
 
@@ -97,7 +100,7 @@ class Config:
     
     def set_output_prefix(self):
         model = self.args.model_id.split('/')[-1]
-        eval_test_dir = self.args.eval_test.split('/')[-2] if isinstance(self.args.eval_test, str) else ''
+        eval_test_dir = self.args.eval_test.split('/')[-2] if isinstance(self.args.eval_test, str) else getattr(self.args, 'test_dataset', '')
         steering_dir = self.args.steering_add_path.split('/')[-2] if self.args.steering_add_path else ''
         if self.args.patch_model:
             self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}"

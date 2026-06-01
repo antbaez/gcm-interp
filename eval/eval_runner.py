@@ -83,8 +83,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
 
     model = model_handler.model
     if not config.args.patch_algo == 'random':
-        if os.path.exists(f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/numerator_1_{which_patch}.pt"):
-            logits = torch.load(f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/numerator_1_{which_patch}.pt")
+        if os.path.exists(f"{'/'.join(config.get_output_prefix().split('/')[:-2])}/numerator_1_{which_patch}.pt"):
+            logits = torch.load(f"{'/'.join(config.get_output_prefix().split('/')[:-2])}/numerator_1_{which_patch}.pt")
         else:
             logits = load_logits(config, data_handler, which_patch, model_handler)
     else:
@@ -104,12 +104,13 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
         logit_metric = 'numerator_1'
 
     decoded_responses = {}
-    batch_handler = BatchHandler(config, data_handler)
+    batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
     len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
     original_outputs = []
     pre_patch_logits = None
     model.eval()
-    for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size)):
+    print("Generating unsteered baseline responses")
+    for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size)):
         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
         with model.generate(gen_qs_toks, 
         pad_token_id=model.tokenizer.eos_token_id,
@@ -130,19 +131,19 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             for reps_type in tqdm(reps_types, desc="Reps Types"):
                 decoded_responses[ablation][reps_type] = {}
                 for topk in tqdm(topk_vals, desc="TopK Values"):
-                    if os.path.exists(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.txt") and os.path.exists(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.json"):
-                        with open(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.json", 'r') as jf:
+                    if os.path.exists(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.txt") and os.path.exists(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.json"):
+                        with open(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.json", 'r') as jf:
                             decoded_responses[ablation][reps_type][topk] = json.load(jf)
 
                         for item_iix, item in enumerate(decoded_responses[ablation][reps_type][topk]):
                             query = item['query']
                             item[f'old_{config.args.base}'] = model.tokenizer.decode(original_outputs[item_iix], skip_special_tokens=True).split(query)[-1]
-                        gen_file = f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.txt"
+                        gen_file = f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.txt"
                         save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
                         print(f"Skipping evaluation for {ablation}, {reps_type}, {topk} {config.args.N} as gen files already exist.")
                         continue
                     decoded_responses[ablation][reps_type][topk] = []
-                    gen_file = f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.txt"
+                    gen_file = f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.txt"
                     print(f"Eval [[LOGITS]] → Ablation: {ablation}, Reps: {reps_type}, TopK: {topk}, N: {config.args.N}, algo: {config.args.patch_algo}, task: {config.args.source} -> {config.args.base}")
 
                     if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')) and os.path.exists(f"{config.get_output_prefix()}/eval/{logit_metric}_{reps_type}_{topk}.csv"):
@@ -153,15 +154,15 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                     else:
                         topk_df = pd.read_csv(f"{config.get_output_prefix()}/eval/{logit_metric}_{reps_type}_{topk}.csv")
 
-                    batch_handler = BatchHandler(config, data_handler)
+                    batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
                     len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
                     first_batch_toks = select_gen_qs_toks(config, data_handler)
-                    print(f"Generating for shape={first_batch_toks['input_ids'].shape}, normalize=True, steering_type={config.args.steering_type}")
-                    batch_handler = BatchHandler(config, data_handler)
-                    for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size)):
+                    print(f"Generating for shape={first_batch_toks['input_ids'].shape}, normalize=True, steering_pos={config.args.steering_pos}")
+                    batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
+                    for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size)):
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_type=config.args.steering_type)
-                        decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
+                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_pos=config.args.steering_pos, steering_type=config.args.steering_type)
+                        decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.steering_batch_size], edited_outputs, config.args.base)
                         gc.collect()
                         torch.cuda.empty_cache()
                         if len(decoded_responses[ablation][reps_type][topk]) == 0:
@@ -320,7 +321,7 @@ def run_eval_transfer(config, data_handler, model_handler, batch_handler, patchi
             print(f"Skipping generation as all relevant files exist.")
             return
         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=256, normalize=False, steering_type=config.args.steering_type)
+        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=256, normalize=False, steering_pos=config.args.steering_pos)
         with model.generate(gen_qs_toks, do_sample=False, max_new_tokens=256) as _:
             original_outputs = model.generator.output.save()
         if config.args.eval_transfer:

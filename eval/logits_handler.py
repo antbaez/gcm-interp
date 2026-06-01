@@ -7,17 +7,19 @@ import matplotlib.pyplot as plt
 import random
 
 def load_logits(config, data_handler, which_patch, model_handler):
-    logits_path = f"{config.get_output_prefix()}/{which_patch}"
+    # patch files are always saved under the patch prefix (no _eval/..._steer suffix)
+    patch_prefix = '/'.join(config.get_output_prefix().split('/')[:-2]) if not config.args.patch_model else config.get_output_prefix()
+    logits_path = f"{patch_prefix}/{which_patch}"
     # print('Loading logits from:', logits_path)
     all_logits = None
 
     name = 'numerator_1' if config.args.patch_algo != 'probes' else 'probes'
-    print(config.get_output_prefix())
-    if os.path.exists(f"{config.get_output_prefix()}/{name}_{which_patch}.pt"):
-        # print(f"Loading precomputed logits for {name} from {config.get_output_prefix()}/{name}_{which_patch}.pt")
-        all_logits = torch.load(f"{config.get_output_prefix()}/{name}_{which_patch}.pt")
+    print(patch_prefix)
+    if os.path.exists(f"{patch_prefix}/{name}_{which_patch}.pt"):
+        # print(f"Loading precomputed logits for {name} from {patch_prefix}/{name}_{which_patch}.pt")
+        all_logits = torch.load(f"{patch_prefix}/{name}_{which_patch}.pt")
     else:
-        print('Path does not exist {}, computing logits afresh.'.format(f"{config.get_output_prefix()}/{name}_{which_patch}.pt"))
+        print('Path does not exist {}, computing logits afresh.'.format(f"{patch_prefix}/{name}_{which_patch}.pt"))
         if config.args.patch_algo != 'probes':
             for i in range(data_handler.LEN):
                 try:

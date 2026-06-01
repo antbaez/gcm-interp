@@ -2,10 +2,10 @@ import sys
 sys.path.insert(1, '../atp/')
 
 class BatchHandler:
-    def __init__(self, config, data_handler, start=None, stop=None):
+    def __init__(self, config, data_handler, start=None, stop=None, batch_size=None):
         self.config = config
         self.data_handler = data_handler
-        self.batch_size = config.args.batch_size
+        self.batch_size = batch_size if batch_size is not None else config.args.batch_size
 
         if not start or not stop:
             start = 0
