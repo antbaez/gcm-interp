@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Usage: ./run_dynamic_steering.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|all>
 MODEL_TAG=""
@@ -37,15 +38,14 @@ DEVICE="cuda:0"
 PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during ATP patching
 PATCH_ALGO="atp"
 SEED=42
-STEERING_BATCH_SIZE="10"  # number of prompts used per batch when computing the steering vector
+STEERING_BATCH_SIZE="5"  # number of prompts used per batch when computing the steering vector
 MAX_NEW_TOKENS=256      # max tokens the model generates per prompt during eval
-MAX_NEW_TOKENS=16
+MAX_NEW_TOKENS=4
 STEERING_N="1 2 5 10"
-STEERING_N="1"
+STEERING_N="1 2"
 TOPK_VALS="0.01 0.05 0.1 0.5"
-TOPK_VALS="0.5"
+TOPK_VALS="0.5 0.1"
 
-PATCH_MODEL=true
 EVAL_MODEL=true
 STEERING=true
 EVAL_TEST=false
@@ -98,16 +98,24 @@ run_experiment() {
         -max_new_tokens "$MAX_NEW_TOKENS"
     )
 
-    python run.py "${BASE_ARGS[@]}" $EVAL_FLAGS
+    # Build JSON combos array from COMBINATIONS
+    local COMBOS_JSON='['
+    local FIRST=true
+    for COMBO in "${COMBINATIONS[@]}"; do
+        local ST SP
+        ST=$(echo $COMBO | awk '{print $1}')
+        SP=$(echo $COMBO | awk '{print $2}')
+        [ "$FIRST" = true ] && FIRST=false || COMBOS_JSON="$COMBOS_JSON,"
+        COMBOS_JSON="$COMBOS_JSON[\"$ST\",\"$SP\"]"
+    done
+    COMBOS_JSON="$COMBOS_JSON]"
 
-    if [ "$MODEL_TAG" = "all" ] && [ "$DATASET_TAG" = "all" ]; then
-        for COMBO in "${COMBINATIONS[@]}"; do
-            ST=$(echo $COMBO | awk '{print $1}')
-            SP=$(echo $COMBO | awk '{print $2}')
-            echo "[$M_TAG/$D_TAG] Running eval: steering_type=$ST steering_pos=$SP"
-            python run.py "${BASE_ARGS[@]}" -steering_type "$ST" -steering_pos "$SP" $EVAL_FLAGS
-        done
-    fi
+    echo ""
+    echo "[$M_TAG/$D_TAG] Running ${#COMBINATIONS[@]} combos in single process"
+    local START_TIME=$SECONDS
+    python run.py "${BASE_ARGS[@]}" -steering_combos "$COMBOS_JSON" $EVAL_FLAGS
+    local ELAPSED=$(( SECONDS - START_TIME ))
+    echo "[$M_TAG/$D_TAG] Done in $(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s"
 }
 
 for M in "${MODELS[@]}"; do

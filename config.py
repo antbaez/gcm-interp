@@ -45,6 +45,7 @@ class Config:
         parser.add_argument('-topk_vals', '--topk_vals', type=float, nargs='+', default=[1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5], help='top-k fractions of heads to sweep')
         parser.add_argument('-steering_pos', '--steering_pos', type=str, default='last_token', choices=['last_token', 'all_tokens'], help='which prompt token positions to apply steering to')
         parser.add_argument('-steering_type', '--steering_type', type=str, default='mean', choices=['last_token', 'mean', 'positional'], help='how to compute the steering vector from patch_activations')
+        parser.add_argument('-steering_combos', '--steering_combos', type=str, default=None, help='JSON array of [[steering_type, steering_pos], ...] pairs to run sequentially in one process')
 
         args = parser.parse_args()
         if isinstance(args.eval_test, str) and args.eval_test.lower() == 'false':
@@ -93,7 +94,7 @@ class Config:
 
         os.makedirs(f'{self.set_output_prefix()}', exist_ok=True)
         self.save_to_yaml(f"{self.output_prefix}/config.yml", self.args)
-        print(f'Saved config to file {self.get_output_prefix()}/config.yml')
+        print('Saved config')
 
     def get_output_prefix(self):
         return self.output_prefix
@@ -109,7 +110,7 @@ class Config:
         # old: both were `if`, so eval always overwrote patch prefix when both flags were true
         # if self.args.eval_model:
         #     self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}/{eval_test_dir}_eval/{steering_dir}_steer"
-        print("op prefix ", self.output_prefix)
+        print(f"Saving to: {self.output_prefix}")
         return self.output_prefix
     
     def update_config(self, key, value):

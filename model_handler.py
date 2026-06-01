@@ -49,7 +49,7 @@ class ModelHandler:
             tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.environ['HF_TOKEN'])
             tokenizer.pad_token = tokenizer.eos_token
             tokenizer.padding_side = 'left'
-        print('Tokenizer loaded, padding side is', tokenizer.padding_side)
+        print(f"Loading model {model_id} (padding: {tokenizer.padding_side})...")
         return tokenizer
 
     def load_model(self, model_id, device, model_type="causal"):

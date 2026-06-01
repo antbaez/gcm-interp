@@ -74,7 +74,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
 
 def decode_responses(model, inputs, originals, edited, base, answers=None):
     decoded = []
-    for i in tqdm(range(len(originals)), desc="Decoding Responses"):
+    for i in range(len(originals)):
         query = model.tokenizer.decode(inputs['input_ids'][i], skip_special_tokens=True)
         orig = model.tokenizer.decode(originals[i], skip_special_tokens=True).split(query)[-1]
         edit = model.tokenizer.decode(edited[i], skip_special_tokens=True).split(query)[-1]

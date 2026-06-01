@@ -37,17 +37,20 @@ def load_patching_reps(data_handler, model_handler, mean=True):
     patching_reps = {}
     for ablation in [data_handler.config.args.ablation]:
         patching_reps[ablation] = {}
-        for key in ['desired', 'undesired']:
-            print(f"Loading patching reps for {ablation} - {key}")
-            patching_reps[ablation][key] = get_patch_activations(model, data_handler, ablation, key=key, mean=mean)
-    print('Returning patching reps')
+        if ablation == 'steer':
+            reps = get_patch_activations(model, data_handler, ablation, mean=mean)
+            patching_reps[ablation]['desired'] = reps
+        else:
+            for key in ['desired', 'undesired']:
+                print(f"Loading patching reps for {ablation} - {key}")
+                patching_reps[ablation][key] = get_patch_activations(model, data_handler, ablation, key=key, mean=mean)
     return patching_reps
 
 def get_patch_activations(model, data_handler, ablation_type, key='desired', mean=True):
     if ablation_type == 'mean':
         return mean_ablations_cache(model, data_handler, key=key)
     elif ablation_type == 'steer':
-        return steering_reps_cache(model, data_handler, batch_size=data_handler.config.args.steering_batch_size, key=key, mean=mean)
+        return steering_reps_cache(model, data_handler, batch_size=data_handler.config.args.steering_batch_size, mean=mean)
     else:
         raise ValueError(f"Unknown ablation type: {ablation_type}")
 
@@ -60,7 +63,7 @@ def save_prompt_responses(responses, path):
             f.write('-' * 40 + '\n')
     with open(path.replace('.txt', '.json'), 'w') as jf:
         json.dump(responses, jf)
-    print(f"Saved responses to {path} and {path.replace('.txt', '.json')}")
+    # print(f"Saved responses to {path.replace('.txt', '')}.(txt + json)")
 
 def save_top_k(reps_type, config, model, topk, logits, logit_metric):
     if reps_type == 'random':
@@ -72,14 +75,13 @@ def save_top_k(reps_type, config, model, topk, logits, logit_metric):
     else:
         topk_df = get_top_k_layer_and_head(logits, topk, config.args.patch_algo)
 
-    print("Saving topk to CSV at ", f"{config.get_output_prefix()}/eval/{logit_metric}_{reps_type}_{topk}.csv")
     os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
     topk_df.to_csv(f"{config.get_output_prefix()}/eval/{logit_metric}_{reps_type}_{topk}.csv", index=False)
     return topk_df
 
 def run_eval(config, data_handler, model_handler, batch_handler, patching_utils, which_patch, topk_vals=None, N=None):
     # set_seed()
-    print("Starting evaluation...")
+    print("\nStarting evaluation...")
 
     model = model_handler.model
     if not config.args.patch_algo == 'random':
@@ -109,28 +111,36 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
     original_outputs = []
     pre_patch_logits = None
     model.eval()
-    print("Generating unsteered baseline responses")
-    for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size)):
-        gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-        with model.generate(gen_qs_toks, 
-        pad_token_id=model.tokenizer.eos_token_id,
-        use_cache=False, 
-        do_sample=False,  
-        top_p=None, 
-        top_k=None, 
-        temperature=None, 
-        max_new_tokens=config.args.max_new_tokens) as _:
-            op = model.generator.output.save()
-        original_outputs += op.cpu().numpy().tolist()
-        batch_handler.update()
-    print('Starting for loop ', config.args)
+    original_outputs_cache = f"{config.get_output_prefix()}/eval/baseline_outputs.json"
+    if os.path.exists(original_outputs_cache):
+        print("Loading cached baseline responses")
+        with open(original_outputs_cache) as f:
+            original_outputs = json.load(f)
+    else:
+        print("Generating unsteered baseline responses")
+        for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size)):
+            gen_qs_toks = select_gen_qs_toks(config, batch_handler)
+            with model.generate(gen_qs_toks,
+            pad_token_id=model.tokenizer.eos_token_id,
+            use_cache=False,
+            do_sample=False,
+            top_p=None,
+            top_k=None,
+            temperature=None,
+            max_new_tokens=config.args.max_new_tokens) as _:
+                op = model.generator.output.save()
+            original_outputs += op.cpu().numpy().tolist()
+            batch_handler.update()
+        os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
+        with open(original_outputs_cache, 'w') as f:
+            json.dump(original_outputs, f)
     for N in n_vals:
         config.args.N = N
-        for ablation in tqdm(ablations, desc="Ablations"):
+        for ablation in ablations:
             decoded_responses[ablation] = {}
-            for reps_type in tqdm(reps_types, desc="Reps Types"):
+            for reps_type in reps_types:
                 decoded_responses[ablation][reps_type] = {}
-                for topk in tqdm(topk_vals, desc="TopK Values"):
+                for topk in topk_vals:
                     if os.path.exists(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.txt") and os.path.exists(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.json"):
                         with open(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.json", 'r') as jf:
                             decoded_responses[ablation][reps_type][topk] = json.load(jf)
@@ -144,7 +154,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         continue
                     decoded_responses[ablation][reps_type][topk] = []
                     gen_file = f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_{config.args.steering_pos}_gen.txt"
-                    print(f"Eval [[LOGITS]] → Ablation: {ablation}, Reps: {reps_type}, TopK: {topk}, N: {config.args.N}, algo: {config.args.patch_algo}, task: {config.args.source} -> {config.args.base}")
+                    # print(f"Ablation: {ablation}, Reps: {reps_type}, TopK: {topk}, N: {config.args.N}, algo: {config.args.patch_algo}, task: {config.args.source} -> {config.args.base}, steering_type: {config.args.steering_type}, steering_pos: {config.args.steering_pos}, normalize: True")
 
                     if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')) and os.path.exists(f"{config.get_output_prefix()}/eval/{logit_metric}_{reps_type}_{topk}.csv"):
                         print(f"Skipping generation as all relevant files exist.")
@@ -157,9 +167,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                     batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
                     len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
                     first_batch_toks = select_gen_qs_toks(config, data_handler)
-                    print(f"Generating for shape={first_batch_toks['input_ids'].shape}, normalize=True, steering_pos={config.args.steering_pos}")
                     batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
-                    for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size)):
+                    for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), desc=f"Steering N={config.args.N} topk={topk}"):
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
                         edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_pos=config.args.steering_pos, steering_type=config.args.steering_type)
                         decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.steering_batch_size], edited_outputs, config.args.base)

@@ -1,4 +1,7 @@
 import sys
+import json
+import gc
+import torch
 from config import Config
 from model_handler import ModelHandler
 from data_handler import DataHandler
@@ -12,10 +15,22 @@ import logging
 logging.basicConfig(level=logging.WARNING)
 from batch_handler import BatchHandler
 from patching import Patching
+def combo_outputs_exist(config, topk_vals, n_vals):
+    reps_type = 'random' if config.args.patch_algo == 'random' else 'targeted'
+    ablation = config.args.ablation
+    prefix = config.get_output_prefix()
+    for N in n_vals:
+        for topk in topk_vals:
+            gen_file = (f"{prefix}/eval/{N}_{reps_type}_{ablation}_{topk}_"
+                        f"{config.args.test_dataset}_{config.args.steering_type}_"
+                        f"{config.args.steering_pos}_gen.txt")
+            if not os.path.exists(gen_file) or not os.path.exists(gen_file.replace('.txt', '.json')):
+                return False
+    return True
+
 def main():
     print('Parsing config...')
     config = Config()
-    print('Loading model...')
     model_handler = ModelHandler(config)
     config.args.batch_size = 5
     data_handler = DataHandler(config, model_handler)
@@ -45,7 +60,21 @@ def main():
         if config.args.pyreft:
             run_eval_pyreft(config, data_handler, model_handler, batch_handler)
         elif config.args.steering:
-            run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads', topk_vals=config.args.topk_vals, N=config.args.steering_n)
+            if config.args.steering_combos:
+                combos = json.loads(config.args.steering_combos)
+                for steering_type, steering_pos in combos:
+                    config.args.steering_type = steering_type
+                    config.args.steering_pos = steering_pos
+                    if combo_outputs_exist(config, config.args.topk_vals, config.args.steering_n):
+                        print(f"[skip] steering_type={steering_type} steering_pos={steering_pos} — all outputs cached")
+                        continue
+                    print(f"\nRunning combo: steering_type={steering_type} steering_pos={steering_pos}")
+                    run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads',
+                             topk_vals=config.args.topk_vals, N=config.args.steering_n)
+                    gc.collect()
+                    torch.cuda.empty_cache()
+            else:
+                run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads', topk_vals=config.args.topk_vals, N=config.args.steering_n)
         elif config.args.eval_transfer:
             data_handler.LEN = min(data_handler.LEN, 100)
             run_eval_transfer(config, data_handler, model_handler, batch_handler, patching_utils)

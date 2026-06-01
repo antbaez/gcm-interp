@@ -9,7 +9,7 @@ import random
 def load_logits(config, data_handler, which_patch, model_handler):
     # patch files are always saved under the patch prefix (no _eval/..._steer suffix)
     patch_prefix = '/'.join(config.get_output_prefix().split('/')[:-2]) if not config.args.patch_model else config.get_output_prefix()
-    logits_path = f"{patch_prefix}/{which_patch}"
+    logits_path = f"{patch_prefix}/heads/{which_patch}"
     # print('Loading logits from:', logits_path)
     all_logits = None
 
@@ -53,7 +53,7 @@ def load_logits(config, data_handler, which_patch, model_handler):
             logits = [[float(head_val) for head_val in layer_dict.values()] for layer_dict in raw_logits.values()]
             all_logits = torch.tensor(logits)
         plot_logit_metrics(config, model_handler, all_logits, name, which_patch)
-        torch.save(all_logits, f"{config.get_output_prefix()}/{name}_{which_patch}.pt")
+        torch.save(all_logits, f"{patch_prefix}/{name}_{which_patch}.pt")
     return all_logits
 
 def get_top_k_layer_and_head(patches, top_k, patch_algo):

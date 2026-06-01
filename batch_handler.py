@@ -46,6 +46,10 @@ class BatchHandler:
                 self.base_qs_toks = {
                     'test': { "input_ids": self.data_handler.base_qs_toks['test']["input_ids"][self.start:self.stop], "attention_mask": self.data_handler.base_qs_toks['test']["attention_mask"][self.start:self.stop]}
                 }
+            elif self.config.args.eval_train:
+                self.base_qs_toks = {
+                    key: { "input_ids": self.data_handler.base_qs_toks[key]["input_ids"][self.start:self.stop], "attention_mask": self.data_handler.base_qs_toks[key]["attention_mask"][self.start:self.stop]} for key in self.data_handler.base_qs_toks
+                }
             if self.config.args.eval_transfer:
                 self.eval_transfer = {
                     "queries": {
@@ -93,6 +97,10 @@ class BatchHandler:
             if self.config.args.eval_test:
                 self.base_qs_toks = {
                     'test': { "input_ids": self.data_handler.base_qs_toks['test']["input_ids"][self.start:self.stop], "attention_mask": self.data_handler.base_qs_toks['test']["attention_mask"][self.start:self.stop]}
+                }
+            elif self.config.args.eval_train:
+                self.base_qs_toks = {
+                    key: { "input_ids": self.data_handler.base_qs_toks[key]["input_ids"][self.start:self.stop], "attention_mask": self.data_handler.base_qs_toks[key]["attention_mask"][self.start:self.stop]} for key in self.data_handler.base_qs_toks
                 }
 
             if self.config.args.eval_transfer:

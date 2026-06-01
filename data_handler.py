@@ -82,6 +82,7 @@ class DataHandler:
         self.max_len = all_tokenized_prompts['input_ids'].shape[1]
 
         if self.config.args.patch_model:
+            print('max_length', self.max_len)
             print('Tokenizing base_toks')
             self.base_toks = {
                 key: self.tokenize_prompts(base[key], max_length=self.max_len) for key in base
@@ -161,6 +162,11 @@ class DataHandler:
             elif self.config.args.eval_test:
                 self.base_qs_toks = {
                     'test': self.tokenize_prompts(base_qs['test'], max_length=self.max_len)
+                }
+
+            elif self.config.args.eval_train:
+                self.base_qs_toks = {
+                    key: self.tokenize_prompts(base_qs[key], max_length=self.max_len) for key in base_qs if key != 'test'
                 }
 
             elif self.config.args.ablation == 'pyreft':
@@ -267,7 +273,6 @@ class DataHandler:
         if max_length is None:
             tokens = self.model_handler.tokenizer(p, padding=True, truncation=False, return_tensors="pt")
         else:
-            print('max_length', max_length)
             tokens =  self.model_handler.tokenizer(p, padding='max_length', max_length=self.max_len, truncation=False, return_tensors="pt")
         return {"input_ids": tokens["input_ids"].to(self.device), "attention_mask": tokens["attention_mask"].to(self.device)}
     
