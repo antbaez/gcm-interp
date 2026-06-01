@@ -42,31 +42,31 @@ class DataHandler:
             'steering_sub': self.load_from_jsonl(file_paths['steering_sub']) if self.config.args.steering_sub_path else None,
         }
 
-        print('Making base templated prompts...')
+        # print('Making base templated prompts...')
         base = {
             'desired': self.get_templated_prompts(jsons['base_desired']),
             'undesired': self.get_templated_prompts(jsons['base_undesired'])
         }
-        print(base['desired'][0])
+        # print(base['desired'][0])
 
-        print('Making base_qs templated prompts...')
+        # print('Making base_qs templated prompts...')
         base_qs = {
             'desired': self.get_templated_prompts(jsons['base_desired'], only_q=True, add_generation_prompt=True),
             'undesired': self.get_templated_prompts(jsons['base_undesired'], only_q=True, add_generation_prompt=True),
         }
-        print(base_qs['desired'][0])
+        # print(base_qs['desired'][0])
 
         if self.config.args.eval_test:
-            print('Making base_qs test templated prompts...')
+            # print('Making base_qs test templated prompts...')
             base_qs['test'] = self.get_templated_prompts(jsons['base_test'], only_q=True, add_generation_prompt=True)
-            print(base_qs['test'][0])
+            # print(base_qs['test'][0])
 
-        print('Making source qs templated prompts...')
+        # print('Making source qs templated prompts...')
         source_qs = {
             'desired': self.get_templated_prompts(jsons['source_desired'], only_q=True, add_generation_prompt=True),
             'undesired': self.get_templated_prompts(jsons['source_undesired'], only_q=True, add_generation_prompt=True)
         }
-        print(source_qs['desired'][0])
+        # print(source_qs['desired'][0])
         
         steering = {
             "add_qs": self.get_templated_prompts(jsons['steering_add'], only_q=True, add_generation_prompt=True) if jsons['steering_add'] else None,

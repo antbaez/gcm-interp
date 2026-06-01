@@ -37,7 +37,7 @@ DEVICE="cuda:0"
 PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during ATP patching
 PATCH_ALGO="atp"
 SEED=42
-STEERING_PATCHING_BATCH_SIZE="10"  # number of prompts used per batch when computing the steering vector 
+STEERING_BATCH_SIZE="10"  # number of prompts used per batch when computing the steering vector
 MAX_NEW_TOKENS=256      # max tokens the model generates per prompt during eval
 MAX_NEW_TOKENS=16
 STEERING_N="1 2 5 10"
@@ -79,8 +79,8 @@ run_experiment() {
         verse)      SOURCE="verse-long";      BASE="prose" ;;
     esac
 
-    STEERING_ADD="./dynamic-steering-data/${MODEL_ID##*/}/${SOURCE}/${SOURCE}-desired-all.jsonl"
-    STEERING_SUB="./dynamic-steering-data/${MODEL_ID##*/}/${SOURCE}/${BASE}-desired-all.jsonl"
+    STEERING_ADD="./data/${MODEL_ID##*/}/${SOURCE}/${SOURCE}-desired-all.jsonl"
+    STEERING_SUB="./data/${MODEL_ID##*/}/${SOURCE}/${BASE}-desired-all.jsonl"
 
     BASE_ARGS=(
         -d "$DEVICE"
@@ -92,20 +92,22 @@ run_experiment() {
         -seed "$SEED"
         -steering_add_path "$STEERING_ADD"
         -steering_sub_path "$STEERING_SUB"
-        -steering_batch_size "$STEERING_PATCHING_BATCH_SIZE"
+        -steering_batch_size "$STEERING_BATCH_SIZE"
         -steering_n $STEERING_N
         -topk_vals $TOPK_VALS
         -max_new_tokens "$MAX_NEW_TOKENS"
     )
 
-    python run.py "${BASE_ARGS[@]}" -patch_model $EVAL_FLAGS
+    python run.py "${BASE_ARGS[@]}" $EVAL_FLAGS
 
-    for COMBO in "${COMBINATIONS[@]}"; do
-        ST=$(echo $COMBO | awk '{print $1}')
-        SP=$(echo $COMBO | awk '{print $2}')
-        echo "[$M_TAG/$D_TAG] Running eval: steering_type=$ST steering_pos=$SP"
-        python run.py "${BASE_ARGS[@]}" -steering_type "$ST" -steering_pos "$SP" $EVAL_FLAGS
-    done
+    if [ "$MODEL_TAG" = "all" ] && [ "$DATASET_TAG" = "all" ]; then
+        for COMBO in "${COMBINATIONS[@]}"; do
+            ST=$(echo $COMBO | awk '{print $1}')
+            SP=$(echo $COMBO | awk '{print $2}')
+            echo "[$M_TAG/$D_TAG] Running eval: steering_type=$ST steering_pos=$SP"
+            python run.py "${BASE_ARGS[@]}" -steering_type "$ST" -steering_pos "$SP" $EVAL_FLAGS
+        done
+    fi
 }
 
 for M in "${MODELS[@]}"; do
