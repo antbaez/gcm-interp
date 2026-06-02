@@ -40,11 +40,13 @@ class Config:
         parser.add_argument('-base', '--base', type=str, help='Patch to base')
         parser.add_argument('-steering_add_path', '--steering_add_path', type=str, help='steering reps to add')
         parser.add_argument('-steering_sub_path', '--steering_sub_path', type=str, help='steering reps to subtract')
+        parser.add_argument('-dataset_list', '--dataset_list', type=str, default=None,
+            help='JSON array of dataset specs: [{"source":..,"base":..,"steering_add":..,"steering_sub":..}]')
         parser.add_argument('-steering_batch_size', '--steering_batch_size', type=int, default=9, help='batch size for computing steering vectors')
         parser.add_argument('-steering_n', '--steering_n', type=int, nargs='+', default=[1, 2, 4, 5, 6, 8, 10], help='steering strength multipliers to sweep')
         parser.add_argument('-topk_vals', '--topk_vals', type=float, nargs='+', default=[1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5], help='top-k fractions of heads to sweep')
-        parser.add_argument('-steering_pos', '--steering_pos', type=str, default='last_token', choices=['last_token', 'all_tokens'], help='which prompt token positions to apply steering to')
-        parser.add_argument('-steering_type', '--steering_type', type=str, default='mean', choices=['last_token', 'mean', 'positional'], help='how to compute the steering vector from patch_activations')
+        parser.add_argument('-steering_pos', '--steering_pos', type=str, default='last-token', choices=['last-token', 'all-tokens'], help='which prompt token positions to apply steering to')
+        parser.add_argument('-steering_type', '--steering_type', type=str, default='mean', choices=['last-token', 'mean', 'positional'], help='how to compute the steering vector from patch_activations')
         parser.add_argument('-steering_combos', '--steering_combos', type=str, default=None, help='JSON array of [[steering_type, steering_pos], ...] pairs to run sequentially in one process')
 
         args = parser.parse_args()
@@ -57,10 +59,11 @@ class Config:
         if args.patch_model or args.eval_model:
             if not args.patch_algo:
                 parser.error("-patch_algo argument is required when --patch_model is set")
-            if not args.source:
-                parser.error("-source argument is required when --patch_model is set")
-            if not args.base:
-                parser.error("-base argument is required when --patch_model is set")
+            if not args.dataset_list:
+                if not args.source:
+                    parser.error("-source is required when -dataset_list is not provided")
+                if not args.base:
+                    parser.error("-base is required when -dataset_list is not provided")
 
         if args.eval_model:
 
@@ -72,12 +75,12 @@ class Config:
                 args.test_dataset = args.eval_test.split('/')[-2]
                 print(f"Steering dataset set to: {args.test_dataset}")
             elif isinstance(args.eval_test, bool) and args.steering:
-                args.test_dataset = args.source
+                args.test_dataset = args.source  # may be None in dataset_list mode; set per-dataset in run.py
 
-            if 'single' in args.test_dataset and args.max_new_tokens == 256:
+            if getattr(args, 'test_dataset', None) and 'single' in args.test_dataset and args.max_new_tokens == 256:
                 args.max_new_tokens = 3
             
-            if args.steering_type == 'positional' and args.steering_pos == 'last_token':
+            if args.steering_type == 'positional' and args.steering_pos == 'last-token':
                 parser.error("steering_type='positional' is incompatible with steering_pos='last_token'")
 
         return args
@@ -92,9 +95,10 @@ class Config:
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
 
-        os.makedirs(f'{self.set_output_prefix()}', exist_ok=True)
-        self.save_to_yaml(f"{self.output_prefix}/config.yml", self.args)
-        print('Saved config')
+        if not self.args.dataset_list:
+            os.makedirs(f'{self.set_output_prefix()}', exist_ok=True)
+            self.save_to_yaml(f"{self.output_prefix}/config.yml", self.args)
+            print('Saved config')
 
     def get_output_prefix(self):
         return self.output_prefix

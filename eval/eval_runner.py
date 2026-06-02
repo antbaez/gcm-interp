@@ -122,7 +122,6 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             gen_qs_toks = select_gen_qs_toks(config, batch_handler)
             with model.generate(gen_qs_toks,
             pad_token_id=model.tokenizer.eos_token_id,
-            use_cache=False,
             do_sample=False,
             top_p=None,
             top_k=None,

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Usage: ./run_dynamic_steering.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|all>
+# Usage: ./run_steering.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|all>
 MODEL_TAG=""
 DATASET_TAG=""
 
@@ -39,8 +39,7 @@ PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during AT
 PATCH_ALGO="atp"
 SEED=42
 STEERING_BATCH_SIZE="5"  # number of prompts used per batch when computing the steering vector
-MAX_NEW_TOKENS=256      # max tokens the model generates per prompt during eval
-MAX_NEW_TOKENS=4
+MAX_NEW_TOKENS=64      # max tokens the model generates per prompt during eval
 STEERING_N="1 2 5 10"
 STEERING_N="1 2"
 TOPK_VALS="0.01 0.05 0.1 0.5"
@@ -51,11 +50,11 @@ STEERING=true
 EVAL_TEST=false
 
 COMBINATIONS=(
-    "last_token last_token"
-    "last_token all_tokens"
-    "mean       last_token"
-    "mean       all_tokens"
-    "positional all_tokens"
+    "last-token last-token"
+    "last-token all-tokens"
+    "mean       last-token"
+    "mean       all-tokens"
+    "positional all-tokens"
 )
 
 EVAL_FLAGS=""
@@ -63,63 +62,66 @@ if [ "$EVAL_MODEL" = true ]; then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
 if [ "$STEERING" = true ]; then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
 if [ "$EVAL_TEST" = true ]; then EVAL_FLAGS="$EVAL_FLAGS --eval_test true"; else EVAL_FLAGS="$EVAL_FLAGS --eval_test false"; fi
 
-run_experiment() {
+run_experiments_for_model() {
     local M_TAG="$1"
-    local D_TAG="$2"
+    shift
+    local D_TAGS=("$@")
 
     case "$M_TAG" in
-        olmo)  MODEL_ID="allenai/OLMo-2-1124-13B-DPO";        MODEL_NAME="OLMo" ;;
-        qwen)  MODEL_ID="Qwen/Qwen1.5-14B-Chat";              MODEL_NAME="Qwen" ;;
-        solar) MODEL_ID="upstage/SOLAR-10.7B-Instruct-v1.0";  MODEL_NAME="Solar" ;;
+        olmo)  MODEL_ID="allenai/OLMo-2-1124-13B-DPO" ;;
+        qwen)  MODEL_ID="Qwen/Qwen1.5-14B-Chat" ;;
+        solar) MODEL_ID="upstage/SOLAR-10.7B-Instruct-v1.0" ;;
     esac
 
-    case "$D_TAG" in
-        harmful)    SOURCE="harmful-long";    BASE="harmless" ;;
-        sycophancy) SOURCE="sycophancy-long"; BASE="non-sycophantic" ;;
-        verse)      SOURCE="verse-long";      BASE="prose" ;;
-    esac
+    # Build dataset_list JSON — all datasets for this model in one array
+    local DS_JSON='['
+    local FIRST=true
+    for D_TAG in "${D_TAGS[@]}"; do
+        case "$D_TAG" in
+            harmful)    D_SOURCE="harmful-long";    D_BASE="harmless" ;;
+            sycophancy) D_SOURCE="sycophancy-long"; D_BASE="non-sycophantic" ;;
+            verse)      D_SOURCE="verse-long";      D_BASE="prose" ;;
+        esac
+        local SA="./data/${MODEL_ID##*/}/${D_SOURCE}/${D_SOURCE}-desired-all.jsonl"
+        local SS="./data/${MODEL_ID##*/}/${D_SOURCE}/${D_BASE}-desired-all.jsonl"
+        [ "$FIRST" = true ] && FIRST=false || DS_JSON="${DS_JSON},"
+        DS_JSON="${DS_JSON}{\"source\":\"${D_SOURCE}\",\"base\":\"${D_BASE}\",\"steering_add\":\"${SA}\",\"steering_sub\":\"${SS}\"}"
+    done
+    DS_JSON="${DS_JSON}]"
 
-    STEERING_ADD="./data/${MODEL_ID##*/}/${SOURCE}/${SOURCE}-desired-all.jsonl"
-    STEERING_SUB="./data/${MODEL_ID##*/}/${SOURCE}/${BASE}-desired-all.jsonl"
+    # Build steering combos JSON
+    local COMBOS_JSON='['
+    local CFIRST=true
+    for COMBO in "${COMBINATIONS[@]}"; do
+        local ST SP
+        ST=$(echo $COMBO | awk '{print $1}')
+        SP=$(echo $COMBO | awk '{print $2}')
+        [ "$CFIRST" = true ] && CFIRST=false || COMBOS_JSON="${COMBOS_JSON},"
+        COMBOS_JSON="${COMBOS_JSON}[\"${ST}\",\"${SP}\"]"
+    done
+    COMBOS_JSON="${COMBOS_JSON}]"
 
     BASE_ARGS=(
         -d "$DEVICE"
         -model_id "$MODEL_ID"
         -batch_size "$PATCHING_BATCH_SIZE"
-        -source "$SOURCE"
-        -base "$BASE"
         -patch_algo "$PATCH_ALGO"
         -seed "$SEED"
-        -steering_add_path "$STEERING_ADD"
-        -steering_sub_path "$STEERING_SUB"
         -steering_batch_size "$STEERING_BATCH_SIZE"
         -steering_n $STEERING_N
         -topk_vals $TOPK_VALS
         -max_new_tokens "$MAX_NEW_TOKENS"
+        -dataset_list "$DS_JSON"
     )
 
-    # Build JSON combos array from COMBINATIONS
-    local COMBOS_JSON='['
-    local FIRST=true
-    for COMBO in "${COMBINATIONS[@]}"; do
-        local ST SP
-        ST=$(echo $COMBO | awk '{print $1}')
-        SP=$(echo $COMBO | awk '{print $2}')
-        [ "$FIRST" = true ] && FIRST=false || COMBOS_JSON="$COMBOS_JSON,"
-        COMBOS_JSON="$COMBOS_JSON[\"$ST\",\"$SP\"]"
-    done
-    COMBOS_JSON="$COMBOS_JSON]"
-
     echo ""
-    echo "[$M_TAG/$D_TAG] Running ${#COMBINATIONS[@]} combos in single process"
+    echo "[$M_TAG / ${D_TAGS[*]}] Running ${#D_TAGS[@]} dataset(s) × ${#COMBINATIONS[@]} combos in single process"
     local START_TIME=$SECONDS
     python run.py "${BASE_ARGS[@]}" -steering_combos "$COMBOS_JSON" $EVAL_FLAGS
     local ELAPSED=$(( SECONDS - START_TIME ))
-    echo "[$M_TAG/$D_TAG] Done in $(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s"
+    echo "[$M_TAG] Done in $(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s"
 }
 
 for M in "${MODELS[@]}"; do
-    for D in "${DATASETS[@]}"; do
-        run_experiment "$M" "$D"
-    done
+    run_experiments_for_model "$M" "${DATASETS[@]}"
 done

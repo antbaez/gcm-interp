@@ -11,10 +11,10 @@ from patching import Patching
 import os
 from eval.eval_runner import *
 import logging
-# Set the logging level to WARNING to suppress DEBUG and INFO
 logging.basicConfig(level=logging.WARNING)
 from batch_handler import BatchHandler
 from patching import Patching
+
 def combo_outputs_exist(config, topk_vals, n_vals):
     reps_type = 'random' if config.args.patch_algo == 'random' else 'targeted'
     ablation = config.args.ablation
@@ -28,14 +28,11 @@ def combo_outputs_exist(config, topk_vals, n_vals):
                 return False
     return True
 
-def main():
-    print('Parsing config...')
-    config = Config()
-    model_handler = ModelHandler(config)
+def run_dataset(config, model_handler):
     config.args.batch_size = 5
     data_handler = DataHandler(config, model_handler)
     if config.args.patch_algo == 'acp':
-        config.args.batch_size = config.args.batch_size = max(x for x in range(64, 0, -1) if data_handler.LEN % x != 1)
+        config.args.batch_size = max(x for x in range(64, 0, -1) if data_handler.LEN % x != 1)
     else:
         config.args.batch_size = 1
 
@@ -74,10 +71,32 @@ def main():
                     gc.collect()
                     torch.cuda.empty_cache()
             else:
-                run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads', topk_vals=config.args.topk_vals, N=config.args.steering_n)
+                run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads',
+                         topk_vals=config.args.topk_vals, N=config.args.steering_n)
         elif config.args.eval_transfer:
             data_handler.LEN = min(data_handler.LEN, 100)
             run_eval_transfer(config, data_handler, model_handler, batch_handler, patching_utils)
+
+def main():
+    print('Parsing config...')
+    config = Config()
+    model_handler = ModelHandler(config)
+
+    if config.args.dataset_list:
+        datasets = json.loads(config.args.dataset_list)
+        for ds in datasets:
+            print(f"\n=== Dataset: {ds['source']} -> {ds['base']} ===")
+            config.args.source = ds['source']
+            config.args.base = ds['base']
+            config.args.steering_add_path = ds['steering_add']
+            config.args.steering_sub_path = ds['steering_sub']
+            config.args.test_dataset = ds['source']
+            config.set_output_prefix()
+            os.makedirs(config.get_output_prefix(), exist_ok=True)
+            config.save_to_yaml(f"{config.get_output_prefix()}/config.yml", config.args)
+            run_dataset(config, model_handler)
+    else:
+        run_dataset(config, model_handler)
 
 if __name__ == "__main__":
     main()

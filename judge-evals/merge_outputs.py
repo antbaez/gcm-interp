@@ -188,6 +188,8 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
             "N": meta["N"],
             "REPS": meta["REPS"],
             "STEERING_METHOD": meta["STEERING_METHOD"],
+            "STEERING_POS": meta["STEERING_POS"],
+            "STEERING_TYPE": meta["STEERING_TYPE"],
             "topk": meta["topk"],
             "TEST_FILE": meta["TEST_FILE"],
         }
@@ -202,7 +204,6 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_path, index=False)
-    print(f"  Saved {output_path}  ({len(df)} rows)")
 
 
 def default_csv_path(gen_path: str) -> str:

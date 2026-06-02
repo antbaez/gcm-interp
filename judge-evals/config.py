@@ -26,7 +26,9 @@ GEN_RE = re.compile(
     (?P<REPS>random|targeted)_
     (?P<STEERING_METHOD>steer|mean)_
     (?P<topk>\d\.\d+)_
-    (?P<TEST_FILE>.+?-(?:long|single))
+    (?P<TEST_FILE>.+?-(?:long|single))_
+    (?P<STEERING_TYPE>[^_]+)_
+    (?P<STEERING_POS>[^_]+)
     _gen\.json$
     """,
     re.VERBOSE,
@@ -51,6 +53,8 @@ PASSTHROUGH_COLS = [
     "REPS",
     "STEERING_METHOD",
     "topk",
+    "STEERING_POS",
+    "STEERING_TYPE",
 ]
 
 # Row-level merge key (unique per example)
@@ -58,6 +62,7 @@ ROW_KEY_COLS = [
     "MODEL_ID", "SOURCE", "BASE", "METHOD",
     "EVAL_SUB_DIR", "STEER_SUB_DIR",
     "N", "REPS", "STEERING_METHOD", "topk",
+    "STEERING_POS", "STEERING_TYPE",
     "data_path_query",
 ]
 
@@ -66,6 +71,7 @@ GROUP_COLS = [
     "MODEL_ID", "SOURCE", "BASE", "METHOD",
     "EVAL_SUB_DIR", "STEER_SUB_DIR",
     "N", "REPS", "STEERING_METHOD", "topk",
+    "STEERING_POS", "STEERING_TYPE",
 ]
 
 # ---------------------------------------------------------------------------

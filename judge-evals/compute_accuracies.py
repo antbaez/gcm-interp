@@ -52,7 +52,6 @@ def fix_empty_response_ratings(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
     df.loc[is_empty, "jp_rating"] = 1
-    print(f"  Rating overrides: {is_empty.sum()} empty responses → jp_rating=1")
     return df
 
 
@@ -68,20 +67,14 @@ def load_or_cache(json_path: str, cache_name: str) -> pd.DataFrame:
     csv_cache = os.path.join(parent, cache_name)
 
     if os.path.exists(csv_cache):
-        print(f"Loading cached {csv_cache}")
         return pd.read_csv(csv_cache)
 
     if not os.path.exists(json_path):
-        print(f"Not found: {json_path}, returning empty DataFrame")
         return pd.DataFrame()
 
-    print(f"Loading {json_path}")
     items = load_jsonl_or_json(json_path)
     df = pd.DataFrame(items)
-
-    before = len(df)
     df = df.drop_duplicates()
-    print(f"Loaded {before} rows, {len(df)} after deduplication")
 
     df.to_csv(csv_cache, index=False)
     return df
@@ -120,10 +113,8 @@ def _compute_and_write(
 
     # Override jp_rating=1 for all empty post-intervention responses
     if not jp_df.empty:
-        print("Applying empty response rating overrides...")
         jp_df = fix_empty_response_ratings(jp_df)
 
-    print("Merging dataframes on metadata columns...")
     if not jp_df.empty:
         available_keys = [c for c in ROW_KEY_COLS if c in jp_df.columns]
         merged = jp_df[available_keys + ["jp_rating"]].copy()
@@ -168,13 +159,11 @@ def _compute_and_write(
     os.makedirs(output_dir, exist_ok=True)
     ratings_path = os.path.join(output_dir, "merged_ratings.csv")
     merged.to_csv(ratings_path, index=False)
-    print(f"Saved {ratings_path} ({len(merged)} rows)")
 
-    print("Computing per-condition accuracies...")
     available_group = [c for c in GROUP_COLS if c in merged.columns]
     grouped = merged.groupby(available_group)
 
-    for _, group in tqdm(grouped):
+    for _, group in grouped:
         row = group.iloc[0]
         base_dir = os.path.join(
             output_dir,
@@ -187,6 +176,7 @@ def _compute_and_write(
         os.makedirs(base_dir, exist_ok=True)
         fn_base = (
             f"{row['N']}_{row['REPS']}_{row['STEERING_METHOD']}_topk_{row['topk']}"
+            f"_{row['STEERING_TYPE']}_{row['STEERING_POS']}"
         )
 
         if has_jp:
@@ -220,7 +210,6 @@ def _compute_and_write(
             with open(path_rf, "w") as f:
                 json.dump({"rf_pass_rate": acc_rf}, f, indent=2)
 
-    print("Done.")
 
 
 def compute_accuracy_for_workdir(

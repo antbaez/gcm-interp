@@ -97,11 +97,13 @@ def compute_accuracy_for_file(
         print(f"  SKIP (filename mismatch): {filename}")
         return None
 
-    N     = m.group("N")
-    reps  = m.group("REPS")
-    steer = m.group("STEERING_METHOD")
-    topk  = m.group("topk")
-    fn_base = f"{N}_{reps}_{steer}_topk_{topk}"
+    N            = m.group("N")
+    reps         = m.group("REPS")
+    steer        = m.group("STEERING_METHOD")
+    topk         = m.group("topk")
+    steering_pos = m.group("STEERING_POS")
+    steering_type = m.group("STEERING_TYPE")
+    fn_base = f"{N}_{reps}_{steer}_topk_{topk}_{steering_type}_{steering_pos}"
 
     acc_dir = (
         output_dir / model_id / f"from_{source}_to_{base}"

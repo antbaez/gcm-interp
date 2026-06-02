@@ -90,7 +90,7 @@ def accuracy_paths(meta: dict) -> tuple[Path, Path]:
         / meta["EVAL_SUB_DIR"]
         / meta["STEER_SUB_DIR"]
     )
-    fn_base = f"{meta['N']}_{meta['REPS']}_{meta['STEERING_METHOD']}_topk_{meta['topk']}"
+    fn_base = f"{meta['N']}_{meta['REPS']}_{meta['STEERING_METHOD']}_topk_{meta['topk']}_{meta['STEERING_TYPE']}_{meta['STEERING_POS']}"
     wo_rf = base_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
     w_rf  = base_dir / f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"
     return wo_rf, w_rf
@@ -180,7 +180,6 @@ def phase1_prepare(
 
         rf_csv = workdir / "relevance_fluency_prompts.csv"
         if not rf_csv.exists():
-            print(f"  Building fluency+relevance prompts: {name}")
             rf_df = build_fluency_prompts(df.copy(), tokenizer)
             rf_df = build_relevance_prompts(rf_df, tokenizer)
             rf_df.to_csv(rf_csv, index=False)
@@ -188,7 +187,6 @@ def phase1_prepare(
         if not skip_judge:
             jp_csv = workdir / "judge_prompts.csv"
             if not jp_csv.exists():
-                print(f"  Building judge prompts: {name}")
                 try:
                     jp_df = build_judge_prompts(df.copy(), tokenizer)
                     jp_df.to_csv(jp_csv, index=False)
@@ -265,14 +263,14 @@ def _evaluate_all_workdirs_batched(
 
         # Single large batched inference
         outputs = []
-        if openai_client is not None:
-            from evaluator import generate_in_batches_openai
-            for batch in generate_in_batches_openai(openai_client, openai_model, prompts, batch_size):
-                outputs.extend(batch)
-        else:
-            sp = get_sampling_params()
-            for batch in generate_in_batches(llm, prompts, sp, batch_size):
-                outputs.extend(batch)
+        # if openai_client is not None:
+        #     from evaluator import generate_in_batches_openai
+        #     for batch in generate_in_batches_openai(openai_client, openai_model, prompts, batch_size):
+        #         outputs.extend(batch)
+        # else:
+        sp = get_sampling_params()
+        for batch in generate_in_batches(llm, prompts, sp, batch_size):
+            outputs.extend(batch)
 
         # Group results back by workdir and write JSONL
         from collections import defaultdict
@@ -322,17 +320,17 @@ def phase2_evaluate(
 
     # --- Long-eval: load model once, batch all prompts across workdirs ---
     if long_items:
-        if openai_model:
-            print(f"\nPhase 2b: OpenAI judge ({openai_model}) for {len(long_items)} long-eval files")
-            from openai import OpenAI
-            client = OpenAI()
-            _evaluate_all_workdirs_batched(None, long_items, batch_size, skip_judge,
-                                           openai_client=client, openai_model=openai_model)
-        else:
-            print(f"\nPhase 2b: Judge model evaluation for {len(long_items)} long-eval files")
-            from evaluator import make_llm
-            llm = make_llm()
-            _evaluate_all_workdirs_batched(llm, long_items, batch_size, skip_judge)
+        # if openai_model:
+        #     print(f"\nPhase 2b: OpenAI judge ({openai_model}) for {len(long_items)} long-eval files")
+        #     from openai import OpenAI
+        #     client = OpenAI()
+        #     _evaluate_all_workdirs_batched(None, long_items, batch_size, skip_judge,
+        #                                    openai_client=client, openai_model=openai_model)
+        # else:
+        print(f"\nPhase 2b: Judge model evaluation for {len(long_items)} long-eval files")
+        from evaluator import make_llm
+        llm = make_llm(max_num_seqs=batch_size)
+        _evaluate_all_workdirs_batched(llm, long_items, batch_size, skip_judge)
 
     return long_items
 
@@ -345,7 +343,6 @@ def phase3_accuracies(long_items: list[tuple[Path, dict, str]], skip_judge: bool
     """Compute per-condition accuracies for all long-eval workdirs."""
     print(f"\nPhase 3: Computing accuracies for {len(long_items)} long-eval workdirs")
     for wd, _meta, _gp in long_items:
-        print(f"  {wd.name}")
         compute_accuracy_for_workdir(wd, ACCURACY_DIR, skip_judge)
 
 
@@ -391,9 +388,9 @@ def parse_args():
     p.add_argument("--force",        action="store_true",
                    help="Re-process even if accuracy files exist")
     p.add_argument("--batch_size",   type=int, default=16)
-    p.add_argument("--openai_model", type=str, default=None,
-                   help="Use OpenAI API instead of local vLLM (e.g. gpt-4o-mini). "
-                        "Requires OPENAI_API_KEY env var.")
+    # p.add_argument("--openai_model", type=str, default=None,
+    #                help="Use OpenAI API instead of local vLLM (e.g. gpt-4o-mini). "
+    #                     "Requires OPENAI_API_KEY env var.")
     p.add_argument("--plots",        action="store_true")
     p.add_argument("--plots_args",   nargs="*", default=None)
     p.add_argument("--runs_dir",     default=str(RUNS_DIR))
@@ -417,7 +414,7 @@ def main():
     )
     print(f"Found {len(gen_files)} gen files:")
     for gf in sorted(gen_files):
-        print(f"  {gf}")
+        print(f"  {Path(gf).name}")
     print(f"\nAccuracy dir: {ACCURACY_DIR}\n")
 
     # Phase 1: convert + build prompts (fast, no GPU)
@@ -433,8 +430,7 @@ def main():
         print("\n" + "=" * 60)
         print("  PHASE 2: Evaluate")
         print("=" * 60)
-        long_items = phase2_evaluate(prepared, args.data_dir, args.batch_size, args.skip_judge,
-                                     openai_model=args.openai_model)
+        long_items = phase2_evaluate(prepared, args.data_dir, args.batch_size, args.skip_judge)
 
         # Phase 3: compute per-condition accuracies for long-eval
         if long_items:

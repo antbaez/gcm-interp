@@ -19,7 +19,9 @@ from compute_accuracies import extract_first_int
 SEED = 42
 
 
-def make_llm(model_name: str = JUDGE_MODEL_NAME):
+def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64):
+    import os
+    os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
     from vllm import LLM
     num_gpus = torch.cuda.device_count()
     if num_gpus == 0:
@@ -32,7 +34,7 @@ def make_llm(model_name: str = JUDGE_MODEL_NAME):
         tensor_parallel_size=1,
         pipeline_parallel_size=1,
         dtype="auto",
-        max_num_seqs=64,
+        max_num_seqs=max_num_seqs,
         max_model_len=4096,
         seed=SEED,
     )
@@ -60,7 +62,7 @@ def generate_in_batches(llm, prompts, sampling_params, batch_size):
     with tqdm(total=len(prompts), desc="vLLM judge", unit="prompt") as pbar:
         for i in range(0, len(prompts), batch_size):
             batch = prompts[i : i + batch_size]
-            results = llm.generate(batch, sampling_params)
+            results = llm.generate(batch, sampling_params, use_tqdm=False)
             completed += len(batch)
             pbar.update(len(batch))
             yield [r.outputs[0].text for r in results]
