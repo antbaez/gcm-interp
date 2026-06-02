@@ -19,6 +19,7 @@ args.add_argument('--num_samples', type=int, default=500)
 args.add_argument('--device', type=str, default='cuda:0')
 args.add_argument('--gen_data', action='store_true', default=False)
 args.add_argument('--batch_size', type=int, default=4)
+args.add_argument('--max_tokens', type=int, default=128)
 
 config = args.parse_args()
 print('####### CONFIG ', config)
@@ -69,7 +70,6 @@ def generate_response(inputs, model, tokenizer, max_new_tokens=512):
         max_new_tokens=max_new_tokens,
         pad_token_id=tokenizer.eos_token_id,
         do_sample=False,
-        temperature=0.0,
     )
     decoded = tokenizer.batch_decode(outputs, skip_special_tokens=True)
     # Strip everything up to and including the assistant marker to isolate the response
@@ -85,6 +85,15 @@ def read_jsonl(data_type, queries_path=queries_path):
             questions.append(data)
     return questions
 
+def extract_messages(d):
+    # New format: {"id": ..., "prompt": [{"role": ..., "content": ...}]}
+    if 'prompt' in d:
+        return d['prompt']
+    # Old format: {"question": ..., "system": ...}
+    if 'system' in d:
+        return [{"role": "system", "content": d['system']}, {"role": "user", "content": d['question']}]
+    return [{"role": "user", "content": d['question']}]
+
 def check_differing_tokens():
     # Validates that each source/base prompt pair differs by exactly one token (the contrastive word swap)
     source_prompts = []
@@ -92,16 +101,11 @@ def check_differing_tokens():
     for data_type in [source, base]:
         data = read_jsonl(data_type)
         for d in data:
+            msgs = extract_messages(d)
             if data_type == source:
-                if 'system' in d:
-                    source_prompts.append(tokenizer.apply_chat_template([{"role": "system", "content": d['system']}, {"role": "user", "content": d['question']}], tokenize=False, add_generation_prompt=True))
-                else:
-                    source_prompts.append(tokenizer.apply_chat_template([{"role": "user", "content": d['question']}], tokenize=False, add_generation_prompt=True))
+                source_prompts.append(tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True))
             else:
-                if 'system' in d:
-                    base_prompts.append(tokenizer.apply_chat_template([{"role": "system", "content": d['system']}, {"role": "user", "content": d['question']}], tokenize=False, add_generation_prompt=True))
-                else:
-                    base_prompts.append(tokenizer.apply_chat_template([{"role": "user", "content": d['question']}], tokenize=False, add_generation_prompt=True))
+                base_prompts.append(tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True))
 
 
     for src, bas in zip(source_prompts, base_prompts):
@@ -145,7 +149,6 @@ if config.gen_data:
         other = source if gen == base else base
         op_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{gen}-desired-all.jsonl"
         os.makedirs(os.path.dirname(op_file), exist_ok=True)
-        print(f'Writing responses to {op_file}')
         file = open(op_file, 'w')
         random.seed(42)
 
@@ -165,10 +168,7 @@ if config.gen_data:
             for d in data:
                 if "desired" not in questions[data_type]:
                     questions[data_type]["desired"] = []
-                if 'system' in d:
-                    questions[data_type]["desired"].append([{"role": "system", "content": d['system']}, {"role": "user", "content": d['question']}])
-                else:
-                    questions[data_type]["desired"].append([{"role": "user", "content": d['question']}])
+                questions[data_type]["desired"].append(extract_messages(d))
             originals[data_type] = {"desired": ""}
 
         qs = questions[gen]["desired"]
@@ -176,7 +176,7 @@ if config.gen_data:
 
         for i in tqdm(range(0, config.num_samples, batch_size)):
             batch_qs = qs[i:i + batch_size]
-            rs = generate_response(batch_qs, model, tokenizer, max_new_tokens=128)
+            rs = generate_response(batch_qs, model, tokenizer, max_new_tokens=config.max_tokens)
 
             for j, r in enumerate(rs):
                 q_index = i + j
@@ -191,7 +191,7 @@ if config.gen_data:
                 file.flush()
 
         file.close()
-
+        print(op_file)
 
         # Maps each task to the single-token string swap that flips source↔base in the prompt
         replacements = {
@@ -202,6 +202,10 @@ if config.gen_data:
             'hate': {
                 'replace': f'I {gen} this haiku',
                 'with': f'I {other} this haiku'
+            },
+            'paragraph': {
+                'replace': 'a long summary',
+                'with': 'a short summary'
             },
             'harmful': {
                 'replace': f'',
@@ -240,15 +244,21 @@ if config.gen_data:
 
         file.close()
 
-    # Create test file from first 50 entries of base-desired, stripping the assistant turn
-    base_desired_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{base}-desired-all.jsonl"
+    # Create test file by generating responses for prompts in the queries test file
     test_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{base}-test.jsonl"
-    with open(base_desired_file, 'r') as f_in, open(test_file, 'w') as f_out:
-        for line in list(f_in)[:50]:
-            entry = json.loads(line)
-            entry['prompt'] = [m for m in entry['prompt'] if m['role'] != 'assistant']
-            f_out.write(json.dumps(entry) + '\n')
-    print(f"Wrote test file to {test_file}")
+    test_questions = read_jsonl(f"{base}-test")
+    test_qs = [extract_messages(d) for d in test_questions]
+    with open(test_file, 'w') as f_out:
+        for i in tqdm(range(0, len(test_qs), batch_size)):
+            batch_qs = test_qs[i:i + batch_size]
+            rs = generate_response(batch_qs, model, tokenizer, max_new_tokens=config.max_tokens)
+            for j, r in enumerate(rs):
+                q_index = i + j
+                f_out.write(json.dumps({
+                    "id": test_questions[q_index].get('id', q_index),
+                    "prompt": test_qs[q_index] + [{"role": "assistant", "content": r}]
+                }) + '\n')
+    print(test_file)
 
     del model
     del tokenizer
