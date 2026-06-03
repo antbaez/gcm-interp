@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Usage: ./run_steering.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|all> [--device <cuda:0>]
+# Usage: ./run_steering.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ALL_MODELS=("olmo" "qwen" "solar")
-ALL_DATASETS=("harmful" "sycophancy" "verse")
+ALL_DATASETS=("harmful" "sycophancy" "verse" "paragraph")
 
 # Expand model tag
 if [ "$MODEL_TAG" = "all" ]; then
@@ -33,18 +33,19 @@ if [ "$DATASET_TAG" = "all" ]; then
 elif [[ " ${ALL_DATASETS[*]} " == *" $DATASET_TAG "* ]]; then
     DATASETS=("$DATASET_TAG")
 else
-    echo "Error: --dataset must be one of: harmful, sycophancy, verse, all"; exit 1
+    echo "Error: --dataset must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
 fi
 
 PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during ATP patching
 PATCH_ALGO="atp"
 SEED=42
-STEERING_BATCH_SIZE="5"  # number of prompts used per batch when computing the steering vector
-MAX_NEW_TOKENS=64      # max tokens the model generates per prompt during eval
-STEERING_N="1 2 5 10"
-STEERING_N="1 2"
-TOPK_VALS="0.01 0.05 0.1 0.5"
-TOPK_VALS="0.5 0.1"
+MAX_NEW_TOKENS=128      # max tokens the model generates per prompt during eval
+
+STEERING_BATCH_SIZE=5  # number of prompts used per batch when computing the steering vector
+STEERING_N="1 5 10"
+STEERING_N="1"
+TOPK_VALS="0.01 0.05 0.1"
+TOPK_VALS="0.01"
 
 EVAL_MODEL=true
 STEERING=true
@@ -82,6 +83,7 @@ run_experiments_for_model() {
             harmful)    D_SOURCE="harmful-long";    D_BASE="harmless" ;;
             sycophancy) D_SOURCE="sycophancy-long"; D_BASE="non-sycophantic" ;;
             verse)      D_SOURCE="verse-long";      D_BASE="prose" ;;
+            paragraph)  D_SOURCE="paragraph-long";  D_BASE="sentence" ;;
         esac
         local SA="./data/${MODEL_ID##*/}/${D_SOURCE}/${D_SOURCE}-desired-all.jsonl"
         local SS="./data/${MODEL_ID##*/}/${D_SOURCE}/${D_BASE}-desired-all.jsonl"

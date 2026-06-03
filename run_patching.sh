@@ -1,19 +1,21 @@
 #!/bin/bash
 
-# Usage: ./run_patching.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|all>
+# Usage: ./run_patching.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]
 MODEL_TAG=""
 DATASET_TAG=""
+DEVICE="cuda:0"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --model)   MODEL_TAG="$2";   shift 2 ;;
         --dataset) DATASET_TAG="$2"; shift 2 ;;
+        --device)  DEVICE="$2";      shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
 ALL_MODELS=("olmo" "qwen" "solar")
-ALL_DATASETS=("harmful" "sycophancy" "verse")
+ALL_DATASETS=("harmful" "sycophancy" "verse" "paragraph")
 
 # Expand model tag
 if [ "$MODEL_TAG" = "all" ]; then
@@ -30,10 +32,9 @@ if [ "$DATASET_TAG" = "all" ]; then
 elif [[ " ${ALL_DATASETS[*]} " == *" $DATASET_TAG "* ]]; then
     DATASETS=("$DATASET_TAG")
 else
-    echo "Error: --dataset must be one of: harmful, sycophancy, verse, all"; exit 1
+    echo "Error: --dataset must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
 fi
 
-DEVICE="cuda:0"
 PATCHING_BATCH_SIZE=100
 PATCH_ALGO="atp"
 SEED=42
@@ -52,6 +53,7 @@ run_patching() {
         harmful)    SOURCE="harmful-long";    BASE="harmless" ;;
         sycophancy) SOURCE="sycophancy-long"; BASE="non-sycophantic" ;;
         verse)      SOURCE="verse-long";      BASE="prose" ;;
+        paragraph)  SOURCE="paragraph-long";  BASE="sentence" ;;
     esac
 
     STEERING_ADD="./data/${MODEL_ID##*/}/${SOURCE}/${SOURCE}-desired-all.jsonl"
