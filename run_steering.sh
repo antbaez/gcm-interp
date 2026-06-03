@@ -1,14 +1,16 @@
 #!/bin/bash
 set -e
 
-# Usage: ./run_steering.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|all>
+# Usage: ./run_steering.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|all> [--device <cuda:0>]
 MODEL_TAG=""
 DATASET_TAG=""
+DEVICE="cuda:0"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --model)   MODEL_TAG="$2";   shift 2 ;;
         --dataset) DATASET_TAG="$2"; shift 2 ;;
+        --device)  DEVICE="$2";      shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -34,7 +36,6 @@ else
     echo "Error: --dataset must be one of: harmful, sycophancy, verse, all"; exit 1
 fi
 
-DEVICE="cuda:0"
 PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during ATP patching
 PATCH_ALGO="atp"
 SEED=42

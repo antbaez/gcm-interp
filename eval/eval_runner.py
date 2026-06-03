@@ -329,7 +329,7 @@ def run_eval_transfer(config, data_handler, model_handler, batch_handler, patchi
             print(f"Skipping generation as all relevant files exist.")
             return
         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=256, normalize=False, steering_pos=config.args.steering_pos)
+        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=256, normalize=False, steering_pos=config.args.steering_pos, steering_type=config.args.steering_type)
         with model.generate(gen_qs_toks, do_sample=False, max_new_tokens=256) as _:
             original_outputs = model.generator.output.save()
         if config.args.eval_transfer:

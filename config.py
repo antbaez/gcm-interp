@@ -22,7 +22,7 @@ class Config:
 
     def parse_arguments(self):
         parser = argparse.ArgumentParser(description='Patching')
-        parser.add_argument('-d', '--device', type=str, default='cuda:1', required=True, help='Device to run the model on')
+        parser.add_argument('-d', '--device', type=str, default='cuda:0', help='Device to run the model on')
         parser.add_argument('-model_id', '--model_id', type=str, required=True, help='Model ID for the model')
         parser.add_argument('-batch_size', '--batch_size', type=int, default=8, required=True, help='Batch size for patching')
         parser.add_argument('-seed', '--seed', type=int, default=42, help='Random seed for reproducibility')

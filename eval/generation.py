@@ -15,7 +15,9 @@ def select_gen_qs_toks(config, batch_handler):
         return batch_handler.eval_transfer['queries']
     else:
         raise ValueError("Either eval_train or eval_test must be True.")
-def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_pos='last-token', steering_type='add'):
+def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_pos='last-token', steering_type=None):
+    if steering_type is None:
+        raise ValueError("steering_type must be specified: 'last-token', 'mean', or 'positional'")
     if steering_type == 'positional' and steering_pos == 'last-token':
         raise ValueError("steering_type='positional' is incompatible with steering_pos='last-token': positional steering requires all token positions.")
     patch_activations = patch_activations['desired'].to(model.device)
