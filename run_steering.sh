@@ -39,15 +39,12 @@ fi
 PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during ATP patching
 PATCH_ALGO="atp"
 SEED=42
-MAX_NEW_TOKENS=512      # max tokens the model generates per prompt during eval
-MAX_NEW_TOKENS=64      
+MAX_NEW_TOKENS=128      # max tokens the model generates per prompt during eval      
 
-VECTOR_CREATION_BATCH_SIZE=50  # number of prompts per batch when computing the steering vector
+VECTOR_CREATION_BATCH_SIZE=5  # number of prompts per batch when computing the steering vector
 STEERING_BATCH_SIZE=5  # number of prompts per batch during steered generation
-STEERING_N="1 2 4 6 8 10"
-STEERING_N="1 5"
-TOPK_VALS="0.01 0.03 0.05 0.07 0.09 0.1 0.5 1.0"
-TOPK_VALS="0.01 0.05"
+STEERING_N="1 2 5 7 10"
+TOPK_VALS="0.01 0.05 0.1 0.5 1.0"
 
 EVAL_MODEL=true
 STEERING=true
