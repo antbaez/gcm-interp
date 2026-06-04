@@ -50,13 +50,16 @@ def _suppress_fd_output():
             os.close(saved_stderr_fd)
 
 
-def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64):
+def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64, device: int | None = None):
     os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
+    if device is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
     from vllm import LLM
     num_gpus = torch.cuda.device_count()
     if num_gpus == 0:
         raise RuntimeError("No GPUs detected!")
-    print(f"Detected {num_gpus} GPU(s). Loading judge model: {model_name}")
+    gpu_info = f"GPU {device}" if device is not None else f"{num_gpus} GPU(s)"
+    print(f"Using {gpu_info}. Loading judge model: {model_name}")
 
     with _suppress_fd_output():
         llm = LLM(

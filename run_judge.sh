@@ -1,14 +1,80 @@
 #!/bin/bash
+set -e
+
+# Usage: ./run_judge.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]
+MODEL_TAG=""
+DATASET_TAG=""
+DEVICE="cuda:0"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --model)   MODEL_TAG="$2";   shift 2 ;;
+        --dataset) DATASET_TAG="$2"; shift 2 ;;
+        --device)  DEVICE="$2";      shift 2 ;;
+        *) echo "Unknown argument: $1"; exit 1 ;;
+    esac
+done
+
+if [ -z "$MODEL_TAG" ] || [ -z "$DATASET_TAG" ]; then
+    echo "Usage: ./run_judge.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]"
+    exit 1
+fi
+
+ALL_MODELS=("olmo" "qwen" "solar")
+ALL_DATASETS=("harmful" "sycophancy" "verse" "paragraph")
+
+# Expand model tag
+if [ "$MODEL_TAG" = "all" ]; then
+    MODELS=("${ALL_MODELS[@]}")
+elif [[ " ${ALL_MODELS[*]} " == *" $MODEL_TAG "* ]]; then
+    MODELS=("$MODEL_TAG")
+else
+    echo "Error: --model must be one of: olmo, qwen, solar, all"; exit 1
+fi
+
+# Expand dataset tag
+if [ "$DATASET_TAG" = "all" ]; then
+    DATASETS=("${ALL_DATASETS[@]}")
+elif [[ " ${ALL_DATASETS[*]} " == *" $DATASET_TAG "* ]]; then
+    DATASETS=("$DATASET_TAG")
+else
+    echo "Error: --dataset must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
+fi
+
+# Strip "cuda:" prefix for run_judge.py --device (expects an int)
+DEVICE_IDX="${DEVICE#cuda:}"
 
 BATCH_SIZE=64
 EVAL_MODE=eval_train   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
-cd /root/gcm-interp/judge-evals && python run_judge.py \
-    --all \
-    --runs_dir "/root/gcm-interp/results" \
-    --data_dir "/root/gcm-interp/data" \
-    --eval_mode "$EVAL_MODE" \
-    --batch_size "$BATCH_SIZE"
+for M_TAG in "${MODELS[@]}"; do
+    case "$M_TAG" in
+        olmo)  MODEL_NAME="OLMo-2-1124-13B-DPO" ;;
+        qwen)  MODEL_NAME="Qwen1.5-14B-Chat" ;;
+        solar) MODEL_NAME="SOLAR-10.7B-Instruct-v1.0" ;;
+    esac
+
+    for D_TAG in "${DATASETS[@]}"; do
+        case "$D_TAG" in
+            harmful)    SOURCE="harmful-long";    BASE="harmless" ;;
+            sycophancy) SOURCE="sycophancy-long"; BASE="non-sycophantic" ;;
+            verse)      SOURCE="verse-long";      BASE="prose" ;;
+            paragraph)  SOURCE="paragraph-long";  BASE="sentence" ;;
+        esac
+
+        echo ""
+        echo "[$M_TAG / $D_TAG] model=$MODEL_NAME  source=$SOURCE  base=$BASE  device=$DEVICE"
+        cd /root/gcm-interp/judge-evals && python run_judge.py \
+            --model_name "$MODEL_NAME" \
+            --source "$SOURCE" \
+            --base "$BASE" \
+            --runs_dir "/root/gcm-interp/results" \
+            --data_dir "/root/gcm-interp/data" \
+            --eval_mode "$EVAL_MODE" \
+            --batch_size "$BATCH_SIZE" \
+            --device "$DEVICE_IDX"
+    done
+done
 
 echo ""
 echo "Summarizing results..."
