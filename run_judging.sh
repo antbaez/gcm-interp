@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
-# Usage: ./run_judge.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+JUDGE_DIR="$SCRIPT_DIR/judge-evals"
+
+# Usage: ./run_judging.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
@@ -45,7 +48,7 @@ fi
 DEVICE_IDX="${DEVICE#cuda:}"
 
 BATCH_SIZE=64
-EVAL_MODE=eval_train   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
+EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
 for M_TAG in "${MODELS[@]}"; do
     case "$M_TAG" in
@@ -64,12 +67,12 @@ for M_TAG in "${MODELS[@]}"; do
 
         echo ""
         echo "[$M_TAG / $D_TAG] model=$MODEL_NAME  source=$SOURCE  base=$BASE  device=$DEVICE"
-        cd /root/gcm-interp/judge-evals && python run_judge.py \
+        cd "$JUDGE_DIR" && python run_judge.py \
             --model_name "$MODEL_NAME" \
             --source "$SOURCE" \
             --base "$BASE" \
-            --runs_dir "/root/gcm-interp/results" \
-            --data_dir "/root/gcm-interp/data" \
+            --runs_dir "$SCRIPT_DIR/results" \
+            --data_dir "$SCRIPT_DIR/data" \
             --eval_mode "$EVAL_MODE" \
             --batch_size "$BATCH_SIZE" \
             --device "$DEVICE_IDX"
@@ -78,4 +81,4 @@ done
 
 echo ""
 echo "Summarizing results..."
-python /root/gcm-interp/judge-evals/summarize_results.py
+python "$JUDGE_DIR/summarize_results.py"

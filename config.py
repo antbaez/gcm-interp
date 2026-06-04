@@ -103,15 +103,7 @@ class Config:
     
     def set_output_prefix(self):
         model = self.args.model_id.split('/')[-1]
-        eval_test_dir = self.args.eval_test.split('/')[-2] if isinstance(self.args.eval_test, str) else getattr(self.args, 'test_dataset', '')
-        steering_dir = self.args.steering_add_path.split('/')[-2] if self.args.steering_add_path else ''
-        if self.args.patch_model:
-            self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}"
-        elif self.args.eval_model:
-            self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}/{eval_test_dir}_eval/{steering_dir}_steer"
-        # old: both were `if`, so eval always overwrote patch prefix when both flags were true
-        # if self.args.eval_model:
-        #     self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}/{eval_test_dir}_eval/{steering_dir}_steer"
+        self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/{self.args.patch_algo}"
         print(f"Saving to: {self.output_prefix}")
         return self.output_prefix
     

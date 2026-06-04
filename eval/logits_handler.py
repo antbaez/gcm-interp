@@ -8,7 +8,7 @@ import random
 
 def load_logits(config, data_handler, which_patch, model_handler):
     # patch files are always saved under the patch prefix (no _eval/..._steer suffix)
-    patch_prefix = '/'.join(config.get_output_prefix().split('/')[:-2]) if not config.args.patch_model else config.get_output_prefix()
+    patch_prefix = config.get_output_prefix()
     logits_path = f"{patch_prefix}/heads/{which_patch}"
     # print('Loading logits from:', logits_path)
     all_logits = None

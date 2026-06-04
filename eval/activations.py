@@ -18,7 +18,7 @@ def mean_ablations_cache(model, data_handler, batch_size=10, key='desired'):
 
 def steering_reps_cache(model, data_handler, batch_size=10, mean=True):
     config = data_handler.config
-    patch_prefix = '/'.join(config.get_output_prefix().split('/')[:-2]) if not config.args.patch_model else config.get_output_prefix()
+    patch_prefix = config.get_output_prefix()
     cache_path = f"{patch_prefix}/steering_cache.pt"
 
     if os.path.exists(cache_path):
