@@ -82,11 +82,21 @@ def extract_path_metadata(path: str) -> dict:
     }
 
 
-def load_test_queries(data_dir: str, model_id: str, source: str, base: str) -> list[str]:
-    """Load the user-turn text from the test JSONL."""
-    logits_path = f"{data_dir}/{model_id}/{source}/{base}-test.jsonl"
+def load_test_queries(data_dir: str, model_id: str, source: str, base: str,
+                      eval_mode: str = "eval_test") -> list[str]:
+    """Load the user-turn text from the JSONL the run actually generated on.
+
+    eval_train -> {base}-desired-all.jsonl (the prompts used when eval_test=false)
+    eval_test  -> {base}-test.jsonl        (the held-out test prompts)
+    """
+    if eval_mode == "eval_train":
+        queries_path = f"{data_dir}/{model_id}/{source}/{base}-desired-all.jsonl"
+    elif eval_mode == "eval_test":
+        queries_path = f"{data_dir}/{model_id}/{source}/{base}-test.jsonl"
+    else:
+        raise ValueError(f"Unknown eval_mode: {eval_mode!r} (expected 'eval_train' or 'eval_test')")
     queries = []
-    with open(logits_path) as f:
+    with open(queries_path) as f:
         for line in f:
             obj = json.loads(line)
             user_content = next(
@@ -152,7 +162,8 @@ def discover_gen_files(
     return result
 
 
-def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
+def gen_to_csv(gen_path: str, data_dir: str, output_path: str,
+               eval_mode: str = "eval_test"):
     """Convert a single gen.json file to a CSV with metadata columns."""
     try:
         meta = extract_path_metadata(gen_path)
@@ -166,7 +177,7 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
     with open(gen_path) as f:
         items = json.load(f)
 
-    test_queries = load_test_queries(data_dir, model_id, source, base)
+    test_queries = load_test_queries(data_dir, model_id, source, base, eval_mode)
 
     old_key = f"old_{base}"
     edit_key = f"edit_{base}"
@@ -188,7 +199,6 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
             "N": meta["N"],
             "REPS": meta["REPS"],
             "STEERING_METHOD": meta["STEERING_METHOD"],
-            "STEERING_POS": meta["STEERING_POS"],
             "STEERING_TYPE": meta["STEERING_TYPE"],
             "topk": meta["topk"],
             "TEST_FILE": meta["TEST_FILE"],
@@ -233,6 +243,10 @@ def main():
                         help="Filter by steer subdirectory (e.g. sycophancy-long_steer)")
     parser.add_argument("--skip_existing", action="store_true",
                         help="Skip gen.json files whose CSV already exists")
+    parser.add_argument("--eval_mode", choices=["eval_train", "eval_test"],
+                        default="eval_test",
+                        help="Which JSONL backs data_path_query: eval_train -> "
+                             "{base}-desired-all.jsonl, eval_test -> {base}-test.jsonl")
     args = parser.parse_args()
 
     data_dir = args.data_dir
@@ -242,7 +256,7 @@ def main():
         if args.skip_existing and Path(output).exists():
             print(f"Skipping {args.input} (CSV already exists)")
             return
-        gen_to_csv(args.input, data_dir, output)
+        gen_to_csv(args.input, data_dir, output, args.eval_mode)
         return
 
     # Discovery mode: convert each matching gen.json to its own CSV
@@ -261,7 +275,7 @@ def main():
             skipped += 1
             continue
         try:
-            gen_to_csv(gpath, data_dir, output)
+            gen_to_csv(gpath, data_dir, output, args.eval_mode)
             processed += 1
         except (ValueError, FileNotFoundError) as e:
             print(f"  ERROR processing {gpath}: {e}")

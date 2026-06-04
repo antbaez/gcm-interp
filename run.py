@@ -22,8 +22,7 @@ def combo_outputs_exist(config, topk_vals, n_vals):
     for N in n_vals:
         for topk in topk_vals:
             gen_file = (f"{prefix}/eval/{N}_{reps_type}_{ablation}_{topk}_"
-                        f"{config.args.test_dataset}_{config.args.steering_type}_"
-                        f"{config.args.steering_pos}_gen.txt")
+                        f"{config.args.test_dataset}_{config.args.steering_type}_gen.txt")
             if not os.path.exists(gen_file) or not os.path.exists(gen_file.replace('.txt', '.json')):
                 return False
     return True
@@ -59,13 +58,12 @@ def run_dataset(config, model_handler):
         elif config.args.steering:
             if config.args.steering_combos:
                 combos = json.loads(config.args.steering_combos)
-                for steering_type, steering_pos in combos:
+                for steering_type in combos:
                     config.args.steering_type = steering_type
-                    config.args.steering_pos = steering_pos
                     if combo_outputs_exist(config, config.args.topk_vals, config.args.steering_n):
-                        print(f"[skip] steering_type={steering_type} steering_pos={steering_pos} — all outputs cached")
+                        print(f"[skip] steering_type={steering_type} — all outputs cached")
                         continue
-                    print(f"\nRunning combo: steering_type={steering_type} steering_pos={steering_pos}")
+                    print(f"\nRunning combo: steering_type={steering_type}")
                     run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads',
                              topk_vals=config.args.topk_vals, N=config.args.steering_n)
                     gc.collect()

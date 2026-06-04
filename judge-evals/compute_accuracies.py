@@ -176,7 +176,7 @@ def _compute_and_write(
         os.makedirs(base_dir, exist_ok=True)
         fn_base = (
             f"{row['N']}_{row['REPS']}_{row['STEERING_METHOD']}_topk_{row['topk']}"
-            f"_{row['STEERING_TYPE']}_{row['STEERING_POS']}"
+            f"_{row['STEERING_TYPE']}"
         )
 
         if has_jp:

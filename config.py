@@ -42,12 +42,12 @@ class Config:
         parser.add_argument('-steering_sub_path', '--steering_sub_path', type=str, help='steering reps to subtract')
         parser.add_argument('-dataset_list', '--dataset_list', type=str, default=None,
             help='JSON array of dataset specs: [{"source":..,"base":..,"steering_add":..,"steering_sub":..}]')
-        parser.add_argument('-steering_batch_size', '--steering_batch_size', type=int, default=9, help='batch size for computing steering vectors')
+        parser.add_argument('-vector_creation_batch_size', '--vector_creation_batch_size', type=int, default=5, help='batch size for computing the steering vector')
+        parser.add_argument('-steering_batch_size', '--steering_batch_size', type=int, default=9, help='batch size for steered generation')
         parser.add_argument('-steering_n', '--steering_n', type=int, nargs='+', default=[1, 2, 4, 5, 6, 8, 10], help='steering strength multipliers to sweep')
         parser.add_argument('-topk_vals', '--topk_vals', type=float, nargs='+', default=[1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5], help='top-k fractions of heads to sweep')
-        parser.add_argument('-steering_pos', '--steering_pos', type=str, default='last-token', choices=['last-token', 'all-tokens'], help='which prompt token positions to apply steering to')
         parser.add_argument('-steering_type', '--steering_type', type=str, default='mean', choices=['last-token', 'mean', 'positional'], help='how to compute the steering vector from patch_activations')
-        parser.add_argument('-steering_combos', '--steering_combos', type=str, default=None, help='JSON array of [[steering_type, steering_pos], ...] pairs to run sequentially in one process')
+        parser.add_argument('-steering_combos', '--steering_combos', type=str, default=None, help='JSON array of [steering_type, ...] strings to run sequentially in one process')
 
         args = parser.parse_args()
         if isinstance(args.eval_test, str) and args.eval_test.lower() == 'false':
@@ -80,8 +80,6 @@ class Config:
             if getattr(args, 'test_dataset', None) and 'single' in args.test_dataset and args.max_new_tokens == 256:
                 args.max_new_tokens = 3
             
-            if args.steering_type == 'positional' and args.steering_pos == 'last-token':
-                parser.error("steering_type='positional' is incompatible with steering_pos='last_token'")
 
         return args
 

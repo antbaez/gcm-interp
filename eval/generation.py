@@ -15,15 +15,12 @@ def select_gen_qs_toks(config, batch_handler):
         return batch_handler.eval_transfer['queries']
     else:
         raise ValueError("Either eval_train or eval_test must be True.")
-def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_pos='last-token', steering_type=None):
+def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_type=None):
     if steering_type is None:
         raise ValueError("steering_type must be specified: 'last-token', 'mean', or 'positional'")
-    if steering_type == 'positional' and steering_pos == 'last-token':
-        raise ValueError("steering_type='positional' is incompatible with steering_pos='last-token': positional steering requires all token positions.")
     patch_activations = patch_activations['desired'].to(model.device)
     layer_ids = topk_df['layer'].unique()
     head_ids = [topk_df[topk_df['layer'] == layer_idx]['neuron'].unique() for layer_idx in layer_ids]
-    # print(f"Generating for ", gen_toks['input_ids'].shape, " with normalization set to ", normalize, " steering type ", steering_pos)
     with model.generate(
         gen_toks,
         pad_token_id=model.tokenizer.eos_token_id,
@@ -56,18 +53,9 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                         # print('Normalizing')
                         steering_vector = steering_vector / (torch.norm(steering_vector, dim=-1, keepdim=True) + 1e-12)
                     if ablation_type == 'mean':
-                        if steering_pos == 'last-token':
-                            layer.self_attn.o_proj.output[..., patch_activations.shape[1] - 1, sl] = N * steering_vector
-                        elif steering_pos == 'all-tokens':
-                            layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] = N * steering_vector
+                        layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] = N * steering_vector
                     elif ablation_type == 'steer':
-
-                        if steering_pos == 'last-token':
-                            # add steering vector only to final token of prompt
-                            layer.self_attn.o_proj.output[..., patch_activations.shape[1] - 1, sl] += N * steering_vector
-                        elif steering_pos == 'all-tokens':
-                            # add steering vector to all tokens in prompt
-                            layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] += N * steering_vector
+                        layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] += N * steering_vector
 
           
           

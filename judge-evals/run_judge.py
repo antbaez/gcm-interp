@@ -90,7 +90,7 @@ def accuracy_paths(meta: dict) -> tuple[Path, Path]:
         / meta["EVAL_SUB_DIR"]
         / meta["STEER_SUB_DIR"]
     )
-    fn_base = f"{meta['N']}_{meta['REPS']}_{meta['STEERING_METHOD']}_topk_{meta['topk']}_{meta['STEERING_TYPE']}_{meta['STEERING_POS']}"
+    fn_base = f"{meta['N']}_{meta['REPS']}_{meta['STEERING_METHOD']}_topk_{meta['topk']}_{meta['STEERING_TYPE']}"
     wo_rf = base_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
     w_rf  = base_dir / f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"
     return wo_rf, w_rf
@@ -114,6 +114,7 @@ def phase1_prepare(
     data_dir: str,
     skip_judge: bool,
     force: bool,
+    eval_mode: str = "eval_test",
 ) -> list[tuple[Path, dict, str]]:
     """
     For each gen file: convert to CSV and build prompt CSVs.
@@ -160,7 +161,7 @@ def phase1_prepare(
         eval_csv = workdir / "eval_output.csv"
         if not eval_csv.exists():
             try:
-                gen_to_csv(gen_path, data_dir, str(eval_csv))
+                gen_to_csv(gen_path, data_dir, str(eval_csv), eval_mode)
             except (ValueError, FileNotFoundError) as e:
                 print(f"  ERROR converting {name}: {e}")
                 errors += 1
@@ -210,8 +211,6 @@ def _evaluate_all_workdirs_batched(
     long_items: list[tuple[Path, dict, str]],
     batch_size: int,
     skip_judge: bool,
-    openai_client=None,
-    openai_model: str = None,
 ):
     """
     Collect all prompts from all workdirs into one batch per mode, run vLLM once
@@ -263,11 +262,6 @@ def _evaluate_all_workdirs_batched(
 
         # Single large batched inference
         outputs = []
-        # if openai_client is not None:
-        #     from evaluator import generate_in_batches_openai
-        #     for batch in generate_in_batches_openai(openai_client, openai_model, prompts, batch_size):
-        #         outputs.extend(batch)
-        # else:
         sp = get_sampling_params()
         for batch in generate_in_batches(llm, prompts, sp, batch_size):
             outputs.extend(batch)
@@ -299,7 +293,6 @@ def phase2_evaluate(
     data_dir: str,
     batch_size: int,
     skip_judge: bool,
-    openai_model: str = None,
 ) -> list[tuple[Path, dict, str]]:
     """
     Evaluate all files.
@@ -320,13 +313,6 @@ def phase2_evaluate(
 
     # --- Long-eval: load model once, batch all prompts across workdirs ---
     if long_items:
-        # if openai_model:
-        #     print(f"\nPhase 2b: OpenAI judge ({openai_model}) for {len(long_items)} long-eval files")
-        #     from openai import OpenAI
-        #     client = OpenAI()
-        #     _evaluate_all_workdirs_batched(None, long_items, batch_size, skip_judge,
-        #                                    openai_client=client, openai_model=openai_model)
-        # else:
         print(f"\nPhase 2b: Judge model evaluation for {len(long_items)} long-eval files")
         from evaluator import make_llm
         llm = make_llm(max_num_seqs=batch_size)
@@ -383,14 +369,16 @@ def parse_args():
     p.add_argument("--steer_subdir", default=None,
                    help="e.g. sycophancy-long_steer")
     p.add_argument("--all",          action="store_true")
+    p.add_argument("--eval_mode",    choices=["eval_train", "eval_test"],
+                   default="eval_test",
+                   help="Which JSONL backs data_path_query (relevance prompt): "
+                        "eval_train -> {base}-desired-all.jsonl, "
+                        "eval_test -> {base}-test.jsonl")
     p.add_argument("--skip_judge",   action="store_true",
                    help="Skip behavioral judge (fluency + relevance only)")
     p.add_argument("--force",        action="store_true",
                    help="Re-process even if accuracy files exist")
     p.add_argument("--batch_size",   type=int, default=16)
-    # p.add_argument("--openai_model", type=str, default=None,
-    #                help="Use OpenAI API instead of local vLLM (e.g. gpt-4o-mini). "
-    #                     "Requires OPENAI_API_KEY env var.")
     p.add_argument("--plots",        action="store_true")
     p.add_argument("--plots_args",   nargs="*", default=None)
     p.add_argument("--runs_dir",     default=str(RUNS_DIR))
@@ -421,7 +409,7 @@ def main():
     print("=" * 60)
     print("  PHASE 1: Convert gen files + build prompt CSVs")
     print("=" * 60)
-    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force)
+    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force, args.eval_mode)
 
     if not prepared:
         print("Nothing to evaluate.")

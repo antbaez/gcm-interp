@@ -28,7 +28,6 @@ ACC_RE = re.compile(
     r"^(?P<N>\d+)_(?P<REPS>random|targeted)_(?P<STEERING_METHOD>steer|mean)"
     r"_topk_(?P<topk>[\d.]+)"
     r"_(?P<STEERING_TYPE>[^_]+)"
-    r"_(?P<STEERING_POS>[^_]+)"
     r"_gen_accuracy_(?P<rf_type>wo_rf|w_rf)\.json\.accuracy\.json$"
 )
 
@@ -64,7 +63,6 @@ def collect_records(accuracy_dir: Path) -> pd.DataFrame:
             "N":             int(m.group("N")),
             "topk":          float(m.group("topk")),
             "steering_type": m.group("STEERING_TYPE"),
-            "steering_pos":  m.group("STEERING_POS"),
             "rf_type":       m.group("rf_type"),
             "pass_rate":     data.get("q1", float("nan")),
         })
@@ -72,11 +70,9 @@ def collect_records(accuracy_dir: Path) -> pd.DataFrame:
 
 
 COMBO_LABELS = {
-    "last-token\nall-tokens":  "type: last-token\npos: all-tokens",
-    "last-token\nlast-token":  "type: last-token\npos: last-token",
-    "mean\nall-tokens":        "type: mean\npos: all-tokens",
-    "mean\nlast-token":        "type: mean\npos: last-token",
-    "positional\nall-tokens":  "type: positional\npos: all-tokens",
+    "last-token": "last-token",
+    "mean":       "mean",
+    "positional": "positional",
 }
 
 LEGEND_TEXT = (
@@ -86,9 +82,7 @@ LEGEND_TEXT = (
 
 
 def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
-    combos = sorted(
-        (df["steering_type"] + "\n" + df["steering_pos"]).unique()
-    )
+    combos = sorted(df["steering_type"].unique())
     combo_display = [COMBO_LABELS.get(c, c) for c in combos]
 
     for (model, dataset), group in df.groupby(["model", "dataset"]):
@@ -124,7 +118,7 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
 
                 matrix = pd.DataFrame(np.nan, index=combos, columns=["wo_rf", "w_rf"])
                 for _, r in subgroup.iterrows():
-                    combo = f"{r.steering_type}\n{r.steering_pos}"
+                    combo = r.steering_type
                     matrix.loc[combo, r["rf_type"]] = r["pass_rate"]
                 matrix.index = combo_display
 
@@ -177,7 +171,7 @@ def main():
         return
 
     csv_path = accuracy_dir / "results_summary.csv"
-    df.sort_values(["model", "dataset", "N", "topk", "steering_type", "steering_pos", "rf_type"]) \
+    df.sort_values(["model", "dataset", "N", "topk", "steering_type", "rf_type"]) \
       .to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path.name}  ({len(df)} rows)")
 

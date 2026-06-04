@@ -39,24 +39,24 @@ fi
 PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during ATP patching
 PATCH_ALGO="atp"
 SEED=42
-MAX_NEW_TOKENS=128      # max tokens the model generates per prompt during eval
+MAX_NEW_TOKENS=512      # max tokens the model generates per prompt during eval
+MAX_NEW_TOKENS=64      
 
-STEERING_BATCH_SIZE=5  # number of prompts used per batch when computing the steering vector
-STEERING_N="1 5 10"
-STEERING_N="1"
-TOPK_VALS="0.01 0.05 0.1"
-TOPK_VALS="0.01"
+VECTOR_CREATION_BATCH_SIZE=50  # number of prompts per batch when computing the steering vector
+STEERING_BATCH_SIZE=5  # number of prompts per batch during steered generation
+STEERING_N="1 2 4 6 8 10"
+STEERING_N="1 5"
+TOPK_VALS="0.01 0.03 0.05 0.07 0.09 0.1 0.5 1.0"
+TOPK_VALS="0.01 0.05"
 
 EVAL_MODEL=true
 STEERING=true
 EVAL_TEST=false
 
 COMBINATIONS=(
-    "last-token last-token"
-    "last-token all-tokens"
-    "mean       last-token"
-    "mean       all-tokens"
-    "positional all-tokens"
+    "last-token"
+    "mean"
+    "positional"
 )
 
 EVAL_FLAGS=""
@@ -96,11 +96,8 @@ run_experiments_for_model() {
     local COMBOS_JSON='['
     local CFIRST=true
     for COMBO in "${COMBINATIONS[@]}"; do
-        local ST SP
-        ST=$(echo $COMBO | awk '{print $1}')
-        SP=$(echo $COMBO | awk '{print $2}')
         [ "$CFIRST" = true ] && CFIRST=false || COMBOS_JSON="${COMBOS_JSON},"
-        COMBOS_JSON="${COMBOS_JSON}[\"${ST}\",\"${SP}\"]"
+        COMBOS_JSON="${COMBOS_JSON}\"${COMBO}\""
     done
     COMBOS_JSON="${COMBOS_JSON}]"
 
@@ -110,6 +107,7 @@ run_experiments_for_model() {
         -batch_size "$PATCHING_BATCH_SIZE"
         -patch_algo "$PATCH_ALGO"
         -seed "$SEED"
+        -vector_creation_batch_size "$VECTOR_CREATION_BATCH_SIZE"
         -steering_batch_size "$STEERING_BATCH_SIZE"
         -steering_n $STEERING_N
         -topk_vals $TOPK_VALS
