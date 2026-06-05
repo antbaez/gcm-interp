@@ -53,9 +53,7 @@ def steering_reps_cache(model, data_handler, batch_size=10, mean=True):
                 base[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
 
     if mean:
-        print('########### Mean steering cache ########### ', f"n_prompts={source_toks['input_ids'].shape[0]}", f"steer_batch_shape={steer[0][0].shape}", f"base_batch_shape={base[0][0].shape}")
         cache = [torch.cat(steer[i], dim=0).mean(0) - torch.cat(base[i], dim=0).mean(0) for i in range(num_layers)]
-        print('########### Mean steering cache after ########### ', f"cache_layer_shape={cache[0].shape}")
     else:
         cache = [torch.cat(steer[i], dim=0) - torch.cat(base[i], dim=0) for i in range(num_layers)]
         print('########### Steering cache after ########### ', f"cache_layer_shape={cache[0].shape}")

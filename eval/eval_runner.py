@@ -81,7 +81,10 @@ def save_top_k(reps_type, config, model, topk, logits, logit_metric):
 
 def run_eval(config, data_handler, model_handler, batch_handler, patching_utils, which_patch, topk_vals=None, N=None):
     # set_seed()
-    print("\nStarting evaluation...")
+    _mid = config.args.model_id.lower()
+    _mshort = 'olmo' if 'olmo' in _mid else 'qwen' if 'qwen' in _mid else 'solar'
+    tag = f"[{_mshort}/{config.args.source.split('-')[0]}]"
+    print(f"\n{tag} Starting evaluation...")
 
     model = model_handler.model
     if not config.args.patch_algo == 'random':
@@ -113,11 +116,11 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
     model.eval()
     original_outputs_cache = f"{config.get_output_prefix()}/eval/baseline_outputs.json"
     if os.path.exists(original_outputs_cache):
-        print("Loading cached baseline responses")
+        print(f"{tag} Loading cached baseline responses")
         with open(original_outputs_cache) as f:
             original_outputs = json.load(f)
     else:
-        print("Generating unsteered baseline responses")
+        print(f"{tag} Generating unsteered baseline responses")
         for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size)):
             gen_qs_toks = select_gen_qs_toks(config, batch_handler)
             with model.generate(gen_qs_toks,
@@ -167,21 +170,25 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                     len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
                     first_batch_toks = select_gen_qs_toks(config, data_handler)
                     batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
-                    for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), desc=f"Steering N={config.args.N} topk={topk}"):
+                    total_batches = len(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size))
+                    print(f"{tag} Steering generation on test set... (N={config.args.N}, topk={topk}, type={config.args.steering_type}, batch_size={config.args.steering_batch_size})")
+                    for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), start=1):
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
                         edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_type=config.args.steering_type)
                         decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.steering_batch_size], edited_outputs, config.args.base)
                         gc.collect()
                         torch.cuda.empty_cache()
+                        print(f"  batch {batch_num}/{total_batches}")
                         if len(decoded_responses[ablation][reps_type][topk]) == 0:
                             decoded_responses[ablation][reps_type][topk] = decoded
                         else:
                             decoded_responses[ablation][reps_type][topk] += decoded
                         batch_handler.update()
+                    print(f"{tag} Steering generation done.")
                     
                     os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
                     save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
-    print("Evaluation complete.")
+    print(f"{tag} Evaluation complete.")
 
 def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
     topk_vals = [0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5, 1.0]

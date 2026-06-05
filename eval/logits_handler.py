@@ -19,7 +19,7 @@ def load_logits(config, data_handler, which_patch, model_handler):
         # print(f"Loading precomputed logits for {name} from {patch_prefix}/{name}_{which_patch}.pt")
         all_logits = torch.load(f"{patch_prefix}/{name}_{which_patch}.pt")
     else:
-        print('Path does not exist {}, computing logits afresh.'.format(f"{patch_prefix}/{name}_{which_patch}.pt"))
+
         if config.args.patch_algo != 'probes':
             for i in range(data_handler.LEN):
                 try:

@@ -8,7 +8,6 @@ def select_gen_qs_toks(config, batch_handler):
         # print("Evaluating on training set.")
         return batch_handler.base_qs_toks['desired']
     elif config.args.eval_test:
-        print("Evaluating on test set. ", batch_handler.base_qs_toks['test']['input_ids'].shape[0])
         return batch_handler.base_qs_toks['test']
     elif config.args.eval_transfer:
         print("Evaluating on eval_test dataset.")
