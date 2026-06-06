@@ -49,7 +49,7 @@ MAX_NEW_TOKENS=512      # max tokens the model generates per prompt during eval
 VECTOR_CREATION_BATCH_SIZE=10  # number of prompts per batch when computing the steering vector
 STEERING_BATCH_SIZE=10  # number of prompts per batch during steered generation
 STEERING_N="1 5 10"
-TOPK_VALS="0.01 0.05 0.1 0.5 1.0"
+TOPK_VALS="0.01 0.05 0.1 1.0"
 
 
 EVAL_MODEL=true

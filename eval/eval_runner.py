@@ -138,6 +138,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
         os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
         with open(original_outputs_cache, 'w') as f:
             json.dump(original_outputs, f)
+        gc.collect()
+        torch.cuda.empty_cache()
     for N in n_vals:
         config.args.N = N
         for ablation in ablations:
@@ -178,9 +180,14 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
                         edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_type=config.args.steering_type)
                         decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.steering_batch_size], edited_outputs, config.args.base)
-                        gc.collect()
-                        torch.cuda.empty_cache()
-                        print(f"  batch {batch_num}/{total_batches}")
+                        input_len = gen_qs_toks['input_ids'].shape[1]
+                        gen_part = edited_outputs[:, input_len:].cpu()
+                        eos_id = model.tokenizer.eos_token_id
+                        gen_lengths = []
+                        for seq in gen_part:
+                            eos_pos = (seq == eos_id).nonzero(as_tuple=True)[0]
+                            gen_lengths.append(eos_pos[0].item() + 1 if len(eos_pos) > 0 else gen_part.shape[1])
+                        print(f"  batch {batch_num}/{total_batches} | gen lengths: {gen_lengths} / {config.args.max_new_tokens}")
                         if len(decoded_responses[ablation][reps_type][topk]) == 0:
                             decoded_responses[ablation][reps_type][topk] = decoded
                         else:
