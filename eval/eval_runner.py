@@ -120,8 +120,9 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
         with open(original_outputs_cache) as f:
             original_outputs = json.load(f)
     else:
-        print(f"{tag} Generating unsteered baseline responses")
-        for idx in tqdm(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size)):
+        baseline_total = len(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size))
+        print(f"{tag} Generating unsteered baseline responses... (dataset_size={data_handler.LEN}, batch_size={config.args.steering_batch_size})")
+        for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), start=1):
             gen_qs_toks = select_gen_qs_toks(config, batch_handler)
             with model.generate(gen_qs_toks,
             pad_token_id=model.tokenizer.eos_token_id,
@@ -132,6 +133,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             max_new_tokens=config.args.max_new_tokens) as _:
                 op = model.generator.output.save()
             original_outputs += op.cpu().numpy().tolist()
+            print(f"  batch {batch_num}/{baseline_total}")
             batch_handler.update()
         os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
         with open(original_outputs_cache, 'w') as f:

@@ -46,10 +46,10 @@ PATCH_ALGO="atp"
 SEED=42
 MAX_NEW_TOKENS=512      # max tokens the model generates per prompt during eval      
 
-VECTOR_CREATION_BATCH_SIZE=5  # number of prompts per batch when computing the steering vector
-STEERING_BATCH_SIZE=5  # number of prompts per batch during steered generation
-STEERING_N="1 2 4 6 8 10"
-TOPK_VALS="0.01 0.03 0.05 0.08 0.1 0.5 1.0"
+VECTOR_CREATION_BATCH_SIZE=10  # number of prompts per batch when computing the steering vector
+STEERING_BATCH_SIZE=10  # number of prompts per batch during steered generation
+STEERING_N="1 5 10"
+TOPK_VALS="0.01 0.05 0.1 0.5 1.0"
 
 
 EVAL_MODEL=true
@@ -122,7 +122,7 @@ run_experiments_for_model() {
     echo ""
     echo "[$M_TAG / ${D_TAGS[*]}] Running ${#D_TAGS[@]} dataset(s) × ${#COMBINATIONS[@]} combos in single process"
     local START_TIME=$SECONDS
-    python run.py "${BASE_ARGS[@]}" -steering_combos "$COMBOS_JSON" $EVAL_FLAGS
+    python -u run.py "${BASE_ARGS[@]}" -steering_combos "$COMBOS_JSON" $EVAL_FLAGS
     local ELAPSED=$(( SECONDS - START_TIME ))
     echo "[$M_TAG] Done in $(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s"
 }

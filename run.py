@@ -40,9 +40,11 @@ def run_dataset(config, model_handler):
             probes_experiment = Experiment(config, data_handler, model_handler, 'heads')
             probes_experiment.run_probes()
         else:
-            print('Running patching on heads...')
+            print(f'Running patching on heads... Dataset size: {data_handler.LEN}')
             heads_experiment = Experiment(config, data_handler, model_handler, 'heads')
             heads_experiment.run()
+            gc.collect()
+            torch.cuda.empty_cache()
 
     if config.args.eval_model:
         config.args.batch_size = max(x for x in range(16, 0, -1) if data_handler.LEN % x != 1)
