@@ -9,6 +9,7 @@ import os
 import gc
 import ast
 import json
+import time
 import pandas as pd
 from tqdm import tqdm
 import sys
@@ -124,6 +125,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
         print(f"{tag} Generating unsteered baseline responses... (dataset_size={data_handler.LEN}, batch_size={config.args.steering_batch_size})")
         for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), start=1):
             gen_qs_toks = select_gen_qs_toks(config, batch_handler)
+            t0 = time.time()
             with model.generate(gen_qs_toks,
             pad_token_id=model.tokenizer.eos_token_id,
             do_sample=False,
@@ -132,8 +134,9 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             temperature=None,
             max_new_tokens=config.args.max_new_tokens) as _:
                 op = model.generator.output.save()
+            batch_time = time.time() - t0
             original_outputs += op.cpu().numpy().tolist()
-            print(f"  batch {batch_num}/{baseline_total}")
+            print(f"  batch {batch_num}/{baseline_total} | {batch_time:.1f}s")
             batch_handler.update()
         os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
         with open(original_outputs_cache, 'w') as f:
@@ -178,7 +181,9 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                     print(f"{tag} Steering generation on test set... (N={config.args.N}, topk={topk}, type={config.args.steering_type}, batch_size={config.args.steering_batch_size})")
                     for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), start=1):
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
+                        t0 = time.time()
                         edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_type=config.args.steering_type)
+                        batch_time = time.time() - t0
                         decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.steering_batch_size], edited_outputs, config.args.base)
                         input_len = gen_qs_toks['input_ids'].shape[1]
                         gen_part = edited_outputs[:, input_len:].cpu()
@@ -187,7 +192,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         for seq in gen_part:
                             eos_pos = (seq == eos_id).nonzero(as_tuple=True)[0]
                             gen_lengths.append(eos_pos[0].item() + 1 if len(eos_pos) > 0 else gen_part.shape[1])
-                        print(f"  batch {batch_num}/{total_batches} | gen lengths: {gen_lengths} / {config.args.max_new_tokens}")
+                        print(f"  batch {batch_num}/{total_batches} | {batch_time:.1f}s | gen lengths: {gen_lengths} / {config.args.max_new_tokens}")
                         if len(decoded_responses[ablation][reps_type][topk]) == 0:
                             decoded_responses[ablation][reps_type][topk] = decoded
                         else:
