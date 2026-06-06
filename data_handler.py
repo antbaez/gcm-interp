@@ -73,11 +73,18 @@ class DataHandler:
             "sub_qs": self.get_templated_prompts(jsons['steering_sub'], only_q=True, add_generation_prompt=True) if jsons['steering_sub'] else None
         }
 
+        patch_prompts = base['desired'] + base['undesired'] + source_qs['desired'] + source_qs['undesired']
         if self.config.args.eval_test:
             if not (self.config.args.steering_add_path is None) and not (self.config.args.steering_sub_path is None):
-                all_templated_prompts = steering['add_qs'] + steering['sub_qs'] + base_qs['test']
+                eval_prompts = steering['add_qs'] + steering['sub_qs'] + base_qs['test']
+            else:
+                eval_prompts = []
+            if self.config.args.patch_model:
+                all_templated_prompts = patch_prompts + eval_prompts
+            else:
+                all_templated_prompts = eval_prompts
         else:
-            all_templated_prompts = base['desired'] + base['undesired'] + source_qs['desired'] + source_qs['undesired']
+            all_templated_prompts = patch_prompts
         all_tokenized_prompts = self.tokenize_prompts(all_templated_prompts, max_length=None)
         self.max_len = all_tokenized_prompts['input_ids'].shape[1]
 
