@@ -183,13 +183,13 @@ class DataHandler:
 
                 self.response_start_positions['pyreft'] = self.get_resp_start_pos(self.pyreft_toks, self.model_handler.marker, self.model_handler.tokenizer) if self.config.args.ablation == 'pyreft' else None
         
-        if self.config.args.eval_model:
+        if self.config.args.patch_model:
+            self.LEN = min(len(base['desired']), 100)
+        elif self.config.args.eval_model:
             if self.config.args.eval_transfer:
                 self.LEN = 100
             else:
                 self.LEN = min(len(base['desired']), 50)
-        else:
-            self.LEN = min(len(base['desired']), 100)
 
         if self.config.args.eval_model:
             self.steering_qs_toks = {
