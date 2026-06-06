@@ -5,12 +5,14 @@ set -e
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
+PATCH=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --model)   MODEL_TAG="$2";   shift 2 ;;
         --dataset) DATASET_TAG="$2"; shift 2 ;;
         --device)  DEVICE="$2";      shift 2 ;;
+        --patch)   PATCH=true;       shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -27,13 +29,16 @@ else
     echo "Error: --model must be one of: olmo, qwen, solar, all"; exit 1
 fi
 
-# Expand dataset tag
+# Expand dataset tag (supports comma-separated values, e.g. "harmful,sycophancy")
 if [ "$DATASET_TAG" = "all" ]; then
     DATASETS=("${ALL_DATASETS[@]}")
-elif [[ " ${ALL_DATASETS[*]} " == *" $DATASET_TAG "* ]]; then
-    DATASETS=("$DATASET_TAG")
 else
-    echo "Error: --dataset must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
+    IFS=',' read -ra DATASETS <<< "$DATASET_TAG"
+    for D in "${DATASETS[@]}"; do
+        if [[ ! " ${ALL_DATASETS[*]} " == *" $D "* ]]; then
+            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
+        fi
+    done
 fi
 
 PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during ATP patching
@@ -58,9 +63,10 @@ COMBINATIONS=(
 )
 
 EVAL_FLAGS=""
+if [ "$PATCH" = true ];      then EVAL_FLAGS="$EVAL_FLAGS -patch_model"; fi
 if [ "$EVAL_MODEL" = true ]; then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
-if [ "$STEERING" = true ]; then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
-if [ "$EVAL_TEST" = true ]; then EVAL_FLAGS="$EVAL_FLAGS --eval_test true"; else EVAL_FLAGS="$EVAL_FLAGS --eval_test false"; fi
+if [ "$STEERING" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
+if [ "$EVAL_TEST" = true ];  then EVAL_FLAGS="$EVAL_FLAGS --eval_test true"; else EVAL_FLAGS="$EVAL_FLAGS --eval_test false"; fi
 
 run_experiments_for_model() {
     local M_TAG="$1"

@@ -25,3 +25,5 @@ normalized-results/**/*.json
 *relevance_fluency_prompts.csv*
 *judge_prompts.csv*
 .DS_Store
+refusal+harmful-data/
+style+sycophancy-data/

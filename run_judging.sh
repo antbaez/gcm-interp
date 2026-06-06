@@ -35,13 +35,16 @@ else
     echo "Error: --model must be one of: olmo, qwen, solar, all"; exit 1
 fi
 
-# Expand dataset tag
+# Expand dataset tag (supports comma-separated values, e.g. "harmful,sycophancy")
 if [ "$DATASET_TAG" = "all" ]; then
     DATASETS=("${ALL_DATASETS[@]}")
-elif [[ " ${ALL_DATASETS[*]} " == *" $DATASET_TAG "* ]]; then
-    DATASETS=("$DATASET_TAG")
 else
-    echo "Error: --dataset must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
+    IFS=',' read -ra DATASETS <<< "$DATASET_TAG"
+    for D in "${DATASETS[@]}"; do
+        if [[ ! " ${ALL_DATASETS[*]} " == *" $D "* ]]; then
+            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
+        fi
+    done
 fi
 
 # Strip "cuda:" prefix for run_judge.py --device (expects an int)
