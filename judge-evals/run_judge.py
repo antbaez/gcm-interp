@@ -68,17 +68,17 @@ WORKDIRS_ROOT = BASE_DIR / "judge-evals" / "workdirs"
 # Helpers
 # ---------------------------------------------------------------------------
 
-def gen_workdir(gen_path: str) -> Path:
-    """Derive a per-file workdir under judge-evals/workdirs/."""
+def gen_workdir(gen_path: str, runs_dir: Path = RUNS_DIR, workdirs_root: Path = WORKDIRS_ROOT) -> Path:
+    """Derive a per-file workdir under workdirs_root/."""
     p = Path(gen_path)
     stem = p.stem
     if stem.endswith("_gen"):
         stem = stem[:-4]
     try:
-        rel = p.parent.relative_to(RUNS_DIR)
+        rel = p.parent.relative_to(runs_dir)
     except ValueError:
         rel = Path(p.parent.name)
-    return WORKDIRS_ROOT / rel / stem
+    return workdirs_root / rel / stem
 
 
 def accuracy_paths(meta: dict, accuracy_dir: Path) -> tuple[Path, Path]:
@@ -116,6 +116,8 @@ def phase1_prepare(
     force: bool,
     eval_mode: str = "eval_test",
     accuracy_dir: Path = ACCURACY_DIR,
+    runs_dir: Path = RUNS_DIR,
+    workdirs_root: Path = WORKDIRS_ROOT,
 ) -> list[tuple[Path, dict, str]]:
     """
     For each gen file: convert to CSV and build prompt CSVs.
@@ -154,7 +156,7 @@ def phase1_prepare(
     errors = 0
 
     for gen_path, meta in to_process:
-        workdir = gen_workdir(gen_path)
+        workdir = gen_workdir(gen_path, runs_dir, workdirs_root)
         workdir.mkdir(parents=True, exist_ok=True)
         name = Path(gen_path).stem
 
@@ -386,9 +388,10 @@ def parse_args():
                    help="GPU device index to use, e.g. 0 or cuda:0 (sets CUDA_VISIBLE_DEVICES)")
     p.add_argument("--plots",        action="store_true")
     p.add_argument("--plots_args",   nargs="*", default=None)
-    p.add_argument("--runs_dir",     default=str(RUNS_DIR))
-    p.add_argument("--data_dir",     default=str(DATA_DIR))
-    p.add_argument("--accuracy_dir", default=str(ACCURACY_DIR))
+    p.add_argument("--runs_dir",      default=str(RUNS_DIR))
+    p.add_argument("--data_dir",      default=str(DATA_DIR))
+    p.add_argument("--accuracy_dir",  default=str(ACCURACY_DIR))
+    p.add_argument("--workdirs_root", default=str(WORKDIRS_ROOT))
     return p.parse_args()
 
 
@@ -405,7 +408,9 @@ def _parse_device(device_str) -> int | None:
 def main():
     args = parse_args()
     device = _parse_device(args.device)
-    accuracy_dir = Path(args.accuracy_dir)
+    accuracy_dir  = Path(args.accuracy_dir)
+    workdirs_root = Path(args.workdirs_root)
+    runs_dir      = Path(args.runs_dir)
 
     if not args.all and not any([
         args.model_name, args.source, args.base,
@@ -427,7 +432,7 @@ def main():
     print("=" * 60)
     print("  PHASE 1: Convert gen files + build prompt CSVs")
     print("=" * 60)
-    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force, args.eval_mode, accuracy_dir)
+    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force, args.eval_mode, accuracy_dir, runs_dir, workdirs_root)
 
     if not prepared:
         print("Nothing to evaluate.")

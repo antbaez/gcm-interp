@@ -77,6 +77,7 @@ for M_TAG in "${MODELS[@]}"; do
             --runs_dir "$SCRIPT_DIR/results" \
             --data_dir "$SCRIPT_DIR/data" \
             --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy" \
+            --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" \
             --eval_mode "$EVAL_MODE" \
             --batch_size "$BATCH_SIZE" \
             --device "$DEVICE_IDX"
