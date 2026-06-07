@@ -19,7 +19,28 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     if steering_type is None:
         raise ValueError("steering_type must be specified: 'last-token', 'mean', or 'positional'")
     patch_activations = patch_activations['desired'].to(model.device)
-    layer_ids = topk_df['layer'].unique()
+    P = patch_activations.shape[1]
+
+    # Precompute the per-head steering contributions OUTSIDE the trace, so the traced
+    # body below contains only plain tensor assignments. pandas indexing / proxy
+    # math inside the trace gets routed through nnsight's tracing hacks and is fragile.
+    interventions = []  # list of (layer_idx, slice, contribution)
+    for layer_idx in topk_df['layer'].unique():
+        head_ids_for_layer = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
+        for head_idx in head_ids_for_layer:
+            sl = slice(DIM * head_idx, DIM * (head_idx + 1))
+
+            if steering_type == 'last-token':
+                sv = patch_activations[layer_idx][-1, sl]            # [dim]
+            elif steering_type == 'mean':
+                sv = patch_activations[layer_idx][:, sl].mean(dim=0) # [dim]
+            elif steering_type == 'positional':
+                sv = patch_activations[layer_idx][:, sl]             # [P, dim]
+
+            if normalize:
+                sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
+
+            interventions.append((int(layer_idx), sl, N * sv))
 
     with model.generate(
         gen_toks,
@@ -31,41 +52,16 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         temperature=None,
         max_new_tokens=max_new_tokens
     ) as tracer:
-        with model.all():
-            # nnsight re-runs this block once per forward
-            # call and yields a concrete tensor on .output access, so a plain Python
-            # shape check reliably separates the two phases:
-            #   prefill — seq_len == full prompt length (> 1)
-            #   decode  — seq_len == 1 (one new token; KV cache handles the rest)
-            #
-            # We only steer the prefill. Steering o_proj at layer L modifies the
-            # residual stream, which is the input to layer L+1. That means the K/V
-            # projections at all deeper layers are computed from the steered residual,
-            # so the KV cache that is built during prefill already reflects the
-            # steering. Decode steps attend over that steered cache with no extra work.
-            if model.model.layers[layer_ids[0]].self_attn.o_proj.output.shape[1] == 1:
-                pass  # decode step — nothing to do
+        # No model.all(): interventions placed directly in the generate body apply
+        # only to the FIRST forward pass — the prefill over the full prompt. Decode
+        # steps are left untouched, so only prompt-token attention outputs are steered.
+        # Those steered prompt activations are written into the KV cache, so the rest
+        # of generation still reflects the steering without re-applying it each step.
+        for layer_idx, sl, contribution in interventions:
+            if ablation_type == 'mean':
+                model.model.layers[layer_idx].self_attn.o_proj.output[..., :P, sl] = contribution
             else:
-                for layer_idx in layer_ids:
-                    head_ids_for_layer = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
-                    layer = model.model.layers[layer_idx]
-                    for head_idx in head_ids_for_layer:
-                        sl = slice(DIM * head_idx, DIM * (head_idx + 1))
-
-                        if steering_type == 'last-token':
-                            sv = patch_activations[layer_idx][-1, sl]            # [dim]
-                        elif steering_type == 'mean':
-                            sv = patch_activations[layer_idx][:, sl].mean(dim=0) # [dim]
-                        elif steering_type == 'positional':
-                            sv = patch_activations[layer_idx][:, sl]             # [P, dim]
-
-                        if normalize:
-                            sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
-
-                        if ablation_type == 'mean':
-                            layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] = N * sv
-                        else:
-                            layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] += N * sv
+                model.model.layers[layer_idx].self_attn.o_proj.output[..., :P, sl] += contribution
 
         generated = model.generator.output.save()
     return generated
