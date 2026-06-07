@@ -81,9 +81,9 @@ def gen_workdir(gen_path: str) -> Path:
     return WORKDIRS_ROOT / rel / stem
 
 
-def accuracy_paths(meta: dict) -> tuple[Path, Path]:
+def accuracy_paths(meta: dict, accuracy_dir: Path) -> tuple[Path, Path]:
     base_dir = (
-        ACCURACY_DIR
+        accuracy_dir
         / meta["MODEL_ID"]
         / f"from_{meta['SOURCE']}_to_{meta['BASE']}"
         / meta["METHOD"]
@@ -96,8 +96,8 @@ def accuracy_paths(meta: dict) -> tuple[Path, Path]:
     return wo_rf, w_rf
 
 
-def accuracy_exists(meta: dict) -> bool:
-    wo_rf, w_rf = accuracy_paths(meta)
+def accuracy_exists(meta: dict, accuracy_dir: Path) -> bool:
+    wo_rf, w_rf = accuracy_paths(meta, accuracy_dir)
     return wo_rf.exists() and w_rf.exists()
 
 
@@ -115,6 +115,7 @@ def phase1_prepare(
     skip_judge: bool,
     force: bool,
     eval_mode: str = "eval_test",
+    accuracy_dir: Path = ACCURACY_DIR,
 ) -> list[tuple[Path, dict, str]]:
     """
     For each gen file: convert to CSV and build prompt CSVs.
@@ -130,7 +131,7 @@ def phase1_prepare(
         except ValueError as e:
             print(f"Skipping {gen_path}: {e}")
             continue
-        if not force and accuracy_exists(meta):
+        if not force and accuracy_exists(meta, accuracy_dir):
             print(f"  Skip (done): {Path(gen_path).name}")
             continue
         to_process.append((gen_path, meta))
@@ -294,10 +295,11 @@ def phase2_evaluate(
     batch_size: int,
     skip_judge: bool,
     device: int | None = None,
+    accuracy_dir: Path = ACCURACY_DIR,
 ) -> list[tuple[Path, dict, str]]:
     """
     Evaluate all files.
-    - Single-eval: token matching (no model), accuracy written directly to ACCURACY_DIR.
+    - Single-eval: token matching (no model), accuracy written directly to accuracy_dir.
     - Long-eval: load judge model ONCE, batch all prompts across workdirs into one
                  inference per mode, then write results to per-workdir JSONL files.
 
@@ -310,7 +312,7 @@ def phase2_evaluate(
     if single_items:
         print(f"\nPhase 2a: Token matching for {len(single_items)} single-eval files")
         for _wd, _meta, gen_path in single_items:
-            compute_accuracy_for_file(Path(gen_path), data_dir, ACCURACY_DIR)
+            compute_accuracy_for_file(Path(gen_path), data_dir, accuracy_dir)
 
     # --- Long-eval: load model once, batch all prompts across workdirs ---
     if long_items:
@@ -326,11 +328,11 @@ def phase2_evaluate(
 # Phase 3: compute accuracies from per-workdir ratings
 # ---------------------------------------------------------------------------
 
-def phase3_accuracies(long_items: list[tuple[Path, dict, str]], skip_judge: bool):
+def phase3_accuracies(long_items: list[tuple[Path, dict, str]], skip_judge: bool, accuracy_dir: Path = ACCURACY_DIR):
     """Compute per-condition accuracies for all long-eval workdirs."""
     print(f"\nPhase 3: Computing accuracies for {len(long_items)} long-eval workdirs")
     for wd, _meta, _gp in long_items:
-        compute_accuracy_for_workdir(wd, ACCURACY_DIR, skip_judge)
+        compute_accuracy_for_workdir(wd, accuracy_dir, skip_judge)
 
 
 # ---------------------------------------------------------------------------
@@ -386,6 +388,7 @@ def parse_args():
     p.add_argument("--plots_args",   nargs="*", default=None)
     p.add_argument("--runs_dir",     default=str(RUNS_DIR))
     p.add_argument("--data_dir",     default=str(DATA_DIR))
+    p.add_argument("--accuracy_dir", default=str(ACCURACY_DIR))
     return p.parse_args()
 
 
@@ -402,6 +405,7 @@ def _parse_device(device_str) -> int | None:
 def main():
     args = parse_args()
     device = _parse_device(args.device)
+    accuracy_dir = Path(args.accuracy_dir)
 
     if not args.all and not any([
         args.model_name, args.source, args.base,
@@ -417,13 +421,13 @@ def main():
     print(f"Found {len(gen_files)} gen files:")
     for gf in sorted(gen_files):
         print(f"  {Path(gf).name}")
-    print(f"\nAccuracy dir: {ACCURACY_DIR}\n")
+    print(f"\nAccuracy dir: {accuracy_dir}\n")
 
     # Phase 1: convert + build prompts (fast, no GPU)
     print("=" * 60)
     print("  PHASE 1: Convert gen files + build prompt CSVs")
     print("=" * 60)
-    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force, args.eval_mode)
+    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force, args.eval_mode, accuracy_dir)
 
     if not prepared:
         print("Nothing to evaluate.")
@@ -432,16 +436,16 @@ def main():
         print("\n" + "=" * 60)
         print("  PHASE 2: Evaluate")
         print("=" * 60)
-        long_items = phase2_evaluate(prepared, args.data_dir, args.batch_size, args.skip_judge, device)
+        long_items = phase2_evaluate(prepared, args.data_dir, args.batch_size, args.skip_judge, device, accuracy_dir)
 
         # Phase 3: compute per-condition accuracies for long-eval
         if long_items:
             print("\n" + "=" * 60)
             print("  PHASE 3: Compute accuracies")
             print("=" * 60)
-            phase3_accuracies(long_items, args.skip_judge)
+            phase3_accuracies(long_items, args.skip_judge, accuracy_dir)
 
-    print(f"\nPipeline complete. Accuracy files: {ACCURACY_DIR}")
+    print(f"\nPipeline complete. Accuracy files: {accuracy_dir}")
 
     if args.plots:
         step_plots(args.plots_args)
