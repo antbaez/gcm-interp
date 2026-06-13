@@ -110,6 +110,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
         logit_metric = 'numerator_1'
 
     decoded_responses = {}
+    dataset_short = config.args.test_dataset.replace('-long', '')
     batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
     len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
     original_outputs = []
@@ -150,19 +151,20 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             for reps_type in reps_types:
                 decoded_responses[ablation][reps_type] = {}
                 for topk in topk_vals:
-                    if os.path.exists(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_gen.txt") and os.path.exists(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_gen.json"):
-                        with open(f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_gen.json", 'r') as jf:
+                    steering_dir = f"{config.get_output_prefix()}/eval/{config.args.steering_type}"
+                    if os.path.exists(f"{steering_dir}/{ablation}_{dataset_short}_N={config.args.N}_k={topk}.txt") and os.path.exists(f"{steering_dir}/{ablation}_{dataset_short}_N={config.args.N}_k={topk}.json"):
+                        with open(f"{steering_dir}/{ablation}_{dataset_short}_N={config.args.N}_k={topk}.json", 'r') as jf:
                             decoded_responses[ablation][reps_type][topk] = json.load(jf)
 
                         for item_iix, item in enumerate(decoded_responses[ablation][reps_type][topk]):
                             query = item['query']
                             item[f'old_{config.args.base}'] = model.tokenizer.decode(original_outputs[item_iix], skip_special_tokens=True).split(query)[-1]
-                        gen_file = f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_gen.txt"
+                        gen_file = f"{steering_dir}/{ablation}_{dataset_short}_N={config.args.N}_k={topk}.txt"
                         save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
                         print(f"Skipping evaluation for {ablation}, {reps_type}, {topk} {config.args.N} as gen files already exist.")
                         continue
                     decoded_responses[ablation][reps_type][topk] = []
-                    gen_file = f"{config.get_output_prefix()}/eval/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_{config.args.steering_type}_gen.txt"
+                    gen_file = f"{steering_dir}/{ablation}_{dataset_short}_N={config.args.N}_k={topk}.txt"
 
 
                     if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')) and os.path.exists(f"{config.get_output_prefix()}/eval/{logit_metric}_{reps_type}_{topk}.csv"):
@@ -200,7 +202,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         batch_handler.update()
                     print(f"{tag} Steering generation done.")
                     
-                    os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
+                    os.makedirs(steering_dir, exist_ok=True)
                     save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
     print(f"{tag} Evaluation complete.")
 
@@ -229,7 +231,7 @@ def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
             topk_df = pd.read_csv(f"{config.get_output_prefix()}/eval/numerator_1_targeted_{topk}.csv")
         reps = "targeted" if config.args.patch_algo != 'random' else "random"
         for N in range(1, 11):
-            gen_file = f"{config.get_output_prefix()}/eval/{N}_{reps}_pyreft_{topk}_gen.txt"
+            gen_file = f"{config.get_output_prefix()}/eval/{N}_{reps}_pyreft_{topk}.txt"
             print('Entering generation loop for PyReFT...')
             if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')):
                 print(f"Skipping generation as all relevant files exist.")
@@ -264,7 +266,7 @@ def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
                     }
                 }
             }
-            gen_file = f"{config.get_output_prefix()}/eval/{N}_{reps}_pyreft_{topk}_gen.txt"
+            gen_file = f"{config.get_output_prefix()}/eval/{N}_{reps}_pyreft_{topk}.txt"
             print('Entering generation loop for PyReFT...')
             if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')):
                 print(f"Skipping generation as all relevant files exist.")

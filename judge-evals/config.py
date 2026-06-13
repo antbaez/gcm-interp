@@ -22,13 +22,11 @@ RATING_REGEX = re.compile(r"(\d+)\]\]")
 # Filename pattern for generation outputs
 GEN_RE = re.compile(
     r"""
-    (?P<N>\d+)_
-    (?P<REPS>random|targeted)_
     (?P<STEERING_METHOD>steer|mean)_
-    (?P<topk>\d\.\d+)_
-    (?P<TEST_FILE>.+?-(?:long|single))_
-    (?P<STEERING_TYPE>[^_]+)
-    _gen\.json$
+    (?P<TEST_FILE>[^_]+)_
+    N=(?P<N>\d+)_
+    k=(?P<topk>[\d.]+)
+    \.json$
     """,
     re.VERBOSE,
 )

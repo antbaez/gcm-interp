@@ -52,19 +52,21 @@ def extract_path_metadata(path: str) -> dict:
     if method not in valid_methods:
         raise ValueError(f"Unexpected METHOD: {method} in path: {path}")
 
-    # Shallow layout: results/model/from_to/method/eval/filename
+    # Shallow layout: results/model/from_to/method/eval/{steering_type}/filename
     if parts[runs_idx + 4] == "eval":
         eval_sub_dir = ""
         steer_sub_dir = ""
-        filename = parts[runs_idx + 5]
+        steering_type = parts[runs_idx + 5]
+        filename = parts[runs_idx + 6]
     else:
-        # Deep layout: results/model/from_to/method/eval_sub/steer_sub/eval/filename
+        # Deep layout: results/model/from_to/method/eval_sub/steer_sub/eval/{steering_type}/filename
         eval_sub_dir = parts[runs_idx + 4]
         steer_sub_dir = parts[runs_idx + 5]
         sub_dir = parts[runs_idx + 6]
         if sub_dir != "eval":
             raise ValueError(f"Unexpected SUB_DIR: {sub_dir} in path: {path}")
-        filename = parts[runs_idx + 7]
+        steering_type = parts[runs_idx + 7]
+        filename = parts[runs_idx + 8]
 
     m = GEN_RE.match(filename)
     if not m:
@@ -78,6 +80,8 @@ def extract_path_metadata(path: str) -> dict:
         "EVAL_SUB_DIR": eval_sub_dir,
         "STEER_SUB_DIR": steer_sub_dir,
         **m.groupdict(),
+        "REPS": "random" if method == "random" else "targeted",
+        "STEERING_TYPE": steering_type,
         "filename": filename,
     }
 
@@ -140,15 +144,15 @@ def discover_gen_files(
 
     gen_files = []
     for algo in algo_parts:
-        # Deep layout: results/model/from_to/method/eval_sub/steer_sub/eval/file
+        # Deep layout: results/model/from_to/method/eval_sub/steer_sub/eval/{steering_type}/file
         deep_pattern = (
             f"{runs_dir}/{model_part}/{task_part}/{algo}"
-            f"/{eval_part}/{steer_part}/eval/*_gen.json"
+            f"/{eval_part}/{steer_part}/eval/*/*.json"
         )
         gen_files.extend(glob.glob(deep_pattern))
-        # Shallow layout: results/model/from_to/method/eval/file
+        # Shallow layout: results/model/from_to/method/eval/{steering_type}/file
         shallow_pattern = (
-            f"{runs_dir}/{model_part}/{task_part}/{algo}/eval/*_gen.json"
+            f"{runs_dir}/{model_part}/{task_part}/{algo}/eval/*/*.json"
         )
         gen_files.extend(glob.glob(shallow_pattern))
 

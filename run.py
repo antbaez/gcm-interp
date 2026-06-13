@@ -16,13 +16,14 @@ from batch_handler import BatchHandler
 from patching import Patching
 
 def combo_outputs_exist(config, topk_vals, n_vals):
-    reps_type = 'random' if config.args.patch_algo == 'random' else 'targeted'
     ablation = config.args.ablation
     prefix = config.get_output_prefix()
+    dataset_short = config.args.test_dataset.replace('-long', '')
+    steering_type = config.args.steering_type
     for N in n_vals:
         for topk in topk_vals:
-            gen_file = (f"{prefix}/eval/{N}_{reps_type}_{ablation}_{topk}_"
-                        f"{config.args.test_dataset}_{config.args.steering_type}_gen.txt")
+            gen_file = (f"{prefix}/eval/{steering_type}/{ablation}_{dataset_short}_"
+                        f"N={N}_k={topk}.txt")
             if not os.path.exists(gen_file) or not os.path.exists(gen_file.replace('.txt', '.json')):
                 return False
     return True
