@@ -4,7 +4,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 
-# Usage: ./run_judging.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]
+# Usage: ./run_judging.sh --model <olmo|qwen|solar|olmo,qwen|all> --dataset <harmful|sycophancy|verse|paragraph|harmful,sycophancy|all> [--device <cuda:0>]
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
@@ -19,20 +19,23 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$MODEL_TAG" ] || [ -z "$DATASET_TAG" ]; then
-    echo "Usage: ./run_judge.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]"
+    echo "Usage: ./run_judge.sh --model <olmo|qwen|solar|olmo,qwen|all> --dataset <harmful|sycophancy|verse|paragraph|harmful,sycophancy|all> [--device <cuda:0>]"
     exit 1
 fi
 
 ALL_MODELS=("olmo" "qwen" "solar")
 ALL_DATASETS=("harmful" "sycophancy" "verse" "paragraph")
 
-# Expand model tag
+# Expand model tag (supports comma-separated values, e.g. "olmo,qwen")
 if [ "$MODEL_TAG" = "all" ]; then
     MODELS=("${ALL_MODELS[@]}")
-elif [[ " ${ALL_MODELS[*]} " == *" $MODEL_TAG "* ]]; then
-    MODELS=("$MODEL_TAG")
 else
-    echo "Error: --model must be one of: olmo, qwen, solar, all"; exit 1
+    IFS=',' read -ra MODELS <<< "$MODEL_TAG"
+    for M in "${MODELS[@]}"; do
+        if [[ ! " ${ALL_MODELS[*]} " == *" $M "* ]]; then
+            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, solar, all"; exit 1
+        fi
+    done
 fi
 
 # Expand dataset tag (supports comma-separated values, e.g. "harmful,sycophancy")
