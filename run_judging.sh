@@ -83,7 +83,8 @@ for M_TAG in "${MODELS[@]}"; do
             --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" \
             --eval_mode "$EVAL_MODE" \
             --batch_size "$BATCH_SIZE" \
-            --device "$DEVICE_IDX"
+            --device "$DEVICE_IDX" \
+            --force
     done
 done
 

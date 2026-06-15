@@ -108,8 +108,8 @@ def compute_accuracy_for_file(
         output_dir / model_id / f"from_{source}_to_{base}"
         / method / eval_subdir / steer_subdir
     )
-    wo_rf_path = acc_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
-    w_rf_path  = acc_dir / f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"
+    wo_rf_path = acc_dir / f"{fn_base}_gen_accuracy_wo_rf.json"
+    w_rf_path  = acc_dir / f"{fn_base}_gen_accuracy_w_rf.json"
 
     if not force and wo_rf_path.exists() and w_rf_path.exists():
         return None  # already done

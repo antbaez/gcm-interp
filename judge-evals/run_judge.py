@@ -91,8 +91,8 @@ def accuracy_paths(meta: dict, accuracy_dir: Path) -> tuple[Path, Path]:
         / meta["STEER_SUB_DIR"]
     )
     fn_base = f"{meta['N']}_{meta['REPS']}_{meta['STEERING_METHOD']}_topk_{meta['topk']}_{meta['STEERING_TYPE']}"
-    wo_rf = base_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
-    w_rf  = base_dir / f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"
+    wo_rf = base_dir / f"{fn_base}_gen_accuracy_wo_rf.json"
+    w_rf  = base_dir / f"{fn_base}_gen_accuracy_w_rf.json"
     return wo_rf, w_rf
 
 

@@ -182,7 +182,7 @@ def _compute_and_write(
         if has_jp:
             acc_without = float(group["jp_pass"].mean())
             path_wo = os.path.join(
-                base_dir, f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
+                base_dir, f"{fn_base}_gen_accuracy_wo_rf.json"
             )
             with open(path_wo, "w") as f:
                 json.dump({"q1": acc_without}, f, indent=2)
@@ -195,7 +195,7 @@ def _compute_and_write(
                 ).mean()
             )
             path_w = os.path.join(
-                base_dir, f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"
+                base_dir, f"{fn_base}_gen_accuracy_w_rf.json"
             )
             with open(path_w, "w") as f:
                 json.dump({"q1": acc_with}, f, indent=2)
