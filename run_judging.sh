@@ -89,4 +89,4 @@ done
 
 echo ""
 echo "Summarizing results..."
-python "$JUDGE_DIR/summarize_results.py"
+python "$JUDGE_DIR/summarize_results.py" --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy"
