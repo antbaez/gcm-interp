@@ -23,6 +23,7 @@ import seaborn as sns
 from config import BASE_DIR
 
 WORKDIRS_JSONL = BASE_DIR / "judge-evals" / "workdirs_jsonl"
+ACCURACY_DIR   = BASE_DIR / "judge-evals" / "accuracy"
 
 
 def _read_jsonl(path: Path):
@@ -197,21 +198,25 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--workdirs_dir", default=str(WORKDIRS_JSONL))
+    parser.add_argument("--accuracy_dir", default=str(ACCURACY_DIR),
+                        help="Directory for the CSV summary and heatmap PNGs")
     args = parser.parse_args()
 
     workdirs_dir = Path(args.workdirs_dir)
+    accuracy_dir = Path(args.accuracy_dir)
+    accuracy_dir.mkdir(parents=True, exist_ok=True)
 
     df = collect_records(workdirs_dir)
     if df.empty:
         print("No rating files found.")
         return
 
-    csv_path = workdirs_dir / "results_summary.csv"
+    csv_path = accuracy_dir / "results_summary.csv"
     df.sort_values(["model", "dataset", "N", "topk", "steering_type", "rf_type"]) \
       .to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path.name}  ({len(df)} rows)")
 
-    make_heatmaps(df, workdirs_dir)
+    make_heatmaps(df, accuracy_dir)
 
 
 if __name__ == "__main__":
