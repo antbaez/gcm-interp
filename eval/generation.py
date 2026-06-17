@@ -22,7 +22,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     P = patch_activations.shape[1]
 
     print(f"[steering] P={P} — tokens steered (first example in batch):")
-    print(model.tokenizer.decode(gen_toks['input_ids'][0, :P], skip_special_tokens=False))
+    print(model.tokenizer.decode(gen_toks['input_ids'][0, -P:], skip_special_tokens=False))
 
     # Precompute the per-head steering contributions OUTSIDE the trace, so the traced
     # body below contains only plain tensor assignments. pandas indexing / proxy
@@ -62,9 +62,9 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         # of generation still reflects the steering without re-applying it each step.
         for layer_idx, sl, contribution in interventions:
             if ablation_type == 'mean':
-                model.model.layers[layer_idx].self_attn.o_proj.output[..., :P, sl] = contribution
+                model.model.layers[layer_idx].self_attn.o_proj.output[..., -P:, sl] = contribution
             else:
-                model.model.layers[layer_idx].self_attn.o_proj.output[..., :P, sl] += contribution
+                model.model.layers[layer_idx].self_attn.o_proj.output[..., -P:, sl] += contribution
 
         generated = model.generator.output.save()
     return generated
