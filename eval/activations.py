@@ -52,8 +52,19 @@ def steering_reps_cache(model, data_handler, batch_size=10, mean=True):
             for idx, layer in enumerate(model.model.layers):
                 base[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
 
+    # Keep only positions that are real tokens in every example of both sets.
+    # With left-padding, real tokens occupy the last N positions, so slicing
+    # to [-min_real_len:] strips all left-padding positions.
+    source_min_real = int(source_toks['attention_mask'].sum(dim=1).min().item())
+    base_min_real = int(base_toks['attention_mask'].sum(dim=1).min().item())
+    min_real_len = min(source_min_real, base_min_real)
+    print(f'source_min_real={source_min_real}, base_min_real={base_min_real}, min_real_len={min_real_len}')
+
     if mean:
         cache = [torch.cat(steer[i], dim=0).mean(0) - torch.cat(base[i], dim=0).mean(0) for i in range(num_layers)]
+        print(f'cache shape before padding filter: {cache[0].shape}')
+        cache = [c[-min_real_len:] for c in cache]
+        print(f'cache shape after padding filter: {cache[0].shape}')
     else:
         cache = [torch.cat(steer[i], dim=0) - torch.cat(base[i], dim=0) for i in range(num_layers)]
         print('########### Steering cache after ########### ', f"cache_layer_shape={cache[0].shape}")
