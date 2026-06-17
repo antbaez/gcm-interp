@@ -2,7 +2,7 @@
 Summarize judge accuracy results into a CSV and heatmap visualizations.
 
 Reads judge_ratings.jsonl, fluency_ratings.jsonl, and relevance_ratings.jsonl
-from the workdirs_jsonl directory tree, computes per-condition pass rates, and
+from the workdirs directory tree, computes per-condition pass rates, and
 produces per-(model, dataset) heatmaps with axes N × topk, one subplot per
 steering type.
 
@@ -22,7 +22,7 @@ import seaborn as sns
 
 from config import BASE_DIR
 
-WORKDIRS_JSONL = BASE_DIR / "judge-evals" / "workdirs_jsonl"
+WORKDIRS_JSONL = BASE_DIR / "judge-evals" / "workdirs"
 ACCURACY_DIR   = BASE_DIR / "judge-evals" / "accuracy"
 
 

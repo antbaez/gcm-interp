@@ -51,7 +51,6 @@ def _suppress_fd_output():
 
 
 def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64, device: int | None = None):
-    os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"
     if device is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
     from vllm import LLM
@@ -61,17 +60,16 @@ def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64, device:
     gpu_info = f"GPU {device}" if device is not None else f"{num_gpus} GPU(s)"
     print(f"Using {gpu_info}. Loading judge model: {model_name}")
 
-    with _suppress_fd_output():
-        llm = LLM(
-            model=model_name,
-            quantization="bitsandbytes",
-            tensor_parallel_size=1,
-            pipeline_parallel_size=1,
-            dtype="auto",
-            max_num_seqs=max_num_seqs,
-            max_model_len=4096,
-            seed=SEED,
-        )
+    llm = LLM(
+        model=model_name,
+        quantization="bitsandbytes",
+        tensor_parallel_size=1,
+        pipeline_parallel_size=1,
+        dtype="auto",
+        max_num_seqs=max_num_seqs,
+        max_model_len=4096,
+        seed=SEED,
+    )
     return llm
 
 

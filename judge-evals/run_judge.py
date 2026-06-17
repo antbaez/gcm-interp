@@ -318,10 +318,21 @@ def phase2_evaluate(
 
     # --- Long-eval: load model once, batch all prompts across workdirs ---
     if long_items:
+        out_files = ["fluency_ratings.jsonl", "relevance_ratings.jsonl"]
+        if not skip_judge:
+            out_files.append("judge_ratings.jsonl")
+        needs_eval = any(
+            not (wd / f).exists()
+            for wd, _, _ in long_items
+            for f in out_files
+        )
         print(f"\nPhase 2b: Judge model evaluation for {len(long_items)} long-eval files")
-        from evaluator import make_llm
-        llm = make_llm(max_num_seqs=batch_size, device=device)
-        _evaluate_all_workdirs_batched(llm, long_items, batch_size, skip_judge)
+        if not needs_eval:
+            print("  All rating files already exist — skipping model load.")
+        else:
+            from evaluator import make_llm
+            llm = make_llm(max_num_seqs=batch_size, device=device)
+            _evaluate_all_workdirs_batched(llm, long_items, batch_size, skip_judge)
 
     return long_items
 

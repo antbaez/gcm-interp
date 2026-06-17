@@ -155,7 +155,6 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             original_outputs += op.cpu().numpy().tolist()
             print(f"  batch {batch_num}/{baseline_total} | {batch_time:.1f}s")
             batch_handler.update()
-            break
         os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
         with open(original_outputs_cache, 'w') as f:
             json.dump(original_outputs, f)
@@ -193,9 +192,6 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         topk_df = pd.read_csv(f"{config.get_output_prefix()}/eval/{logit_metric}_{reps_type}_{topk}.csv")
 
                     batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
-                    len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
-                    first_batch_toks = select_gen_qs_toks(config, data_handler)
-                    batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
                     total_batches = len(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size))
                     print(f"{tag} Steering generation on test set... (N={config.args.N}, topk={topk}, type={config.args.steering_type}, batch_size={config.args.steering_batch_size})")
                     for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), start=1):
@@ -217,7 +213,6 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         else:
                             decoded_responses[ablation][reps_type][topk] += decoded
                         batch_handler.update()
-                        break
                     print(f"{tag} Steering generation done.")
                     
                     os.makedirs(steering_dir, exist_ok=True)

@@ -21,8 +21,15 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     patch_activations = patch_activations['desired'].to(model.device)
     P = patch_activations.shape[1]
 
-    print(f"[steering] P={P} — tokens steered (first example in batch):")
-    print(model.tokenizer.decode(gen_toks['input_ids'][0, -P:], skip_special_tokens=False))
+    # Find where the first real (non-padding) token starts, to anchor the positional
+    # steering vector at the beginning of the prompt rather than the end.
+    if 'attention_mask' in gen_toks:
+        prompt_start = int((gen_toks['attention_mask'][0] == 0).sum().item())
+    else:
+        prompt_start = 0
+
+    print(f"[steering] P={P}, prompt_start={prompt_start} — tokens steered (first example in batch):")
+    print(model.tokenizer.decode(gen_toks['input_ids'][0, prompt_start:prompt_start + P], skip_special_tokens=False))
 
     # Precompute the per-head steering contributions OUTSIDE the trace, so the traced
     # body below contains only plain tensor assignments. pandas indexing / proxy
@@ -62,9 +69,9 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         # of generation still reflects the steering without re-applying it each step.
         for layer_idx, sl, contribution in interventions:
             if ablation_type == 'mean':
-                model.model.layers[layer_idx].self_attn.o_proj.output[..., -P:, sl] = contribution
+                model.model.layers[layer_idx].self_attn.o_proj.output[..., prompt_start:prompt_start + P, sl] = contribution
             else:
-                model.model.layers[layer_idx].self_attn.o_proj.output[..., -P:, sl] += contribution
+                model.model.layers[layer_idx].self_attn.o_proj.output[..., prompt_start:prompt_start + P, sl] += contribution
 
         generated = model.generator.output.save()
     return generated
