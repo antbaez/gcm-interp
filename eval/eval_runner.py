@@ -55,13 +55,29 @@ def get_patch_activations(model, data_handler, ablation_type, key='desired', mea
     else:
         raise ValueError(f"Unknown ablation type: {ablation_type}")
 
+LABEL_MAP = {
+    'query': 'PROMPT',
+    'answer': 'ANSWER',
+}
+
 def save_prompt_responses(responses, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
         for entry in responses:
             for k, v in entry.items():
-                f.write(f"{v}\n")
-            f.write('-' * 40 + '\n')
+                if k.startswith('raw_old_'):
+                    label = 'UNSTEERED (RAW)'
+                elif k.startswith('raw_edit_'):
+                    label = 'STEERED (RAW)'
+                elif k.startswith('old_'):
+                    label = 'UNSTEERED'
+                elif k.startswith('edit_'):
+                    label = 'STEERED'
+                else:
+                    label = LABEL_MAP.get(k, k.upper())
+                f.write(f"{label}:\n{v}\n")
+                f.write('-' * 40 + '\n')
+            f.write('=' * 40 + '\n')
     with open(path.replace('.txt', '.json'), 'w') as jf:
         json.dump(responses, jf)
     # print(f"Saved responses to {path.replace('.txt', '')}.(txt + json)")
@@ -139,6 +155,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             original_outputs += op.cpu().numpy().tolist()
             print(f"  batch {batch_num}/{baseline_total} | {batch_time:.1f}s")
             batch_handler.update()
+            break
         os.makedirs(f"{config.get_output_prefix()}/eval/", exist_ok=True)
         with open(original_outputs_cache, 'w') as f:
             json.dump(original_outputs, f)
@@ -200,6 +217,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         else:
                             decoded_responses[ablation][reps_type][topk] += decoded
                         batch_handler.update()
+                        break
                     print(f"{tag} Steering generation done.")
                     
                     os.makedirs(steering_dir, exist_ok=True)

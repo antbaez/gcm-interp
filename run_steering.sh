@@ -5,7 +5,7 @@ set -e
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
-PATCH=false
+PATCH=true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -46,15 +46,16 @@ PATCH_ALGO="atp"
 SEED=42
 MAX_NEW_TOKENS=512      # max tokens the model generates per prompt during eval      
 
-VECTOR_CREATION_BATCH_SIZE=10  # number of prompts per batch when computing the steering vector
-STEERING_BATCH_SIZE=10  # number of prompts per batch during steered generation
-STEERING_N="1 5 10"
-TOPK_VALS="0.01 0.05 0.1 1.0"
+VECTOR_CREATION_BATCH_SIZE=5  # number of prompts per batch when computing the steering vector
+STEERING_BATCH_SIZE=5  # number of prompts per batch during steered generation
+STEERING_N="1"
+TOPK_VALS="0.1 0.5 1.0"
 
 
 EVAL_MODEL=true
 STEERING=true
-EVAL_TEST=true
+EVAL_TEST=false
+EVAL_TRAIN=true
 
 COMBINATIONS=(
     "last-token"
@@ -63,10 +64,11 @@ COMBINATIONS=(
 )
 
 EVAL_FLAGS=""
-if [ "$PATCH" = true ];      then EVAL_FLAGS="$EVAL_FLAGS -patch_model"; fi
-if [ "$EVAL_MODEL" = true ]; then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
-if [ "$STEERING" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
-if [ "$EVAL_TEST" = true ];  then EVAL_FLAGS="$EVAL_FLAGS --eval_test true"; else EVAL_FLAGS="$EVAL_FLAGS --eval_test false"; fi
+if [ "$PATCH" = true ];       then EVAL_FLAGS="$EVAL_FLAGS -patch_model"; fi
+if [ "$EVAL_MODEL" = true ];  then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
+if [ "$STEERING" = true ];    then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
+if [ "$EVAL_TEST" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --eval_test true"; else EVAL_FLAGS="$EVAL_FLAGS --eval_test false"; fi
+if [ "$EVAL_TRAIN" = true ];  then EVAL_FLAGS="$EVAL_FLAGS -eval_train"; fi
 
 run_experiments_for_model() {
     local M_TAG="$1"

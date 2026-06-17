@@ -21,6 +21,9 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     patch_activations = patch_activations['desired'].to(model.device)
     P = patch_activations.shape[1]
 
+    print(f"[steering] P={P} — tokens steered (first example in batch):")
+    print(model.tokenizer.decode(gen_toks['input_ids'][0, :P], skip_special_tokens=False))
+
     # Precompute the per-head steering contributions OUTSIDE the trace, so the traced
     # body below contains only plain tensor assignments. pandas indexing / proxy
     # math inside the trace gets routed through nnsight's tracing hacks and is fragile.
@@ -72,10 +75,14 @@ def decode_responses(model, inputs, originals, edited, base, answers=None):
         query = model.tokenizer.decode(inputs['input_ids'][i], skip_special_tokens=True)
         orig = model.tokenizer.decode(originals[i], skip_special_tokens=True).split(query)[-1]
         edit = model.tokenizer.decode(edited[i], skip_special_tokens=True).split(query)[-1]
+        raw_orig = model.tokenizer.decode(originals[i], skip_special_tokens=False)
+        raw_edit = model.tokenizer.decode(edited[i], skip_special_tokens=False)
         to_append = {
             'query': query,
             f'old_{base}': orig,
-            f'edit_{base}': edit
+            f'edit_{base}': edit,
+            f'raw_old_{base}': raw_orig,
+            f'raw_edit_{base}': raw_edit,
         }
         if answers is not None:
             to_append['answer'] = answers[i]
