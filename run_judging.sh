@@ -65,10 +65,10 @@ for M_TAG in "${MODELS[@]}"; do
 
     for D_TAG in "${DATASETS[@]}"; do
         case "$D_TAG" in
-            harmful)    SOURCE="harmful-long";    BASE="harmless" ;;
-            sycophancy) SOURCE="sycophancy-long"; BASE="non-sycophantic" ;;
-            verse)      SOURCE="verse-long";      BASE="prose" ;;
-            paragraph)  SOURCE="paragraph-long";  BASE="sentence" ;;
+            harmful)    SOURCE="harmful-long";         BASE="harmless" ;;
+            sycophancy) SOURCE="non-sycophantic-long"; BASE="sycophancy" ;;
+            verse)      SOURCE="verse-long";           BASE="prose" ;;
+            paragraph)  SOURCE="paragraph-long";       BASE="sentence" ;;
         esac
 
         echo ""

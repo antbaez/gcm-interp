@@ -65,7 +65,7 @@ def run_dataset(config, model_handler):
                     config.args.steering_type = steering_type
                     _mid = config.args.model_id.lower()
                     _mshort = 'olmo' if 'olmo' in _mid else 'qwen' if 'qwen' in _mid else 'solar'
-                    tag = f"[{_mshort}/{config.args.source.split('-')[0]}]"
+                    tag = f"[{_mshort}/{getattr(config.args, 'dataset_tag', config.args.source.split('-')[0])}]"
                     if combo_outputs_exist(config, config.args.topk_vals, config.args.steering_n):
                         print(f"{tag} [skip] steering_type={steering_type} — all outputs cached")
                         continue
@@ -91,9 +91,11 @@ def main():
         for ds in datasets:
             _mid = config.args.model_id.lower()
             _mshort = 'olmo' if 'olmo' in _mid else 'qwen' if 'qwen' in _mid else 'solar'
-            print(f"\n[{_mshort}/{ds['source'].split('-')[0]}] === Dataset: {ds['source']} -> {ds['base']} ===")
+            print(f"\n[{_mshort}/{ds.get('tag', ds['source'].split('-')[0])}] === Dataset: {ds['source']} -> {ds['base']} ===")
             config.args.source = ds['source']
             config.args.base = ds['base']
+            config.args.data_dir = ds.get('dir', ds['source'])
+            config.args.dataset_tag = ds.get('tag', ds['source'].split('-')[0])
             config.args.steering_add_path = ds['steering_add']
             config.args.steering_sub_path = ds['steering_sub']
             config.args.test_dataset = ds['source']

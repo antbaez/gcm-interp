@@ -91,19 +91,19 @@ run_experiments_for_model() {
     local FIRST=true
     for D_TAG in "${D_TAGS[@]}"; do
         case "$D_TAG" in
-            harmful)    D_SOURCE="harmful-long";    D_BASE="harmless" ;;
-            sycophancy) D_SOURCE="sycophancy-long"; D_BASE="non-sycophantic" ;;
-            verse)      D_SOURCE="verse-long";      D_BASE="prose" ;;
-            paragraph)  D_SOURCE="paragraph-long";  D_BASE="sentence" ;;
+            harmful)    D_SOURCE="harmful-long";         D_BASE="harmless";  D_DIR="harmful-long" ;;
+            sycophancy) D_SOURCE="non-sycophantic-long"; D_BASE="sycophancy"; D_DIR="sycophancy-long" ;;
+            verse)      D_SOURCE="verse-long";           D_BASE="prose";     D_DIR="verse-long" ;;
+            paragraph)  D_SOURCE="paragraph-long";       D_BASE="sentence";  D_DIR="paragraph-long" ;;
         esac
-        local SA="./data/${MODEL_ID##*/}/${D_SOURCE}/${D_SOURCE}-desired-all.jsonl"
-        local SS="./data/${MODEL_ID##*/}/${D_SOURCE}/${D_BASE}-desired-all.jsonl"
+        local SA="./data/${MODEL_ID##*/}/${D_DIR}/${D_SOURCE}-desired-all.jsonl"
+        local SS="./data/${MODEL_ID##*/}/${D_DIR}/${D_BASE}-desired-all.jsonl"
         local D_UPPER="${D_TAG^^}"
         local BS_VAR="BATCH_SIZE_${D_UPPER}"
         local SBS="${!BS_VAR}"
         local VBS="${!BS_VAR}"
         [ "$FIRST" = true ] && FIRST=false || DS_JSON="${DS_JSON},"
-        DS_JSON="${DS_JSON}{\"source\":\"${D_SOURCE}\",\"base\":\"${D_BASE}\",\"steering_add\":\"${SA}\",\"steering_sub\":\"${SS}\",\"steering_batch_size\":${SBS},\"vector_creation_batch_size\":${VBS}}"
+        DS_JSON="${DS_JSON}{\"source\":\"${D_SOURCE}\",\"base\":\"${D_BASE}\",\"dir\":\"${D_DIR}\",\"tag\":\"${D_TAG}\",\"steering_add\":\"${SA}\",\"steering_sub\":\"${SS}\",\"steering_batch_size\":${SBS},\"vector_creation_batch_size\":${VBS}}"
     done
     DS_JSON="${DS_JSON}]"
 
@@ -187,3 +187,7 @@ done
 echo ""
 echo "Summarizing results..."
 python "$JUDGE_DIR/summarize_results.py" --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy"
+
+echo ""
+echo "Analyzing judge ratings..."
+python "$JUDGE_DIR/analyze_judge_results.py" --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy"

@@ -200,6 +200,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
 
                     batch_handler = BatchHandler(config, data_handler, batch_size=config.args.steering_batch_size)
                     total_batches = len(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size))
+                    print("----------------------------------------")
                     print(f"{tag} Steering generation on test set... (N={config.args.N}, topk={topk}, type={config.args.steering_type}, batch_size={config.args.steering_batch_size})")
                     for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), start=1):
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)

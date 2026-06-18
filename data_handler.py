@@ -14,13 +14,14 @@ class DataHandler:
         self.device = self.config.args.device
         self.no_generation_prompt_for_eval_transfer = False
         
+        data_dir = getattr(self.config.args, 'data_dir', self.config.args.source)
         file_paths = {
-            'base_desired': f"{self.config.args.data_path}/{self.config.args.source}/{self.config.args.base}-desired-all.jsonl",
-            'base_undesired': f"{self.config.args.data_path}/{self.config.args.source}/{self.config.args.base}-undesired-all.jsonl",
-            'source_desired': f"{self.config.args.data_path}/{self.config.args.source}/{self.config.args.source}-desired-all.jsonl",
-            'source_undesired': f"{self.config.args.data_path}/{self.config.args.source}/{self.config.args.source}-undesired-all.jsonl",
+            'base_desired': f"{self.config.args.data_path}/{data_dir}/{self.config.args.base}-desired-all.jsonl",
+            'base_undesired': f"{self.config.args.data_path}/{data_dir}/{self.config.args.base}-undesired-all.jsonl",
+            'source_desired': f"{self.config.args.data_path}/{data_dir}/{self.config.args.source}-desired-all.jsonl",
+            'source_undesired': f"{self.config.args.data_path}/{data_dir}/{self.config.args.source}-undesired-all.jsonl",
             'base_test': (
-                f"{self.config.args.data_path}/{self.config.args.source}/{self.config.args.base}-test.jsonl"
+                f"{self.config.args.data_path}/{data_dir}/{self.config.args.base}-test.jsonl"
                 if isinstance(self.config.args.eval_test, bool) and self.config.args.eval_test
                 else f"{self.config.args.eval_test}"
                 if isinstance(self.config.args.eval_test, str) and self.config.args.eval_test
