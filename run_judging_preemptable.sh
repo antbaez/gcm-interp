@@ -1,16 +1,18 @@
 #!/bin/bash
-#SBATCH -p mit_normal_gpu
+#SBATCH -p mit_preemptable
 #SBATCH --gres=gpu:h200:1
 #SBATCH -c 8
 #SBATCH --mem=100G
-#SBATCH --time=06:00:00
+#SBATCH --time=24:00:00
+#SBATCH --requeue
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=acbaez@mit.edu
 
+
 # Usage:
-#   sbatch run_jobs_normal.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all>
+#   sbatch run_jobs_preemptable.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all>
 #   Defaults: --model all --dataset all
 
 set -e
@@ -28,11 +30,7 @@ done
 
 echo "Running: model=$MODEL  dataset=$DATASET"
 
-source ~/gcm-interp/setup.sh
-cd ~/gcm-interp
-
-bash run_steering.sh --model "$MODEL" --dataset "$DATASET" --patch
-
 source ~/gcm-interp/setup_judging.sh
+cd ~/gcm-interp
 
 bash run_judging.sh  --model "$MODEL" --dataset "$DATASET"

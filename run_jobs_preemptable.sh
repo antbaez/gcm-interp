@@ -33,4 +33,8 @@ source ~/gcm-interp/setup.sh
 cd ~/gcm-interp
 
 bash run_steering.sh --model "$MODEL" --dataset "$DATASET" --patch
+
+source ~/gcm-interp/setup_judging.sh
+
+
 bash run_judging.sh  --model "$MODEL" --dataset "$DATASET"

@@ -9,6 +9,7 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=acbaez@mit.edu
 
+
 # Usage:
 #   sbatch run_jobs_normal.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all>
 #   Defaults: --model all --dataset all
@@ -28,11 +29,7 @@ done
 
 echo "Running: model=$MODEL  dataset=$DATASET"
 
-source ~/gcm-interp/setup.sh
-cd ~/gcm-interp
-
-bash run_steering.sh --model "$MODEL" --dataset "$DATASET" --patch
-
 source ~/gcm-interp/setup_judging.sh
+cd ~/gcm-interp
 
 bash run_judging.sh  --model "$MODEL" --dataset "$DATASET"
