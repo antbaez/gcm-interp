@@ -66,13 +66,13 @@ for M_TAG in "${MODELS[@]}"; do
     for D_TAG in "${DATASETS[@]}"; do
         case "$D_TAG" in
             harmful)    SOURCE="harmful-long";         BASE="harmless" ;;
-            sycophancy) SOURCE="non-sycophantic-long"; BASE="sycophancy" ;;
+            sycophancy) SOURCE="sycophancy-long"; BASE="non-sycophantic" ;;
             verse)      SOURCE="verse-long";           BASE="prose" ;;
             paragraph)  SOURCE="paragraph-long";       BASE="sentence" ;;
         esac
 
         echo ""
-        echo "[$M_TAG / $D_TAG] model=$MODEL_NAME  source=$SOURCE  base=$BASE  device=$DEVICE"
+        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  device=$DEVICE"
         cd "$JUDGE_DIR" && python run_judge.py \
             --model_name "$MODEL_NAME" \
             --source "$SOURCE" \
@@ -85,9 +85,14 @@ for M_TAG in "${MODELS[@]}"; do
             --batch_size "$BATCH_SIZE" \
             --device "$DEVICE_IDX" \
             --force
+        cd "$SCRIPT_DIR"
     done
 done
 
 echo ""
 echo "Summarizing results..."
 python "$JUDGE_DIR/summarize_results.py" --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy"
+
+echo ""
+echo "Analyzing judge ratings..."
+python "$JUDGE_DIR/analyze_judge_results.py" --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy"
