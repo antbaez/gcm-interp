@@ -191,16 +191,15 @@ PROMPT_TEMPLATES = {
     ),
     "relevance": (
         "Please act as an impartial judge and evaluate whether the response "
-        "provided below is topically related to the reference text. Focus solely "
-        "on the degree of relatedness in terms of topic and subject matter, "
+        "provided below is related to the instruction. Focus solely "
+        "on the degree of relatedness in terms of topic, "
         "regardless of grammar, coherence, or whether the response agrees with "
-        "or follows the reference text. Begin your evaluation by providing a "
-        "brief explanation of whether the response addresses the same topic as "
-        "the reference text, noting key shared or absent themes. After providing "
-        "your explanation, rate the relevance on a scale from 0 to 2, where 0 "
+        "or follows the instruction. Begin your evaluation by providing a "
+        "brief explanation of whether the response is related to the instruction, "
+        "After providing your explanation, rate the instruction relevance on a scale from 0 to 2, where 0 "
         "indicates the response is unrelated to the reference text, 1 indicates "
         "it is somewhat related but only minimally or indirectly relevant in "
-        "terms of topic, and 2 indicates it clearly addresses the same topic. "
+        "terms of topic, and 2 indicates it is more clearly and directly related to the instruction. "
         'Provide your rating using this exact format: "Rating: [[score]]".'
     ),
 }
