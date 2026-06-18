@@ -168,12 +168,12 @@ class DataHandler:
 
             elif self.config.args.eval_test:
                 self.base_qs_toks = {
-                    'test': self.tokenize_prompts(base_qs['test'], max_length=self.max_len)
+                    'test': self.tokenize_prompts(base_qs['test'], max_length=None)
                 }
 
             elif self.config.args.eval_train:
                 self.base_qs_toks = {
-                    key: self.tokenize_prompts(base_qs[key], max_length=self.max_len) for key in base_qs if key != 'test'
+                    key: self.tokenize_prompts(base_qs[key], max_length=None) for key in base_qs if key != 'test'
                 }
 
             elif self.config.args.ablation == 'pyreft':
@@ -193,8 +193,8 @@ class DataHandler:
 
         if self.config.args.eval_model:
             self.steering_qs_toks = {
-                "add": self.tokenize_prompts(steering["add_qs"], max_length=self.max_len) if steering["add_qs"] else None,
-                "sub": self.tokenize_prompts(steering["sub_qs"], max_length=self.max_len) if steering["sub_qs"] else None
+                "add": self.tokenize_prompts(steering["add_qs"], max_length=None) if steering["add_qs"] else None,
+                "sub": self.tokenize_prompts(steering["sub_qs"], max_length=None) if steering["sub_qs"] else None
             }
 
         self.truncate_to_len(self.LEN)

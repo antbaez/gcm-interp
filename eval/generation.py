@@ -21,15 +21,13 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     patch_activations = patch_activations['desired'].to(model.device)
     P = patch_activations.shape[1]
 
-    # Find where the first real (non-padding) token starts, to anchor the positional
-    # steering vector at the beginning of the prompt rather than the end.
+    total_len = gen_toks['input_ids'].shape[1]
     if 'attention_mask' in gen_toks:
-        prompt_start = int((gen_toks['attention_mask'][0] == 0).sum().item())
+        prompt_starts = (gen_toks['attention_mask'] == 0).sum(dim=1).int().tolist()
     else:
-        prompt_start = 0
-
-    print(f"[steering] P={P}, prompt_start={prompt_start} — tokens steered (first example in batch):")
-    print(model.tokenizer.decode(gen_toks['input_ids'][0, prompt_start:prompt_start + P], skip_special_tokens=False))
+        prompt_starts = [0] * gen_toks['input_ids'].shape[0]
+    real_lens = [total_len - ps for ps in prompt_starts]
+    print(f"[steering] total_len={total_len}, real_len={min(real_lens)}-{max(real_lens)}, P={P}")
 
     # Precompute the per-head steering contributions OUTSIDE the trace, so the traced
     # body below contains only plain tensor assignments. pandas indexing / proxy
@@ -68,10 +66,14 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         # Those steered prompt activations are written into the KV cache, so the rest
         # of generation still reflects the steering without re-applying it each step.
         for layer_idx, sl, contribution in interventions:
-            if ablation_type == 'mean':
-                model.model.layers[layer_idx].self_attn.o_proj.output[..., prompt_start:prompt_start + P, sl] = contribution
-            else:
-                model.model.layers[layer_idx].self_attn.o_proj.output[..., prompt_start:prompt_start + P, sl] += contribution
+            out = model.model.layers[layer_idx].self_attn.o_proj.output
+            for i, ps in enumerate(prompt_starts):
+                actual_P = min(P, total_len - ps)
+                c = contribution if contribution.dim() == 1 else contribution[:actual_P]
+                if ablation_type == 'mean':
+                    out[i, ps:ps + actual_P, sl] = c
+                else:
+                    out[i, ps:ps + actual_P, sl] = out[i, ps:ps + actual_P, sl] + c
 
         generated = model.generator.output.save()
     return generated

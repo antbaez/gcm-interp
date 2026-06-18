@@ -97,6 +97,10 @@ def main():
             config.args.steering_add_path = ds['steering_add']
             config.args.steering_sub_path = ds['steering_sub']
             config.args.test_dataset = ds['source']
+            if 'steering_batch_size' in ds:
+                config.args.steering_batch_size = int(ds['steering_batch_size'])
+            if 'vector_creation_batch_size' in ds:
+                config.args.vector_creation_batch_size = int(ds['vector_creation_batch_size'])
             config.set_output_prefix()
             os.makedirs(config.get_output_prefix(), exist_ok=True)
             config.save_to_yaml(f"{config.get_output_prefix()}/config.yml", config.args)

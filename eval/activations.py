@@ -31,6 +31,15 @@ def steering_reps_cache(model, data_handler, batch_size=10, mean=True):
 
     source_toks = data_handler.steering_qs_toks['add']
     base_toks = data_handler.steering_qs_toks['sub']
+    add_max_real = int(source_toks['attention_mask'].sum(dim=1).max().item())
+    sub_max_real = int(base_toks['attention_mask'].sum(dim=1).max().item())
+    source_toks = {k: v[:, -add_max_real:] for k, v in source_toks.items()}
+    base_toks = {k: v[:, -sub_max_real:] for k, v in base_toks.items()}
+    add_total = source_toks['input_ids'].shape[1]
+    sub_total = base_toks['input_ids'].shape[1]
+    add_real = int(source_toks['attention_mask'][0].sum().item())
+    sub_real = int(base_toks['attention_mask'][0].sum().item())
+    print(f"[steering-vec] add: total_len={add_total}, real_len={add_real} | sub: total_len={sub_total}, real_len={sub_real}")
     num_layers = len(model.model.layers)
     steer = [[] for _ in range(num_layers)]
     base = [[] for _ in range(num_layers)]

@@ -60,16 +60,23 @@ def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64, device:
     gpu_info = f"GPU {device}" if device is not None else f"{num_gpus} GPU(s)"
     print(f"Using {gpu_info}. Loading judge model: {model_name}")
 
-    llm = LLM(
-        model=model_name,
-        quantization="bitsandbytes",
-        tensor_parallel_size=1,
-        pipeline_parallel_size=1,
-        dtype="auto",
-        max_num_seqs=max_num_seqs,
-        max_model_len=4096,
-        seed=SEED,
-    )
+    try:
+        with _suppress_fd_output():
+            llm = LLM(
+                model=model_name,
+                quantization="bitsandbytes",
+                tensor_parallel_size=1,
+                pipeline_parallel_size=1,
+                dtype="auto",
+                max_num_seqs=max_num_seqs,
+                max_model_len=4096,
+                seed=SEED,
+            )
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        raise
+    print(f"Judge model loaded.")
     return llm
 
 

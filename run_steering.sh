@@ -46,8 +46,10 @@ PATCH_ALGO="atp"
 SEED=42
 MAX_NEW_TOKENS=512      # max tokens the model generates per prompt during eval      
 
-VECTOR_CREATION_BATCH_SIZE=5  # number of prompts per batch when computing the steering vector
-STEERING_BATCH_SIZE=5  # number of prompts per batch during steered generation
+BATCH_SIZE_HARMFUL=10
+BATCH_SIZE_SYCOPHANCY=10
+BATCH_SIZE_VERSE=5
+BATCH_SIZE_PARAGRAPH=5
 STEERING_N="1"
 TOPK_VALS="0.1 0.5 1.0"
 
@@ -92,8 +94,12 @@ run_experiments_for_model() {
         esac
         local SA="./data/${MODEL_ID##*/}/${D_SOURCE}/${D_SOURCE}-desired-all.jsonl"
         local SS="./data/${MODEL_ID##*/}/${D_SOURCE}/${D_BASE}-desired-all.jsonl"
+        local D_UPPER="${D_TAG^^}"
+        local BS_VAR="BATCH_SIZE_${D_UPPER}"
+        local SBS="${!BS_VAR}"
+        local VBS="${!BS_VAR}"
         [ "$FIRST" = true ] && FIRST=false || DS_JSON="${DS_JSON},"
-        DS_JSON="${DS_JSON}{\"source\":\"${D_SOURCE}\",\"base\":\"${D_BASE}\",\"steering_add\":\"${SA}\",\"steering_sub\":\"${SS}\"}"
+        DS_JSON="${DS_JSON}{\"source\":\"${D_SOURCE}\",\"base\":\"${D_BASE}\",\"steering_add\":\"${SA}\",\"steering_sub\":\"${SS}\",\"steering_batch_size\":${SBS},\"vector_creation_batch_size\":${VBS}}"
     done
     DS_JSON="${DS_JSON}]"
 
@@ -112,16 +118,17 @@ run_experiments_for_model() {
         -batch_size "$PATCHING_BATCH_SIZE"
         -patch_algo "$PATCH_ALGO"
         -seed "$SEED"
-        -vector_creation_batch_size "$VECTOR_CREATION_BATCH_SIZE"
-        -steering_batch_size "$STEERING_BATCH_SIZE"
         -steering_n $STEERING_N
         -topk_vals $TOPK_VALS
         -max_new_tokens "$MAX_NEW_TOKENS"
         -dataset_list "$DS_JSON"
     )
 
+    read -ra _N_ARR <<< "$STEERING_N"
+    read -ra _K_ARR <<< "$TOPK_VALS"
+    local N_COMBOS=$(( ${#_N_ARR[@]} * ${#_K_ARR[@]} ))
     echo ""
-    echo "[$M_TAG / ${D_TAGS[*]}] Running ${#D_TAGS[@]} dataset(s) × ${#COMBINATIONS[@]} combos in single process"
+    echo "[$M_TAG / ${D_TAGS[*]}] Running ${#D_TAGS[@]} dataset(s) × ${N_COMBOS} combinations (N=[${STEERING_N}]  k=[${TOPK_VALS}]) in single process"
     local START_TIME=$SECONDS
     python -u run.py "${BASE_ARGS[@]}" -steering_combos "$COMBOS_JSON" $EVAL_FLAGS
     local ELAPSED=$(( SECONDS - START_TIME ))

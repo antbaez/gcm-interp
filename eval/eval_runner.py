@@ -9,6 +9,7 @@ import os
 import gc
 import ast
 import json
+import statistics
 import time
 import pandas as pd
 from tqdm import tqdm
@@ -142,6 +143,12 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
         print(f"{tag} Generating unsteered baseline responses... (dataset_size={data_handler.LEN}, batch_size={config.args.steering_batch_size})")
         for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), start=1):
             gen_qs_toks = select_gen_qs_toks(config, batch_handler)
+            max_real = int(gen_qs_toks['attention_mask'].sum(dim=1).max().item())
+            gen_qs_toks = {k: v[:, -max_real:] for k, v in gen_qs_toks.items()}
+            if batch_num == 1:
+                total_len = gen_qs_toks['input_ids'].shape[1]
+                real_len = int(gen_qs_toks['attention_mask'][0].sum().item())
+                print(f"[baseline] total_len={total_len}, real_len={real_len}")
             t0 = time.time()
             with model.generate(gen_qs_toks,
             pad_token_id=model.tokenizer.eos_token_id,
@@ -196,6 +203,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                     print(f"{tag} Steering generation on test set... (N={config.args.N}, topk={topk}, type={config.args.steering_type}, batch_size={config.args.steering_batch_size})")
                     for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.steering_batch_size), start=1):
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
+                        max_real = int(gen_qs_toks['attention_mask'].sum(dim=1).max().item())
+                        gen_qs_toks = {k: v[:, -max_real:] for k, v in gen_qs_toks.items()}
                         t0 = time.time()
                         edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_type=config.args.steering_type)
                         batch_time = time.time() - t0
@@ -207,14 +216,14 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         for seq in gen_part:
                             eos_pos = (seq == eos_id).nonzero(as_tuple=True)[0]
                             gen_lengths.append(eos_pos[0].item() + 1 if len(eos_pos) > 0 else gen_part.shape[1])
-                        print(f"  batch {batch_num}/{total_batches} | {batch_time:.1f}s | gen lengths: {gen_lengths} / {config.args.max_new_tokens}")
+                        _gl = gen_lengths
+                        print(f"  batch {batch_num}/{total_batches} | {batch_time:.1f}s | gen lengths: min={min(_gl)} mean={statistics.mean(_gl):.0f} median={statistics.median(_gl):.0f} max={max(_gl)}")
                         if len(decoded_responses[ablation][reps_type][topk]) == 0:
                             decoded_responses[ablation][reps_type][topk] = decoded
                         else:
                             decoded_responses[ablation][reps_type][topk] += decoded
                         batch_handler.update()
-                    print(f"{tag} Steering generation done.")
-                    
+
                     os.makedirs(steering_dir, exist_ok=True)
                     save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
     print(f"{tag} Evaluation complete.")
