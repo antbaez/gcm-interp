@@ -53,7 +53,7 @@ fi
 # Strip "cuda:" prefix for run_judge.py --device (expects an int)
 DEVICE_IDX="${DEVICE#cuda:}"
 
-BATCH_SIZE=64
+BATCH_SIZE=128
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
 for M_TAG in "${MODELS[@]}"; do
@@ -66,7 +66,7 @@ for M_TAG in "${MODELS[@]}"; do
     for D_TAG in "${DATASETS[@]}"; do
         case "$D_TAG" in
             harmful)    SOURCE="harmful-long";         BASE="harmless";          DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-            sycophancy) SOURCE="non-sycophantic-long"; BASE="sycophancy";        DATA_SOURCE="sycophancy-long"; DATA_BASE="non-sycophantic" ;;
+            sycophancy) SOURCE="non-sycophantic-long"; BASE="sycophancy";        DATA_SOURCE="sycophancy-long"; DATA_BASE="sycophancy" ;;
             verse)      SOURCE="verse-long";           BASE="prose";             DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
             paragraph)  SOURCE="paragraph-long";       BASE="sentence";          DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
         esac
