@@ -167,7 +167,9 @@ def discover_gen_files(
 
 
 def gen_to_csv(gen_path: str, data_dir: str, output_path: str,
-               eval_mode: str = "eval_test"):
+               eval_mode: str = "eval_test",
+               data_source: str | None = None,
+               data_base: str | None = None):
     """Convert a single gen.json file to a CSV with metadata columns."""
     try:
         meta = extract_path_metadata(gen_path)
@@ -181,7 +183,10 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str,
     with open(gen_path) as f:
         items = json.load(f)
 
-    test_queries = load_test_queries(data_dir, model_id, source, base, eval_mode)
+    # data_source/data_base allow the results dir naming to differ from the data dir layout
+    query_source = data_source or source
+    query_base = data_base or base
+    test_queries = load_test_queries(data_dir, model_id, query_source, query_base, eval_mode)
 
     old_key = f"old_{base}"
     edit_key = f"edit_{base}"

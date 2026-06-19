@@ -118,6 +118,8 @@ def phase1_prepare(
     accuracy_dir: Path = ACCURACY_DIR,
     runs_dir: Path = RUNS_DIR,
     workdirs_root: Path = WORKDIRS_ROOT,
+    data_source: str | None = None,
+    data_base: str | None = None,
 ) -> list[tuple[Path, dict, str]]:
     """
     For each gen file: convert to CSV and build prompt CSVs.
@@ -164,7 +166,8 @@ def phase1_prepare(
         eval_csv = workdir / "eval_output.csv"
         if not eval_csv.exists():
             try:
-                gen_to_csv(gen_path, data_dir, str(eval_csv), eval_mode)
+                gen_to_csv(gen_path, data_dir, str(eval_csv), eval_mode,
+                           data_source=data_source, data_base=data_base)
             except (ValueError, FileNotFoundError) as e:
                 print(f"  ERROR converting {name}: {e}")
                 errors += 1
@@ -379,6 +382,10 @@ def parse_args():
     p.add_argument("--model_name",   default=None)
     p.add_argument("--source",       default=None)
     p.add_argument("--base",         default=None)
+    p.add_argument("--data_source",  default=None,
+                   help="Override source used for data file lookup (defaults to --source)")
+    p.add_argument("--data_base",    default=None,
+                   help="Override base used for data file lookup (defaults to --base)")
     p.add_argument("--algos",        nargs="*", default=None)
     p.add_argument("--eval_subdir",  default=None,
                    help="e.g. sycophancy-single_eval")
@@ -443,7 +450,8 @@ def main():
     print("=" * 60)
     print("  PHASE 1: Convert gen files + build prompt CSVs")
     print("=" * 60)
-    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force, args.eval_mode, accuracy_dir, runs_dir, workdirs_root)
+    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force, args.eval_mode, accuracy_dir, runs_dir, workdirs_root,
+                              data_source=args.data_source, data_base=args.data_base)
 
     if not prepared:
         print("Nothing to evaluate.")

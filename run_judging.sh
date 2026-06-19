@@ -65,10 +65,10 @@ for M_TAG in "${MODELS[@]}"; do
 
     for D_TAG in "${DATASETS[@]}"; do
         case "$D_TAG" in
-            harmful)    SOURCE="harmful-long";         BASE="harmless" ;;
-            sycophancy) SOURCE="sycophancy-long"; BASE="non-sycophantic" ;;
-            verse)      SOURCE="verse-long";           BASE="prose" ;;
-            paragraph)  SOURCE="paragraph-long";       BASE="sentence" ;;
+            harmful)    SOURCE="harmful-long";         BASE="harmless";          DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+            sycophancy) SOURCE="non-sycophantic-long"; BASE="sycophancy";        DATA_SOURCE="sycophancy-long"; DATA_BASE="non-sycophantic" ;;
+            verse)      SOURCE="verse-long";           BASE="prose";             DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+            paragraph)  SOURCE="paragraph-long";       BASE="sentence";          DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
         esac
 
         echo ""
@@ -77,6 +77,8 @@ for M_TAG in "${MODELS[@]}"; do
             --model_name "$MODEL_NAME" \
             --source "$SOURCE" \
             --base "$BASE" \
+            --data_source "$DATA_SOURCE" \
+            --data_base "$DATA_BASE" \
             --runs_dir "$SCRIPT_DIR/results" \
             --data_dir "$SCRIPT_DIR/data" \
             --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy" \
