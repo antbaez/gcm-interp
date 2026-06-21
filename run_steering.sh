@@ -60,8 +60,8 @@ STEERING=true
 EVAL_TEST=true
 
 COMBINATIONS=(
-    # "last-token"
-    # "mean"
+    "last-token"
+    "mean"
     "positional"
 )
 
