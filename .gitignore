@@ -27,3 +27,8 @@ normalized-results/**/*.json
 .DS_Store
 refusal+harmful-data/
 style+sycophancy-data/
+
+results/
+judge-evals/workdirs
+judge-evals/accuracy
+logs/
