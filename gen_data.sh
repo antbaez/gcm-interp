@@ -26,11 +26,11 @@ case "$MODEL_TAG" in
 esac
 
 BASE_ID=""
-SOURCE="paragraph-long"
-BASE="sentence"
+SOURCE="non-sycophantic-long"
+BASE="sycophancy-long"
 NUM_SAMPLES=100
 DEVICE="cuda:0"
-BATCH_SIZE=10
+BATCH_SIZE=50
 GEN_DATA=true
 GEN_LOGITS=false
 MAX_TOKENS=512

@@ -43,7 +43,9 @@ assert MARKER is not None, "Please set the MARKER variable for your model"
 source = config.source
 base = config.base
 # Input queries must exist at this path as {source}.jsonl and {base}.jsonl
-queries_path = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}-queries"
+_queries_dir = 'sycophancy-long-queries' if source == 'non-sycophantic-long' else f'{source}-queries'
+queries_path = f"/home/acbaez/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{_queries_dir}"
+output_dir = 'sycophancy-long' if source == 'non-sycophantic-long' else source
 
 
 
@@ -76,8 +78,11 @@ def generate_response(inputs, model, tokenizer, max_new_tokens=512):
     response = [r.split(MARKER)[-1] for idx, r in enumerate(decoded)]
     return response
 
+_filename_overrides = {'sycophancy-long': 'sycophancy'}
+
 def read_jsonl(data_type, queries_path=queries_path):
-    file_name = f"{queries_path}/{data_type}.jsonl"
+    filename = _filename_overrides.get(data_type, data_type)
+    file_name = f"{queries_path}/{filename}.jsonl"
     questions = []
     with open(file_name, 'r') as file:
         for line in file:
@@ -144,10 +149,14 @@ def load_model_and_tokenizer(model_name: str, device: str):
 model, tokenizer = load_model_and_tokenizer(MODEL_NAME, config.device)
 
 if config.gen_data:
+    base_name = base.replace('-long', '').replace('-single', '')
+    source_name = source
     # Generate desired responses for both base and source conditions
     for gen in [base, source]:
         other = source if gen == base else base
-        op_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{gen}-desired-all.jsonl"
+        gen_name = base_name if gen == base else source_name
+        other_name = source_name if gen == base else base_name
+        op_file = f"/home/acbaez/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{output_dir}/{gen_name}-desired-all.jsonl"
         os.makedirs(os.path.dirname(op_file), exist_ok=True)
         file = open(op_file, 'w')
         random.seed(42)
@@ -218,6 +227,10 @@ if config.gen_data:
             'lie-capitals': {
                 'replace': f'',
                 'with': f''
+            },
+            'non-sycophantic': {
+                'replace': f'I believe that it is {"ok" if "non-sycophantic" in gen else "terrible"}',
+                'with': f'I believe that it is {"terrible" if "non-sycophantic" in gen else "ok"}'
             }
 
         }
@@ -229,9 +242,9 @@ if config.gen_data:
 
         # Undesired responses are the desired responses re-paired with the flipped (opposite condition) prompt
         if gen == source:
-            other_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{base}-undesired-all.jsonl"
+            other_file = f"/home/acbaez/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{output_dir}/{base_name}-undesired-all.jsonl"
         else:
-            other_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{source}-undesired-all.jsonl"
+            other_file = f"/home/acbaez/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{output_dir}/{source_name}-undesired-all.jsonl"
 
         with open(other_file, 'w') as file:
             for data in dataset:
@@ -244,20 +257,16 @@ if config.gen_data:
 
         file.close()
 
-    # Create test file by generating responses for prompts in the queries test file
-    test_file = f"/root/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{source}/{base}-test.jsonl"
-    test_questions = read_jsonl(f"{base}-test")
+    # Create test file from queries test file (questions only, no responses)
+    test_file = f"/home/acbaez/gcm-interp/data/{MODEL_NAME.split('/')[-1]}/{output_dir}/{base_name}-test.jsonl"
+    test_questions = read_jsonl(f"{base_name}-test")
     test_qs = [extract_messages(d) for d in test_questions]
     with open(test_file, 'w') as f_out:
-        for i in tqdm(range(0, len(test_qs), batch_size)):
-            batch_qs = test_qs[i:i + batch_size]
-            rs = generate_response(batch_qs, model, tokenizer, max_new_tokens=config.max_tokens)
-            for j, r in enumerate(rs):
-                q_index = i + j
-                f_out.write(json.dumps({
-                    "id": test_questions[q_index].get('id', q_index),
-                    "prompt": test_qs[q_index] + [{"role": "assistant", "content": r}]
-                }) + '\n')
+        for q_index, q in enumerate(test_qs):
+            f_out.write(json.dumps({
+                "id": test_questions[q_index].get('id', q_index),
+                "prompt": q
+            }) + '\n')
     print(test_file)
 
     del model
