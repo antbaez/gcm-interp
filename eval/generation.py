@@ -19,7 +19,10 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     if steering_type is None:
         raise ValueError("steering_type must be specified: 'last-token', 'mean', or 'positional'")
     patch_activations = patch_activations['desired'].to(model.device)
-    P = patch_activations.shape[1]
+    # last-token / mean caches are [layers, dim] (single direction); positional is
+    # [layers, P, dim] (one direction per position). P only exists for positional.
+    positional = (steering_type == 'positional')
+    P = patch_activations.shape[1] if positional else None
 
     total_len = gen_toks['input_ids'].shape[1]
     if 'attention_mask' in gen_toks:
@@ -38,12 +41,10 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         for head_idx in head_ids_for_layer:
             sl = slice(DIM * head_idx, DIM * (head_idx + 1))
 
-            if steering_type == 'last-token':
-                sv = patch_activations[layer_idx][-1, sl]            # [dim]
-            elif steering_type == 'mean':
-                sv = patch_activations[layer_idx][:, sl].mean(dim=0) # [dim]
-            elif steering_type == 'positional':
-                sv = patch_activations[layer_idx][:, sl]             # [P, dim]
+            if positional:
+                sv = patch_activations[layer_idx][:, sl]   # [P, dim]
+            else:
+                sv = patch_activations[layer_idx][sl]      # [dim]  (last-token or mean)
 
             if normalize:
                 sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
@@ -68,12 +69,46 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         for layer_idx, sl, contribution in interventions:
             out = model.model.layers[layer_idx].self_attn.o_proj.output
             for i, ps in enumerate(prompt_starts):
-                actual_P = min(P, total_len - ps)
-                c = contribution if contribution.dim() == 1 else contribution[:actual_P]
-                if ablation_type == 'mean':
-                    out[i, ps:ps + actual_P, sl] = c
+                if contribution.dim() == 1:
+                    # last-token / mean: one direction applied to every real position.
+                    if ablation_type == 'mean':
+                        out[i, ps:total_len, sl] = contribution
+                    else:
+                        out[i, ps:total_len, sl] = out[i, ps:total_len, sl] + contribution
                 else:
-                    out[i, ps:ps + actual_P, sl] = out[i, ps:ps + actual_P, sl] + c
+                    # positional right-aligned: contribution[P-1] -> last real token,
+                    # contribution[0] -> leftmost cached position. Slicing the last
+                    # actual_P entries (contribution[-actual_P:]) lines them up
+                    # directly with the rightmost window [start_pos:total_len], so the
+                    # last token always gets contribution[P-1]. If the prompt is longer
+                    # than P, the uncovered tokens to the left get contribution[0]
+                    # (the leftmost cached vector).
+                    actual_P = min(P, total_len - ps)
+                    start_pos = total_len - actual_P
+                    if ablation_type == 'mean':
+                        out[i, start_pos:total_len, sl] = contribution[-actual_P:]
+                    else:
+                        out[i, start_pos:total_len, sl] = out[i, start_pos:total_len, sl] + contribution[-actual_P:]
+                    if total_len - ps > P:
+                        tail = contribution[0]  # leftmost cached vector
+                        if ablation_type == 'mean':
+                            out[i, ps:start_pos, sl] = tail
+                        else:
+                            out[i, ps:start_pos, sl] = out[i, ps:start_pos, sl] + tail
+
+                    # Previous left-aligned implementation (and used torch.flip — now removed):
+                    # actual_P = min(P, total_len - ps)
+                    # c = contribution[:actual_P]
+                    # if ablation_type == 'mean':
+                    #     out[i, ps:ps + actual_P, sl] = c
+                    # else:
+                    #     out[i, ps:ps + actual_P, sl] = out[i, ps:ps + actual_P, sl] + c
+                    # if total_len - ps > P:
+                    #     tail = contribution[-1]  # [dim]
+                    #     if ablation_type == 'mean':
+                    #         out[i, ps + actual_P:total_len, sl] = tail
+                    #     else:
+                    #         out[i, ps + actual_P:total_len, sl] = out[i, ps + actual_P:total_len, sl] + tail
 
         generated = model.generator.output.save()
     return generated

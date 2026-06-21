@@ -52,6 +52,7 @@ BATCH_SIZE_VERSE=50
 BATCH_SIZE_PARAGRAPH=10
 STEERING_N="1 3 5 8 10"
 TOPK_VALS="0.01 0.03 0.05 0.08 0.1 0.5 1.0"
+NORMALIZE=false
 
 
 EVAL_MODEL=true
@@ -59,8 +60,8 @@ STEERING=true
 EVAL_TEST=true
 
 COMBINATIONS=(
-    "last-token"
-    "mean"
+    # "last-token"
+    # "mean"
     "positional"
 )
 
@@ -69,6 +70,7 @@ if [ "$PATCH" = true ];       then EVAL_FLAGS="$EVAL_FLAGS -patch_model"; fi
 if [ "$EVAL_MODEL" = true ];  then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
 if [ "$STEERING" = true ];    then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
 if [ "$EVAL_TEST" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --eval_test true"; else EVAL_FLAGS="$EVAL_FLAGS --eval_test false"; fi
+if [ "$NORMALIZE" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --normalize"; fi
 if [ "$EVAL_TRAIN" = true ];  then EVAL_FLAGS="$EVAL_FLAGS -eval_train"; fi
 
 run_experiments_for_model() {

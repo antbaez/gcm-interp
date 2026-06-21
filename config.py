@@ -48,6 +48,7 @@ class Config:
         parser.add_argument('-topk_vals', '--topk_vals', type=float, nargs='+', default=[1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5], help='top-k fractions of heads to sweep')
         parser.add_argument('-steering_type', '--steering_type', type=str, default='mean', choices=['last-token', 'mean', 'positional'], help='how to compute the steering vector from patch_activations')
         parser.add_argument('-steering_combos', '--steering_combos', type=str, default=None, help='JSON array of [steering_type, ...] strings to run sequentially in one process')
+        parser.add_argument('--normalize', action='store_true', default=False, help='Normalize steering vectors to unit norm before scaling by N')
 
         args = parser.parse_args()
         if isinstance(args.eval_test, str) and args.eval_test.lower() == 'false':

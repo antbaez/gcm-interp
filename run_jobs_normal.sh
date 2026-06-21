@@ -4,8 +4,8 @@
 #SBATCH -c 8
 #SBATCH --mem=100G
 #SBATCH --time=06:00:00
-#SBATCH --output=logs/%j.out
-#SBATCH --error=logs/%j.err
+#SBATCH --output=logs/out/%j.out
+#SBATCH --error=logs/err/%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=acbaez@mit.edu
 

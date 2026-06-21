@@ -101,7 +101,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
     # set_seed()
     _mid = config.args.model_id.lower()
     _mshort = 'olmo' if 'olmo' in _mid else 'qwen' if 'qwen' in _mid else 'solar'
-    tag = f"[{_mshort}/{config.args.source.split('-')[0]}]"
+    tag = f"[{_mshort}/{getattr(config.args, 'dataset_tag', config.args.source.split('-')[0])}]"
     print(f"\n{tag} Starting evaluation...")
 
     model = model_handler.model
@@ -207,7 +207,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         max_real = int(gen_qs_toks['attention_mask'].sum(dim=1).max().item())
                         gen_qs_toks = {k: v[:, -max_real:] for k, v in gen_qs_toks.items()}
                         t0 = time.time()
-                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_type=config.args.steering_type)
+                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type)
                         batch_time = time.time() - t0
                         decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.steering_batch_size], edited_outputs, config.args.base)
                         input_len = gen_qs_toks['input_ids'].shape[1]
