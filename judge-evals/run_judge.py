@@ -261,8 +261,14 @@ def _evaluate_all_workdirs_batched(
             print(f"  [{mode}] Nothing to evaluate (all done).")
             continue
 
+        from collections import Counter
+        steering_counts = Counter(wd.parent.name for wd, _ in all_rows)
+        steering_summary = ", ".join(
+            f"{stype}: {cnt}" for stype, cnt in sorted(steering_counts.items())
+        )
         print(f"  [{mode}] Evaluating {len(all_rows)} prompts across "
-              f"{len({wd for wd, _ in all_rows})} workdirs...")
+              f"{len({wd for wd, _ in all_rows})} workdirs "
+              f"[{steering_summary}]...")
 
         prompts = [row[prompt_col] for _, row in all_rows]
 
@@ -291,7 +297,11 @@ def _evaluate_all_workdirs_batched(
                 for item in results:
                     f.write(json.dumps(item, ensure_ascii=False) + "\n")
             written += 1
-        print(f"  [{mode}] Done. Wrote {written} files.")
+        written_counts = Counter(wd.parent.name for wd in wd_results)
+        written_summary = ", ".join(
+            f"{stype}: {cnt}" for stype, cnt in sorted(written_counts.items())
+        )
+        print(f"  [{mode}] Done. Wrote {written} files [{written_summary}].")
 
 
 def phase2_evaluate(

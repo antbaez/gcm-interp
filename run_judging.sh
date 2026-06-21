@@ -97,4 +97,4 @@ python "$JUDGE_DIR/summarize_results.py" --accuracy_dir "$SCRIPT_DIR/judge-evals
 
 echo ""
 echo "Analyzing judge ratings..."
-python "$JUDGE_DIR/analyze_judge_results.py" --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy"
+python "$JUDGE_DIR/analyze_judge_ratings.py" --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy"

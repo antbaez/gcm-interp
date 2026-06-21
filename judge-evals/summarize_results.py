@@ -25,6 +25,13 @@ from config import BASE_DIR
 WORKDIRS_JSONL = BASE_DIR / "judge-evals" / "workdirs"
 ACCURACY_DIR   = BASE_DIR / "judge-evals" / "accuracy"
 
+SOURCE_TO_TAG = {
+    "harmful-long":         "harmful",
+    "non-sycophantic-long": "sycophancy",
+    "verse-long":           "verse",
+    "paragraph-long":       "paragraph",
+}
+
 
 def _read_jsonl(path: Path):
     with open(path) as f:
@@ -67,14 +74,13 @@ def collect_records(workdirs_dir: Path) -> pd.DataFrame:
         if N is None or topk is None:
             continue
 
-        is_syco      = "sycophancy" in source
         flu_by_query = {r.get("data_path_query"): r.get("judge_rating") for r in flu_recs}
         rel_by_query = {r.get("data_path_query"): r.get("judge_rating") for r in rel_recs}
 
         wo_passes, w_passes = [], []
         for rec in judge_recs:
             jp_rating = rec.get("judge_rating")
-            jp_pass   = bool((jp_rating == 3) if is_syco else (jp_rating == 5))
+            jp_pass   = bool(jp_rating == 5)
             query     = rec.get("data_path_query", "")
             flu       = flu_by_query.get(query)
             rel       = rel_by_query.get(query)
@@ -96,7 +102,7 @@ def collect_records(workdirs_dir: Path) -> pd.DataFrame:
 
 RF_TITLES = {
     "wo_rf": "wo_rf (no quality filter)",
-    "w_rf":  "w_rf (fluency + relevance = 2)",
+    "w_rf":  "w_rf (quality filter)",
 }
 RF_ORDER = ["wo_rf", "w_rf"]
 
@@ -112,8 +118,8 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
             (n for n in ("OLMo", "Qwen", "SOLAR") if n.lower() in model.lower()),
             model.split("/")[-1],
         )
-        short_source = re.sub(r"-(long|single)$", "", source)
-        short_title  = f"{short_model}  |  {short_source} → {base}"
+        short_source = SOURCE_TO_TAG.get(source, re.sub(r"-(long|single)$", "", source))
+        short_title  = f"{short_model}  |  {short_source}"
 
         n_vals    = sorted(group["N"].unique())
         topk_vals = sorted(group["topk"].unique())
@@ -123,12 +129,12 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
 
         fig, axes = plt.subplots(
             n_rows, n_cols,
-            figsize=(1.2 + 0.80 * len(topk_vals) * n_cols,
-                     1.0 + 0.68 * len(n_vals) * n_rows),
+            figsize=(1.2 + 0.60 * len(topk_vals) * n_cols,
+                     1.0 + 0.50 * len(n_vals) * n_rows),
             squeeze=False,
             constrained_layout=True,
         )
-        fig.suptitle(short_title, fontsize=16)
+        fig.suptitle(short_title, fontsize=18)
 
         for row_i, combo in enumerate(combos):
             for col_i, rf in enumerate(RF_ORDER):
@@ -164,17 +170,18 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
                         )
 
                 if row_i == 0:
-                    ax.set_title(RF_TITLES[rf], fontsize=13)
+                    ax.set_title(RF_TITLES[rf], fontsize=15)
                 # Every block carries its own x-axis (ticks + label).
-                ax.set_xlabel("topk", fontsize=11)
+                ax.set_xlabel("", fontsize=13)
                 if col_i == 0:
-                    ax.set_ylabel(combo, fontsize=13, fontweight="bold",
+                    combo_label = "mean-token" if combo == "mean" else combo
+                    ax.set_ylabel(combo_label, fontsize=15, fontweight="bold",
                                   labelpad=8)
                 else:
                     ax.set_ylabel("")
-                ax.set_yticklabels(n_vals, rotation=0, fontsize=9)
+                ax.set_yticklabels(n_vals, rotation=0, fontsize=11)
                 ax.set_xticklabels(topk_labels, rotation=45, ha="right",
-                                   fontsize=9)
+                                   fontsize=11)
 
         # Shared colorbar on the right.
         sm = mpl.cm.ScalarMappable(
@@ -184,12 +191,13 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
 
         # Axis-orientation legend, top-right.
         fig.text(
-            0.995, 0.995, "rows = N\ncolumns = topk",
-            ha="right", va="top", fontsize=9, family="monospace",
+            0.995, 1.01, "rows = N\ncolumns = topk",
+            ha="right", va="top", fontsize=13, family="monospace",
+            clip_on=False,
             bbox=dict(boxstyle="round", facecolor="white", edgecolor="gray"),
         )
 
-        fig_path = accuracy_dir / f"heatmap_{short_model}_{short_source}_to_{base}.png"
+        fig_path = accuracy_dir / f"heatmap_{short_model}_{short_source}.png"
         plt.savefig(fig_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"Saved heatmap: {fig_path.name}")
@@ -216,7 +224,9 @@ def main():
       .to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path.name}  ({len(df)} rows)")
 
-    make_heatmaps(df, accuracy_dir)
+    CANONICAL_BASES = {"harmless", "sycophancy", "prose"}
+    canonical = df["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
+    make_heatmaps(df[canonical], accuracy_dir)
 
 
 if __name__ == "__main__":
