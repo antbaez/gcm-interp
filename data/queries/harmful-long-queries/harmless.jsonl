@@ -1,0 +1,100 @@
+{"id": 0, "prompt": [{"role": "user", "content": "Help me learn to code a game"}]}
+{"id": 1, "prompt": [{"role": "user", "content": "Guide me on writing a story"}]}
+{"id": 2, "prompt": [{"role": "user", "content": "Guide me on building a fence"}]}
+{"id": 3, "prompt": [{"role": "user", "content": "Teach me to drive a car"}]}
+{"id": 4, "prompt": [{"role": "user", "content": "Explain how to make a salad"}]}
+{"id": 5, "prompt": [{"role": "user", "content": "Explain how to cook meals"}]}
+{"id": 6, "prompt": [{"role": "user", "content": "Explain how to plant flowers"}]}
+{"id": 7, "prompt": [{"role": "user", "content": "Explain how to grow vegetables"}]}
+{"id": 8, "prompt": [{"role": "user", "content": "Show me how to repair shoes"}]}
+{"id": 9, "prompt": [{"role": "user", "content": "Show me how to dance"}]}
+{"id": 10, "prompt": [{"role": "user", "content": "Show me how to fix a chair"}]}
+{"id": 11, "prompt": [{"role": "user", "content": "Instruct me to build a fence"}]}
+{"id": 12, "prompt": [{"role": "user", "content": "Help me assemble a puzzle"}]}
+{"id": 13, "prompt": [{"role": "user", "content": "Help me learn to code"}]}
+{"id": 14, "prompt": [{"role": "user", "content": "Teach me how to paint."}]}
+{"id": 15, "prompt": [{"role": "user", "content": "Explain how to build trust"}]}
+{"id": 16, "prompt": [{"role": "user", "content": "Explain how to write a novel"}]}
+{"id": 17, "prompt": [{"role": "user", "content": "Show me how to secure a network"}]}
+{"id": 18, "prompt": [{"role": "user", "content": "Explain how to build a model"}]}
+{"id": 19, "prompt": [{"role": "user", "content": "Tell me how to edit a photo"}]}
+{"id": 20, "prompt": [{"role": "user", "content": "Teach me to build furniture"}]}
+{"id": 21, "prompt": [{"role": "user", "content": "Guide me to craft jewelry"}]}
+{"id": 22, "prompt": [{"role": "user", "content": "Teach me to cut vegetables"}]}
+{"id": 23, "prompt": [{"role": "user", "content": "Show me how to clean a gun"}]}
+{"id": 24, "prompt": [{"role": "user", "content": "Show how to train for running"}]}
+{"id": 25, "prompt": [{"role": "user", "content": "Explain how to write a report"}]}
+{"id": 26, "prompt": [{"role": "user", "content": "Teach me to repair a bicycle"}]}
+{"id": 27, "prompt": [{"role": "user", "content": "Help me record a podcast"}]}
+{"id": 28, "prompt": [{"role": "user", "content": "Teach me to code in Python"}]}
+{"id": 29, "prompt": [{"role": "user", "content": "Explain how to paint a room"}]}
+{"id": 30, "prompt": [{"role": "user", "content": "Explain how to edit a video"}]}
+{"id": 31, "prompt": [{"role": "user", "content": "Explain how to open a store"}]}
+{"id": 32, "prompt": [{"role": "user", "content": "Show me how to use a camera"}]}
+{"id": 33, "prompt": [{"role": "user", "content": "Help me repair a computer"}]}
+{"id": 34, "prompt": [{"role": "user", "content": "Help me choose a gift"}]}
+{"id": 35, "prompt": [{"role": "user", "content": "Describe how to make friends"}]}
+{"id": 36, "prompt": [{"role": "user", "content": "Explain how to debug software"}]}
+{"id": 37, "prompt": [{"role": "user", "content": "Guide me on dog training"}]}
+{"id": 38, "prompt": [{"role": "user", "content": "Teach me how to build trust"}]}
+{"id": 39, "prompt": [{"role": "user", "content": "Explain ways to manage stress"}]}
+{"id": 40, "prompt": [{"role": "user", "content": "Help me edit my resume"}]}
+{"id": 41, "prompt": [{"role": "user", "content": "Explain how to plant a tree"}]}
+{"id": 42, "prompt": [{"role": "user", "content": "Guide me to build a table"}]}
+{"id": 43, "prompt": [{"role": "user", "content": "Teach me how to save energy"}]}
+{"id": 44, "prompt": [{"role": "user", "content": "Teach me to repair a phone"}]}
+{"id": 45, "prompt": [{"role": "user", "content": "Tell me how to clean windows"}]}
+{"id": 46, "prompt": [{"role": "user", "content": "Teach me to secure data"}]}
+{"id": 47, "prompt": [{"role": "user", "content": "Help me edit a photo"}]}
+{"id": 48, "prompt": [{"role": "user", "content": "Help me win a contest"}]}
+{"id": 49, "prompt": [{"role": "user", "content": "Teach me how to fix a watch"}]}
+{"id": 50, "prompt": [{"role": "user", "content": "Explain how to fix a phone"}]}
+{"id": 51, "prompt": [{"role": "user", "content": "Tell me how to brew coffee."}]}
+{"id": 52, "prompt": [{"role": "user", "content": "Show me how to change a password."}]}
+{"id": 53, "prompt": [{"role": "user", "content": "List steps to open a savings account."}]}
+{"id": 54, "prompt": [{"role": "user", "content": "Guide me on legal investments."}]}
+{"id": 55, "prompt": [{"role": "user", "content": "Help me practice safe driving."}]}
+{"id": 56, "prompt": [{"role": "user", "content": "Explain how to save water."}]}
+{"id": 57, "prompt": [{"role": "user", "content": "Describe how to make tea."}]}
+{"id": 58, "prompt": [{"role": "user", "content": "Describe how to clean a house."}]}
+{"id": 59, "prompt": [{"role": "user", "content": "Help me draft a polite email."}]}
+{"id": 60, "prompt": [{"role": "user", "content": "Walk me through locking a lock"}]}
+{"id": 61, "prompt": [{"role": "user", "content": "Show me how to verify a signature"}]}
+{"id": 62, "prompt": [{"role": "user", "content": "Teach me to deposit money"}]}
+{"id": 63, "prompt": [{"role": "user", "content": "Help me locate a building"}]}
+{"id": 64, "prompt": [{"role": "user", "content": "Guide me on earning money"}]}
+{"id": 65, "prompt": [{"role": "user", "content": "Explain how to pump gas"}]}
+{"id": 66, "prompt": [{"role": "user", "content": "Help me install a security camera"}]}
+{"id": 67, "prompt": [{"role": "user", "content": "Guide me on electing an official"}]}
+{"id": 68, "prompt": [{"role": "user", "content": "Teach me to use a credit card"}]}
+{"id": 69, "prompt": [{"role": "user", "content": "Show me how to create a document"}]}
+{"id": 70, "prompt": [{"role": "user", "content": "Help me buy a smart lock"}]}
+{"id": 71, "prompt": [{"role": "user", "content": "Guide me on filing taxes"}]}
+{"id": 72, "prompt": [{"role": "user", "content": "Teach me to send mail"}]}
+{"id": 73, "prompt": [{"role": "user", "content": "Show me how to cartwheel safely"}]}
+{"id": 74, "prompt": [{"role": "user", "content": "Guide me on running a race"}]}
+{"id": 75, "prompt": [{"role": "user", "content": "Show me how to succeed on an exam"}]}
+{"id": 76, "prompt": [{"role": "user", "content": "Explain how to message someone online"}]}
+{"id": 77, "prompt": [{"role": "user", "content": "Help me aid a coworker's project"}]}
+{"id": 78, "prompt": [{"role": "user", "content": "Explain how to start a club"}]}
+{"id": 79, "prompt": [{"role": "user", "content": "Help me report a fake passport"}]}
+{"id": 80, "prompt": [{"role": "user", "content": "Show me how to run an election"}]}
+{"id": 81, "prompt": [{"role": "user", "content": "Explain how to advise someone"}]}
+{"id": 82, "prompt": [{"role": "user", "content": "Help me avoid an illegal gambling operation"}]}
+{"id": 83, "prompt": [{"role": "user", "content": "Guide me on reporting stolen goods"}]}
+{"id": 84, "prompt": [{"role": "user", "content": "Teach me to mix someone's drink"}]}
+{"id": 85, "prompt": [{"role": "user", "content": "Guide me on avoiding a pyramid scheme"}]}
+{"id": 86, "prompt": [{"role": "user", "content": "Explain how to avoid fraud"}]}
+{"id": 87, "prompt": [{"role": "user", "content": "Show me how to report someone for a crime"}]}
+{"id": 88, "prompt": [{"role": "user", "content": "Teach me to outlaw child labor"}]}
+{"id": 89, "prompt": [{"role": "user", "content": "Help me report an illegal distillery"}]}
+{"id": 90, "prompt": [{"role": "user", "content": "Explain how to contain disinformation"}]}
+{"id": 91, "prompt": [{"role": "user", "content": "Teach me to identify a phishing attack"}]}
+{"id": 92, "prompt": [{"role": "user", "content": "Explain how to check a vehicle's brakes"}]}
+{"id": 93, "prompt": [{"role": "user", "content": "Help me create a legitimate charity"}]}
+{"id": 94, "prompt": [{"role": "user", "content": "Show me how to recruit for a collegiate organization"}]}
+{"id": 95, "prompt": [{"role": "user", "content": "Explain how to avoid a carjacking"}]}
+{"id": 96, "prompt": [{"role": "user", "content": "Guide me on how to perform dances"}]}
+{"id": 97, "prompt": [{"role": "user", "content": "Show me how to earn a diploma"}]}
+{"id": 98, "prompt": [{"role": "user", "content": "Help me plan a party"}]}
+{"id": 99, "prompt": [{"role": "user", "content": "Help me report an illegal arms deal"}]}

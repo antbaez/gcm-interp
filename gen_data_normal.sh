@@ -1,17 +1,16 @@
 #!/bin/bash
-#SBATCH -p mit_preemptable
+#SBATCH -p mit_normal_gpu
 #SBATCH --gres=gpu:h200:1
 #SBATCH -c 8
 #SBATCH --mem=100G
-#SBATCH --time=24:00:00
-#SBATCH --requeue
+#SBATCH --time=06:00:00
 #SBATCH --output=logs/out/%j.out
 #SBATCH --error=logs/err/%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=acbaez@mit.edu
 
 # Usage:
-#   sbatch gen_data_preemptable.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|all> [--max_tokens <N>]
+#   sbatch gen_data_normal.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|all> [--max_tokens <N>]
 #   Defaults: --model all --dataset all
 
 set -e

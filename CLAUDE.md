@@ -96,6 +96,25 @@ The key difference from `run_steering.sh` is that `run.sh` uses `STEERING_N="1 2
 
 ---
 
+## Steering mechanism
+
+Steering vectors are built from the difference between two sets of prompts — `add` (desired direction) and `sub` (undesired direction) — captured at each layer's attention output (`self_attn.o_proj.output`, dimension `H` over all heads). Three `steering_type` modes (`eval/activations.py → steering_reps_cache()`) differ only in how the sequence axis is collapsed before subtracting `add − sub`:
+
+- **`last-token`** — uses only the last real token's activation (left-padding keeps it flush right), averaged over examples. Shape `[layers, H]`.
+- **`mean`** — masked mean over each example's non-padding tokens, then averaged over examples. Shape `[layers, H]`.
+- **`positional`** — mean over examples only, keeping the sequence axis: one vector per token position. Shape `[layers, P, H]`.
+
+Vectors are cached per type to `steering_cache_<type>.pt`.
+
+At generation time (`eval/generation.py → generate_with_patches()`), `topk_df` selects which `(layer, head)` pairs to steer; each head's slice of the vector is optionally L2-normalized and scaled by `N`. The intervention is written into `o_proj.output` during the prefill pass only — steered values propagate through decoding via the KV cache. It applies to all prompt positions (padding writes are inert under the attention mask):
+
+- **`last-token` / `mean`** — the single per-layer vector is broadcast across every position.
+- **`positional`** — aligned by length: if the prompt is ≤ `P` tokens, the rightmost `total_len` rows of the vector are used; if longer, the full vector applies to the last `P` positions and earlier tokens are left unsteered.
+
+`ablation_type == 'steer'` adds the contribution to the activation; `'mean'` replaces it.
+
+---
+
 ## Key files
 
 | File | Role |
@@ -117,3 +136,9 @@ The key difference from `run_steering.sh` is that `run.sh` uses `STEERING_N="1 2
 | `judge-evals/evaluator.py` | vLLM wrapper (`make_llm`, `generate_in_batches`) |
 | `judge-evals/compute_accuracies.py` | Computes pass rates from rating JSONL files |
 | `judge-evals/summarize_results.py` | Aggregates accuracy JSONs into CSV + heatmaps |
+
+---
+
+## Model-specific notes
+
+**Qwen3**: Thinking is suppressed by passing `enable_thinking=False` to all `apply_chat_template()` calls (`data_handler.py`, `gen_data.py`), which bakes an empty `<think>\n\n</think>` block into the generation prompt end. As a side effect, JSONL assistant responses begin with `<think>\n\n</think>` because `gen_data.py` splits on `'\nassistant\n'`, which precedes that block in the decoded output.
