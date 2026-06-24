@@ -50,7 +50,33 @@ def _suppress_fd_output():
             os.close(saved_stderr_fd)
 
 
-def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64, device: int | None = None):
+def compute_max_prompt_len(long_items, model_name: str = JUDGE_MODEL_NAME) -> int:
+    """Scan all prompt CSVs and return the max token length across all prompts."""
+    from transformers import AutoTokenizer
+    print("Scanning prompt CSVs to compute max token length...")
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    prompt_cols = {
+        "relevance_fluency_prompts.csv": ["fluency_prompt", "relevance_prompt"],
+        "judge_prompts.csv": ["judge_prompt"],
+    }
+    max_len = 0
+    for wd, _meta, _gp in long_items:
+        for csv_name, cols in prompt_cols.items():
+            csv_path = wd / csv_name
+            if not csv_path.exists():
+                continue
+            df = pd.read_csv(csv_path, keep_default_na=False)
+            for col in cols:
+                if col not in df.columns:
+                    continue
+                lengths = [len(tokenizer.encode(p)) for p in df[col].tolist()]
+                if lengths:
+                    max_len = max(max_len, max(lengths))
+    print(f"Max prompt token length: {max_len}")
+    return max_len
+
+
+def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64, device: int | None = None, max_model_len: int | None = None):
     if device is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
     from vllm import LLM
@@ -69,7 +95,7 @@ def make_llm(model_name: str = JUDGE_MODEL_NAME, max_num_seqs: int = 64, device:
                 pipeline_parallel_size=1,
                 dtype="auto",
                 max_num_seqs=max_num_seqs,
-                max_model_len=4096,
+                max_model_len=max_model_len,
                 seed=SEED,
             )
     except Exception:

@@ -28,6 +28,7 @@ MODEL_SHORT = {
     "OLMo-2-1124-13B-DPO":        "olmo",
     "Qwen1.5-14B-Chat":            "qwen",
     "SOLAR-10.7B-Instruct-v1.0":   "solar",
+    "gemma-3-12b-it":              "Gemma",
 }
 
 

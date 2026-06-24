@@ -100,6 +100,12 @@ def collect_records(workdirs_dir: Path) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+STEERING_LABELS = {
+    "last-token": "last",
+    "mean":       "mean",
+    "positional": "positional",
+}
+
 RF_TITLES = {
     "wo_rf": "wo_rf (no quality filter)",
     "w_rf":  "w_rf (quality filter)",
@@ -107,19 +113,36 @@ RF_TITLES = {
 RF_ORDER = ["wo_rf", "w_rf"]
 
 
-def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
+def compute_diff(df: pd.DataFrame) -> pd.DataFrame:
+    """Replace mean/positional pass_rates with (last-token − mean/positional)."""
+    join_cols = ["model", "dataset", "source", "base", "N", "topk", "rf_type"]
+    last = (
+        df[df["steering_type"] == "last-token"]
+        .set_index(join_cols)["pass_rate"]
+        .rename("last_pass_rate")
+    )
+    out = df.join(last, on=join_cols)
+    mask = out["steering_type"] != "last-token"
+    out.loc[mask, "pass_rate"] = out.loc[mask, "pass_rate"] - out.loc[mask, "last_pass_rate"]
+    return out[mask].drop(columns=["last_pass_rate"])
+
+
+def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path, figures_dir: Path, diff: bool = False, norm_label: str = "normalized"):
     import matplotlib as mpl
 
     combos = sorted(df["steering_type"].unique())
+    cmap = "RdYlGn" if diff else "YlGn"
+    vmin, vmax = (-1, 1) if diff else (0, 1)
 
     for (model, dataset), group in df.groupby(["model", "dataset"]):
         source, base = dataset.split(" → ")
         short_model  = next(
-            (n for n in ("OLMo", "Qwen", "SOLAR") if n.lower() in model.lower()),
+            (n for n in ("OLMo", "Qwen3", "Qwen", "Gemma", "Llama") if n.lower() in model.lower()),
             model.split("/")[-1],
         )
         short_source = SOURCE_TO_TAG.get(source, re.sub(r"-(long|single)$", "", source))
-        short_title  = f"{short_model}  |  {short_source}"
+        mode_label   = "diff (other − last)" if diff else norm_label
+        short_title  = f"{short_model}  |  {short_source}  |  {mode_label}"
 
         n_vals    = sorted(group["N"].unique())
         topk_vals = sorted(group["topk"].unique())
@@ -150,9 +173,9 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
                 sns.heatmap(
                     matrix,
                     ax=ax,
-                    vmin=0, vmax=1,
+                    vmin=vmin, vmax=vmax,
                     annot=False,
-                    cmap="YlGn",
+                    cmap=cmap,
                     linewidths=0.5,
                     cbar=False,
                 )
@@ -174,7 +197,7 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
                 # Every block carries its own x-axis (ticks + label).
                 ax.set_xlabel("", fontsize=13)
                 if col_i == 0:
-                    combo_label = "mean-token" if combo == "mean" else combo
+                    combo_label = STEERING_LABELS.get(combo, combo)
                     ax.set_ylabel(combo_label, fontsize=15, fontweight="bold",
                                   labelpad=8)
                 else:
@@ -185,7 +208,7 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
 
         # Shared colorbar on the right.
         sm = mpl.cm.ScalarMappable(
-            cmap="YlGn", norm=mpl.colors.Normalize(vmin=0, vmax=1)
+            cmap=cmap, norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax)
         )
         fig.colorbar(sm, ax=axes.ravel().tolist(), shrink=0.6, pad=0.02)
 
@@ -197,7 +220,90 @@ def make_heatmaps(df: pd.DataFrame, accuracy_dir: Path):
             bbox=dict(boxstyle="round", facecolor="white", edgecolor="gray"),
         )
 
-        fig_path = accuracy_dir / f"heatmap_{short_model}_{short_source}.png"
+        suffix   = "_diff" if diff else ""
+        fig_path = figures_dir / f"heatmap_{short_model}_{short_source}{suffix}.png"
+        plt.savefig(fig_path, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"Saved heatmap: {fig_path.name}")
+
+
+def make_simple_heatmaps(df: pd.DataFrame, accuracy_dir: Path, figures_simple_dir: Path, diff: bool = False, norm_label: str = "normalized"):
+    import matplotlib as mpl
+
+    combos = sorted(df["steering_type"].unique())
+    cmap = "RdYlGn" if diff else "YlGn"
+    vmin, vmax = (-1, 1) if diff else (0, 1)
+
+    w_rf = df[df["rf_type"] == "w_rf"]
+    max_over_n = (
+        w_rf.groupby(["model", "dataset", "source", "base", "steering_type", "topk"], as_index=False)
+            ["pass_rate"].max()
+    )
+
+    # Diff is computed after max-over-N so each cell is max_N(last) − max_N(other)
+    if diff:
+        max_over_n = compute_diff(max_over_n.assign(rf_type="w_rf", N=0))
+        max_over_n = max_over_n.drop(columns=["rf_type", "N"], errors="ignore")
+
+    combos = sorted(max_over_n["steering_type"].unique())
+
+    for (model, dataset), group in max_over_n.groupby(["model", "dataset"]):
+        source, base = dataset.split(" → ")
+        short_model  = next(
+            (n for n in ("OLMo", "Qwen3", "Qwen", "Gemma", "Llama") if n.lower() in model.lower()),
+            model.split("/")[-1],
+        )
+        short_source = SOURCE_TO_TAG.get(source, re.sub(r"-(long|single)$", "", source))
+        mode_label   = "diff (other − last)" if diff else norm_label
+        short_title  = f"{short_model}  |  {short_source}  |  {mode_label}  (max over N, w_rf)"
+
+        topk_vals   = sorted(group["topk"].unique())
+        topk_labels = [str(t) for t in topk_vals]
+
+        matrix = (
+            group.pivot_table(index="steering_type", columns="topk", values="pass_rate")
+                 .reindex(index=combos, columns=topk_vals)
+        )
+        row_labels = [STEERING_LABELS.get(c, c) for c in combos]
+
+        fig, ax = plt.subplots(
+            figsize=(1.2 + 0.65 * len(topk_vals), 0.6 + 0.55 * len(combos)),
+            constrained_layout=True,
+        )
+        fig.suptitle(short_title, fontsize=14)
+
+        sns.heatmap(
+            matrix,
+            ax=ax,
+            vmin=vmin, vmax=vmax,
+            annot=False,
+            cmap=cmap,
+            linewidths=0.5,
+            cbar=False,
+        )
+        for r_i in range(matrix.shape[0]):
+            for c_i in range(matrix.shape[1]):
+                val = matrix.iat[r_i, c_i]
+                if pd.isna(val):
+                    continue
+                ax.text(
+                    c_i + 0.5, r_i + 0.5, f"{val:.2f}",
+                    ha="center", va="center",
+                    color="black", fontsize=9,
+                )
+
+        ax.set_yticklabels(row_labels, rotation=0, fontsize=11)
+        ax.set_xticklabels(topk_labels, rotation=45, ha="right", fontsize=11)
+        ax.set_xlabel("topk", fontsize=12)
+        ax.set_ylabel("")
+
+        sm = mpl.cm.ScalarMappable(
+            cmap=cmap, norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+        )
+        fig.colorbar(sm, ax=ax, shrink=0.8, pad=0.02)
+
+        suffix   = "_diff" if diff else ""
+        fig_path = figures_simple_dir / f"heatmap_{short_model}_{short_source}_simple{suffix}.png"
         plt.savefig(fig_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"Saved heatmap: {fig_path.name}")
@@ -208,11 +314,25 @@ def main():
     parser.add_argument("--workdirs_dir", default=str(WORKDIRS_JSONL))
     parser.add_argument("--accuracy_dir", default=str(ACCURACY_DIR),
                         help="Directory for the CSV summary and heatmap PNGs")
+    parser.add_argument("--diff", action="store_true",
+                        help="Plot other−last difference instead of raw pass rates")
+    parser.add_argument("--unnormalized", action="store_true",
+                        help="Read from workdirs-unnormalized, save to accuracy-unnormalized, label as unnormalized")
     args = parser.parse_args()
 
     workdirs_dir = Path(args.workdirs_dir)
     accuracy_dir = Path(args.accuracy_dir)
-    accuracy_dir.mkdir(parents=True, exist_ok=True)
+    norm_label   = "normalized"
+    if args.unnormalized:
+        workdirs_dir = workdirs_dir.parent / f"{workdirs_dir.name}-unnormalized"
+        accuracy_dir = accuracy_dir.parent / f"{accuracy_dir.name}-unnormalized"
+        norm_label   = "unnormalized"
+    if args.diff:
+        accuracy_dir = accuracy_dir.parent / f"{accuracy_dir.name}-diff"
+    figures_dir = accuracy_dir / "figures"
+    figures_simple_dir = accuracy_dir / "figures_simple"
+    for d in (accuracy_dir, figures_dir, figures_simple_dir):
+        d.mkdir(parents=True, exist_ok=True)
 
     df = collect_records(workdirs_dir)
     if df.empty:
@@ -226,7 +346,9 @@ def main():
 
     CANONICAL_BASES = {"harmless", "sycophancy", "prose"}
     canonical = df["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
-    make_heatmaps(df[canonical], accuracy_dir)
+    plot_df = compute_diff(df[canonical]) if args.diff else df[canonical]
+    make_heatmaps(plot_df, accuracy_dir, figures_dir, diff=args.diff, norm_label=norm_label)
+    make_simple_heatmaps(df[canonical], accuracy_dir, figures_simple_dir, diff=args.diff, norm_label=norm_label)
 
 
 if __name__ == "__main__":

@@ -344,7 +344,10 @@ def phase2_evaluate(
             print("  All rating files already exist — skipping model load.")
         else:
             from evaluator import make_llm
-            llm = make_llm(max_num_seqs=batch_size, device=device)
+            model_ids = {meta.get("MODEL_ID", "") for _, meta, _ in long_items}
+            max_model_len = 8192 if any(any(m in mid.lower() for m in ("gemma", "qwen3")) for mid in model_ids) else 4096
+            print(f"Judge max_model_len: {max_model_len}")
+            llm = make_llm(max_num_seqs=batch_size, device=device, max_model_len=max_model_len)
             _evaluate_all_workdirs_batched(llm, long_items, batch_size, skip_judge)
 
     return long_items
@@ -453,7 +456,8 @@ def main():
     )
     print(f"Found {len(gen_files)} gen files:")
     for gf in sorted(gen_files):
-        print(f"  {Path(gf).name}")
+        p = Path(gf)
+        print(f"  {p.parent.name}/{p.name}")
     print(f"\nAccuracy dir: {accuracy_dir}\n")
 
     # Phase 1: convert + build prompts (fast, no GPU)
