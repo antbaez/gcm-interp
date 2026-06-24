@@ -1,6 +1,6 @@
 import torch
 import gc
-from patching_utils import PatchingUtils
+from patching_utils import PatchingUtils, get_layers
 import einops
 import gc
 class Patching:
@@ -52,7 +52,7 @@ class Patching:
             attn_desired_effects = []
             attn_undesired_effects = []
             net_effects = []
-            for idx in range(len(model.model.layers)):
+            for idx in range(len(get_layers(model))):
                 attn_desired_effects.append(
                     base_desired_attn[idx].value.grad *
                     (source_q_des_attn[idx].value - base_desired_attn[idx].value)

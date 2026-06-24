@@ -6,6 +6,13 @@ from index_utils import *
 from tqdm import tqdm
 import json
 
+def get_layers(model):
+    """Return transformer decoder layers; handles Gemma-3's nested language_model."""
+    inner = model.model
+    if hasattr(inner._module, 'language_model'):
+        return inner.language_model.layers
+    return inner.layers
+
 class PatchingUtils:
     def __init__(self, patching_handler):
         self.patching_handler = patching_handler
@@ -39,17 +46,17 @@ class PatchingUtils:
     def patch_heads(self, base_toks, source_toks, resp_start_positions):
         source_toks = self.align_toks(source_toks, base_toks)
         model = self.model_handler.model
-        num_heads = model.model.config.num_attention_heads
-        head_dim = model.model.config.hidden_size // num_heads
+        num_heads = self.model_handler.num_heads
+        head_dim = self.model_handler.dim
         source_heads = self.get_activations(source_toks, which_patch='heads', base_toks=base_toks, align=True, logit=False)
         with torch.no_grad():
             layer_results = []
-            for layer_idx in tqdm(range(len(model.model.layers))):
+            for layer_idx in tqdm(range(len(get_layers(model)))):
                 head_results = []
                 for head_idx in range(num_heads):
                     head = slice(head_dim*head_idx,head_dim*(head_idx+1))
                     with model.trace(base_toks) as invoker:
-                        model.model.layers[layer_idx].self_attn.o_proj.output[:, :, head] = \
+                        get_layers(model)[layer_idx].self_attn.o_proj.output[:, :, head] = \
                             source_heads[layer_idx][:, :, head].to(model.device)
                         logits = model.lm_head.output.detach().cpu().save()
                     head_results.append(self.get_response_logits(base_toks, resp_start_positions, logits)) # Shape: [batch_size]
@@ -63,7 +70,7 @@ class PatchingUtils:
         if align:
             toks = self.align_toks(toks, base_toks)
         with model.trace(toks) as _:
-            for layer in model.model.layers:
+            for layer in get_layers(model):
                 if which_patch =='heads':
                     self_attn = layer.self_attn.o_proj.output
                 if retain_grad:

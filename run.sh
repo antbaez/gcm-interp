@@ -5,7 +5,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 
-# Usage: ./run.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all> [--device <cuda:0>]
+# Usage: ./run.sh --model <olmo|qwen|qwen3|gemma|all> --dataset <harmful|sycophancy|verse|all> [--device <cuda:0>]
 
 PATCHING_BATCH_SIZE=100 # number of prompts processed per forward pass during ATP patching
 PATCH_ALGO="atp"
@@ -15,7 +15,7 @@ MAX_NEW_TOKENS=512      # max tokens the model generates per prompt during eval
 BATCH_SIZE_HARMFUL=50
 BATCH_SIZE_SYCOPHANCY=50
 BATCH_SIZE_VERSE=50
-BATCH_SIZE_PARAGRAPH=10
+
 STEERING_N="1"
 TOPK_VALS="0.5"
 
@@ -44,8 +44,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-ALL_MODELS=("olmo" "qwen" "solar")
-ALL_DATASETS=("harmful" "sycophancy" "verse" "paragraph")
+ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
+ALL_DATASETS=("harmful" "sycophancy" "verse")
 
 # Expand model tag
 if [ "$MODEL_TAG" = "all" ]; then
@@ -53,7 +53,7 @@ if [ "$MODEL_TAG" = "all" ]; then
 elif [[ " ${ALL_MODELS[*]} " == *" $MODEL_TAG "* ]]; then
     MODELS=("$MODEL_TAG")
 else
-    echo "Error: --model must be one of: olmo, qwen, solar, all"; exit 1
+    echo "Error: --model must be one of: olmo, qwen, qwen3, gemma, llama, all"; exit 1
 fi
 
 # Expand dataset tag (supports comma-separated values, e.g. "harmful,sycophancy")
@@ -63,7 +63,7 @@ else
     IFS=',' read -ra DATASETS <<< "$DATASET_TAG"
     for D in "${DATASETS[@]}"; do
         if [[ ! " ${ALL_DATASETS[*]} " == *" $D "* ]]; then
-            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
+            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, all"; exit 1
         fi
     done
 fi
@@ -83,7 +83,9 @@ run_experiments_for_model() {
     case "$M_TAG" in
         olmo)  MODEL_ID="allenai/OLMo-2-1124-13B-DPO" ;;
         qwen)  MODEL_ID="Qwen/Qwen1.5-14B-Chat" ;;
-        solar) MODEL_ID="upstage/SOLAR-10.7B-Instruct-v1.0" ;;
+        qwen3) MODEL_ID="Qwen/Qwen3-14B" ;;
+        gemma) MODEL_ID="google/gemma-3-12b-it" ;;
+        llama) MODEL_ID="meta-llama/Llama-3.1-8B-Instruct" ;;
     esac
 
     # Build dataset_list JSON — all datasets for this model in one array
@@ -94,7 +96,7 @@ run_experiments_for_model() {
             harmful)    D_SOURCE="harmful-long";         D_BASE="harmless";  D_DIR="harmful-long" ;;
             sycophancy) D_SOURCE="non-sycophantic-long"; D_BASE="sycophancy"; D_DIR="sycophancy-long" ;;
             verse)      D_SOURCE="verse-long";           D_BASE="prose";     D_DIR="verse-long" ;;
-            paragraph)  D_SOURCE="paragraph-long";       D_BASE="sentence";  D_DIR="paragraph-long" ;;
+
         esac
         local SA="./data/${MODEL_ID##*/}/${D_DIR}/${D_SOURCE}-desired-all.jsonl"
         local SS="./data/${MODEL_ID##*/}/${D_DIR}/${D_BASE}-desired-all.jsonl"
@@ -155,7 +157,8 @@ for M_TAG in "${MODELS[@]}"; do
     case "$M_TAG" in
         olmo)  MODEL_NAME="OLMo-2-1124-13B-DPO" ;;
         qwen)  MODEL_NAME="Qwen1.5-14B-Chat" ;;
-        solar) MODEL_NAME="SOLAR-10.7B-Instruct-v1.0" ;;
+        qwen3) MODEL_NAME="Qwen3-14B" ;;
+        gemma) MODEL_NAME="gemma-3-12b-it" ;;
     esac
 
     for D_TAG in "${DATASETS[@]}"; do
@@ -163,7 +166,7 @@ for M_TAG in "${MODELS[@]}"; do
             harmful)    SOURCE="harmful-long";    BASE="harmless" ;;
             sycophancy) SOURCE="sycophancy-long"; BASE="non-sycophantic" ;;
             verse)      SOURCE="verse-long";      BASE="prose" ;;
-            paragraph)  SOURCE="paragraph-long";  BASE="sentence" ;;
+
         esac
 
         echo ""

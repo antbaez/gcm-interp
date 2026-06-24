@@ -3,7 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Usage: ./delete_results.sh --model <olmo|qwen|solar|olmo,qwen|all> --dataset <harmful|sycophancy|verse|paragraph|harmful,sycophancy|all> [--yes]
+# Usage: ./delete_results.sh --model <olmo|qwen|qwen3|gemma|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--yes]
 # Deletes the corresponding folders in results/, judge-evals/accuracy/ and judge-evals/workdirs/.
 MODEL_TAG=""
 DATASET_TAG=""
@@ -19,12 +19,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$MODEL_TAG" ] || [ -z "$DATASET_TAG" ]; then
-    echo "Usage: ./delete_results.sh --model <olmo|qwen|solar|olmo,qwen|all> --dataset <harmful|sycophancy|verse|paragraph|harmful,sycophancy|all> [--yes]"
+    echo "Usage: ./delete_results.sh --model <olmo|qwen|qwen3|gemma|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--yes]"
     exit 1
 fi
 
-ALL_MODELS=("olmo" "qwen" "solar")
-ALL_DATASETS=("harmful" "sycophancy" "verse" "paragraph")
+ALL_MODELS=("olmo" "qwen" "qwen3" "gemma")
+ALL_DATASETS=("harmful" "sycophancy" "verse")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -33,7 +33,7 @@ else
     IFS=',' read -ra MODELS <<< "$MODEL_TAG"
     for M in "${MODELS[@]}"; do
         if [[ ! " ${ALL_MODELS[*]} " == *" $M "* ]]; then
-            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, solar, all"; exit 1
+            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, qwen3, gemma, all"; exit 1
         fi
     done
 fi
@@ -45,7 +45,7 @@ else
     IFS=',' read -ra DATASETS <<< "$DATASET_TAG"
     for D in "${DATASETS[@]}"; do
         if [[ ! " ${ALL_DATASETS[*]} " == *" $D "* ]]; then
-            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
+            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, all"; exit 1
         fi
     done
 fi
@@ -62,7 +62,8 @@ for M_TAG in "${MODELS[@]}"; do
     case "$M_TAG" in
         olmo)  MODEL_NAME="OLMo-2-1124-13B-DPO" ;;
         qwen)  MODEL_NAME="Qwen1.5-14B-Chat" ;;
-        solar) MODEL_NAME="SOLAR-10.7B-Instruct-v1.0" ;;
+        qwen3) MODEL_NAME="Qwen3-14B" ;;
+        gemma) MODEL_NAME="gemma-3-12b-it" ;;
     esac
 
     for D_TAG in "${DATASETS[@]}"; do
@@ -70,7 +71,7 @@ for M_TAG in "${MODELS[@]}"; do
             harmful)    SOURCE="harmful-long";         BASE="harmless" ;;
             sycophancy) SOURCE="non-sycophantic-long"; BASE="sycophancy" ;;
             verse)      SOURCE="verse-long";           BASE="prose" ;;
-            paragraph)  SOURCE="paragraph-long";       BASE="sentence" ;;
+
         esac
 
         REL="$MODEL_NAME/from_${SOURCE}_to_${BASE}"

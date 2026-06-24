@@ -4,7 +4,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 
-# Usage: ./run_judging.sh --model <olmo|qwen|solar|olmo,qwen|all> --dataset <harmful|sycophancy|verse|paragraph|harmful,sycophancy|all> [--device <cuda:0>]
+# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--device <cuda:0>]
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
@@ -19,12 +19,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$MODEL_TAG" ] || [ -z "$DATASET_TAG" ]; then
-    echo "Usage: ./run_judge.sh --model <olmo|qwen|solar|olmo,qwen|all> --dataset <harmful|sycophancy|verse|paragraph|harmful,sycophancy|all> [--device <cuda:0>]"
+    echo "Usage: ./run_judge.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--device <cuda:0>]"
     exit 1
 fi
 
-ALL_MODELS=("olmo" "qwen" "solar")
-ALL_DATASETS=("harmful" "sycophancy" "verse" "paragraph")
+ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
+ALL_DATASETS=("harmful" "sycophancy" "verse")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -33,7 +33,7 @@ else
     IFS=',' read -ra MODELS <<< "$MODEL_TAG"
     for M in "${MODELS[@]}"; do
         if [[ ! " ${ALL_MODELS[*]} " == *" $M "* ]]; then
-            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, solar, all"; exit 1
+            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, qwen3, gemma, llama, all"; exit 1
         fi
     done
 fi
@@ -45,7 +45,7 @@ else
     IFS=',' read -ra DATASETS <<< "$DATASET_TAG"
     for D in "${DATASETS[@]}"; do
         if [[ ! " ${ALL_DATASETS[*]} " == *" $D "* ]]; then
-            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, paragraph, all"; exit 1
+            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, all"; exit 1
         fi
     done
 fi
@@ -53,14 +53,16 @@ fi
 # Strip "cuda:" prefix for run_judge.py --device (expects an int)
 DEVICE_IDX="${DEVICE#cuda:}"
 
-BATCH_SIZE=128
+BATCH_SIZE=64
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
 for M_TAG in "${MODELS[@]}"; do
     case "$M_TAG" in
         olmo)  MODEL_NAME="OLMo-2-1124-13B-DPO" ;;
         qwen)  MODEL_NAME="Qwen1.5-14B-Chat" ;;
-        solar) MODEL_NAME="SOLAR-10.7B-Instruct-v1.0" ;;
+        qwen3) MODEL_NAME="Qwen3-14B" ;;
+        gemma) MODEL_NAME="gemma-3-12b-it" ;;
+        llama) MODEL_NAME="Llama-3.1-8B-Instruct" ;;
     esac
 
     for D_TAG in "${DATASETS[@]}"; do
@@ -68,7 +70,7 @@ for M_TAG in "${MODELS[@]}"; do
             harmful)    SOURCE="harmful-long";         BASE="harmless";          DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
             sycophancy) SOURCE="non-sycophantic-long"; BASE="sycophancy";        DATA_SOURCE="sycophancy-long"; DATA_BASE="sycophancy" ;;
             verse)      SOURCE="verse-long";           BASE="prose";             DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-            paragraph)  SOURCE="paragraph-long";       BASE="sentence";          DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+
         esac
 
         echo ""

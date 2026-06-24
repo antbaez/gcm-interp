@@ -3,6 +3,7 @@ import torch
 from transformers import BitsAndBytesConfig, AutoTokenizer, AutoModelForSequenceClassification, AutoModelForCausalLM
 import os
 from nnsight import NNsight, LanguageModel
+
 class ModelHandler:
     def __init__(self, config):
         self.config = config
@@ -17,8 +18,10 @@ class ModelHandler:
         self.model = self.load_model(model_id, self.device)
         self.model.tokenizer = self.tokenizer
         model_config = self.model.config.to_dict()
-        hidden_size = model_config['hidden_size']
-        self.num_heads = model_config['num_attention_heads']
+        tc = model_config.get('text_config', model_config)
+        hidden_size = tc['hidden_size']
+        self.num_heads = tc['num_attention_heads']
+        self.num_layers = tc['num_hidden_layers']
         self.dim = hidden_size // self.num_heads
 
         if 'solar' in model_id.lower():
@@ -39,6 +42,9 @@ class ModelHandler:
         elif 'olmo' in model_id.lower():
             self.marker = '<|assistant|>\n'
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0]
+        elif 'google' in model_id.lower():
+            self.marker = '<start_of_turn>model\n'
+            self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0][1:]
 
     def load_tokenizer(self, model_id):
         if 'qwen'  in model_id.lower():

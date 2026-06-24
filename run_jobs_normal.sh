@@ -10,29 +10,32 @@
 #SBATCH --mail-user=acbaez@mit.edu
 
 # Usage:
-#   sbatch run_jobs_normal.sh --model <olmo|qwen|solar|all> --dataset <harmful|sycophancy|verse|paragraph|all>
-#   Defaults: --model all --dataset all
+#   sbatch run_jobs_normal.sh --model <olmo|qwen|qwen3|gemma|all> --dataset <harmful|sycophancy|verse|all> [--judging]
+#   Defaults: --model all --dataset all (runs both steering and judging)
 
 set -e
 
 MODEL="all"
 DATASET="all"
+JUDGING_ONLY=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --model)   MODEL="$2";   shift 2 ;;
-        --dataset) DATASET="$2"; shift 2 ;;
+        --model)   MODEL="$2";        shift 2 ;;
+        --dataset) DATASET="$2";      shift 2 ;;
+        --judging) JUDGING_ONLY=true; shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
-echo "Running: model=$MODEL  dataset=$DATASET"
+echo "Running: model=$MODEL  dataset=$DATASET  judging_only=$JUDGING_ONLY"
 
-source ~/gcm-interp/setup.sh
 cd ~/gcm-interp
 
-bash run_steering.sh --model "$MODEL" --dataset "$DATASET" --patch
+if [ "$JUDGING_ONLY" = false ]; then
+    source ~/gcm-interp/setup.sh
+    bash run_steering.sh --model "$MODEL" --dataset "$DATASET" --patch
+fi
 
 source ~/gcm-interp/setup_judging.sh
-
-bash run_judging.sh  --model "$MODEL" --dataset "$DATASET"
+bash run_judging.sh --model "$MODEL" --dataset "$DATASET"

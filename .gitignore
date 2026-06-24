@@ -32,3 +32,10 @@ results/
 judge-evals/workdirs
 judge-evals/accuracy
 logs/
+
+
+judge-evals/accuracy-diff-unnormalized/
+judge-evals/accuracy-diff/
+judge-evals/accuracy-unnormalized/
+judge-evals/workdirs-unnormalized/
+results-unnormalized/

@@ -118,7 +118,7 @@ class DataHandler:
             orig_template = self.model_handler.tokenizer.chat_template
             if self.config.args.eval_transfer:
                 # Removing the system prompt for eval_test dataset
-                if config.args.model_id.split('/')[1] == 'Qwen1.5-14B-Chat':
+                if config.args.model_id.split('/')[1] in ('Qwen1.5-14B-Chat', 'Qwen3-14B'):
                     self.model_handler.tokenizer.chat_template = "{% for message in messages %}\n" \
                     "{{ '<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n' }}\n" \
                     "{% endfor %}\n" \
@@ -231,6 +231,8 @@ class DataHandler:
                 self.response_start_positions["pyreft"] = self.get_resp_start_pos(self.pyreft_toks, self.model_handler.marker, self.model_handler.tokenizer)
 
     def get_templated_prompts(self, prompts, _base_completion=None, only_q=False, add_generation_prompt=False):
+        is_qwen3 = 'qwen3' in self.config.args.model_id.lower()
+        extra_kwargs = {'enable_thinking': False} if is_qwen3 else {}
         if only_q:
             prompt_lengths = None
             if self.no_generation_prompt_for_eval_transfer:
@@ -245,21 +247,24 @@ class DataHandler:
                 self.model_handler.tokenizer.apply_chat_template(
                     [p['prompt'][i] for i in range(prompt_lengths[pdx])],
                     add_generation_prompt=add_generation_prompt,
-                    tokenize=False
+                    tokenize=False,
+                    **extra_kwargs
                 ) for pdx, p in enumerate(prompts)]
         elif _base_completion is not None:
             assert len(prompts) == len(_base_completion), f"Length of prompts and base completion do not match: {len(prompts)} vs {len(_base_completion)}"
             return [
                 self.model_handler.tokenizer.apply_chat_template(
                     [p['prompt'][i] for i in range(len(p['prompt']) - 1)] + [_base_completion[pi]['prompt'][-1]],
-                    tokenize=False
+                    tokenize=False,
+                    **extra_kwargs
                 ) for pi, p in enumerate(prompts)]
         else:
             return [
                 self.model_handler.tokenizer.apply_chat_template(
-                    p['prompt'], 
+                    p['prompt'],
                     add_generation_prompt=False,
-                    tokenize=False
+                    tokenize=False,
+                    **extra_kwargs
                 ) for p in prompts]
         
     def get_resp_start_pos(self, tokens, marker, tokenizer):

@@ -64,7 +64,7 @@ def run_dataset(config, model_handler):
                 for steering_type in combos:
                     config.args.steering_type = steering_type
                     _mid = config.args.model_id.lower()
-                    _mshort = 'olmo' if 'olmo' in _mid else 'qwen' if 'qwen' in _mid else 'solar'
+                    _mshort = 'olmo' if 'olmo' in _mid else 'qwen3' if 'qwen3' in _mid else 'qwen' if 'qwen' in _mid else 'gemma' if 'gemma' in _mid else 'solar'
                     tag = f"[{_mshort}/{getattr(config.args, 'dataset_tag', config.args.source.split('-')[0])}]"
                     if combo_outputs_exist(config, config.args.topk_vals, config.args.steering_n):
                         print(f"{tag} [skip] steering_type={steering_type} — all outputs cached")
@@ -90,7 +90,7 @@ def main():
         datasets = json.loads(config.args.dataset_list)
         for ds in datasets:
             _mid = config.args.model_id.lower()
-            _mshort = 'olmo' if 'olmo' in _mid else 'qwen' if 'qwen' in _mid else 'solar'
+            _mshort = 'olmo' if 'olmo' in _mid else 'qwen3' if 'qwen3' in _mid else 'qwen' if 'qwen' in _mid else 'gemma' if 'gemma' in _mid else 'solar'
             print(f"\n[{_mshort}/{ds.get('tag', ds['source'].split('-')[0])}] === Dataset: {ds['source']} -> {ds['base']} ===")
             config.args.source = ds['source']
             config.args.base = ds['base']
