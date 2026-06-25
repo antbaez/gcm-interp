@@ -54,11 +54,11 @@ class Patching:
             net_effects = []
             for idx in range(len(model.model.layers)):
                 attn_desired_effects.append(
-                    base_desired_attn[idx].grad * 
+                    base_desired_attn[idx].value.grad *
                     (source_q_des_attn[idx] - base_desired_attn[idx])
                 )
                 attn_undesired_effects.append(
-                    base_undesired_attn[idx].grad * 
+                    base_undesired_attn[idx].value.grad *
                     (source_q_undes_attn[idx] - base_undesired_attn[idx])
                 )
 
@@ -66,5 +66,4 @@ class Patching:
             net_effects = torch.stack([h for h in net_effects], dim=0).detach().cpu()
             gc.collect()
             torch.cuda.empty_cache()
-            print('net_effects', net_effects.shape)
             return net_effects

@@ -3,10 +3,17 @@ vLLM judge model — shared inference utilities for run_judge.py.
 """
 
 import json
+import logging
+import os
 from pathlib import Path
 
 import pandas as pd
 import torch
+
+# Suppress vLLM's verbose startup and inference logs before importing
+os.environ.setdefault("VLLM_LOGGING_LEVEL", "WARNING")
+logging.getLogger("vllm").setLevel(logging.WARNING)
+
 from vllm import LLM, SamplingParams
 
 from config import JUDGE_MODEL_NAME, PASSTHROUGH_COLS, extract_rating

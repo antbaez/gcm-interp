@@ -28,23 +28,26 @@ class Experiment:
         self.patching_logits = []
 
     def run(self):
+        heads_dir = f'{self.config.get_output_prefix()}/heads'
+        os.makedirs(heads_dir, exist_ok=True)
         for idx in tqdm(range(0, self.data_handler.LEN, self.batch_size)):
-            if os.path.exists(f'{self.config.get_output_prefix()}/{self.which_patch}_{idx}.pt'):
+            if os.path.exists(f'{heads_dir}/{self.which_patch}_{idx}.pt'):
                 continue
             start = idx
             stop = min(idx + self.batch_size, self.data_handler.LEN)
-            print(f'Running patching on {self.which_patch} from {start} to {stop}')
             self.batch_handler.update(start, stop)
             self.patching_logits = self.patching.apply_patching()
             self.save_logits(self.patching_logits, idx)
 
     def save_logits(self, logits, idx):
-        torch.save(logits, f'{self.config.get_output_prefix()}/{self.which_patch}_{idx}.pt')
+        heads_dir = f'{self.config.get_output_prefix()}/heads'
+        torch.save(logits, f'{heads_dir}/{self.which_patch}_{idx}.pt')
 
     def run_probes(self):
-        if os.path.exists(f'{self.config.get_output_prefix()}/{self.which_patch}.json'):
+        heads_dir = f'{self.config.get_output_prefix()}/heads'
+        if os.path.exists(f'{heads_dir}/{self.which_patch}.json'):
             return
         print('Running probes...')
         self.accuracy = self.probes.get_accuracy()
-        with open(f'{self.config.get_output_prefix()}/{self.which_patch}.json', 'w') as f:
+        with open(f'{heads_dir}/{self.which_patch}.json', 'w') as f:
             json.dump(self.accuracy, f)

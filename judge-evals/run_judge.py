@@ -86,9 +86,8 @@ def accuracy_paths(meta: dict) -> tuple[Path, Path]:
         ACCURACY_DIR
         / meta["MODEL_ID"]
         / f"from_{meta['SOURCE']}_to_{meta['BASE']}"
-        / meta["METHOD"]
-        / meta["EVAL_SUB_DIR"]
-        / meta["STEER_SUB_DIR"]
+        / meta["CACHE_MODE"]
+        / meta["STEERING_TYPE"]
     )
     fn_base = f"{meta['N']}_{meta['REPS']}_{meta['STEERING_METHOD']}_topk_{meta['topk']}"
     wo_rf = base_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
@@ -102,7 +101,7 @@ def accuracy_exists(meta: dict) -> bool:
 
 
 def is_single_eval(meta: dict) -> bool:
-    return "single" in meta.get("EVAL_SUB_DIR", "")
+    return "single" in meta.get("TEST_FILE", "")
 
 
 # ---------------------------------------------------------------------------
@@ -365,11 +364,10 @@ def parse_args():
     p.add_argument("--model_name",   default=None)
     p.add_argument("--source",       default=None)
     p.add_argument("--base",         default=None)
-    p.add_argument("--algos",        nargs="*", default=None)
-    p.add_argument("--eval_subdir",  default=None,
-                   help="e.g. sycophancy-single_eval")
-    p.add_argument("--steer_subdir", default=None,
-                   help="e.g. sycophancy-long_steer")
+    p.add_argument("--cache_mode",    default=None,
+                   help="cache or no_cache")
+    p.add_argument("--steering_type", default=None,
+                   help="e.g. positional, last-token, all-tokens")
     p.add_argument("--all",          action="store_true")
     p.add_argument("--skip_judge",   action="store_true",
                    help="Skip behavioral judge (fluency + relevance only)")
@@ -378,24 +376,29 @@ def parse_args():
     p.add_argument("--batch_size",   type=int, default=16)
     p.add_argument("--plots",        action="store_true")
     p.add_argument("--plots_args",   nargs="*", default=None)
-    p.add_argument("--runs_dir",     default=str(RUNS_DIR))
-    p.add_argument("--data_dir",     default=str(DATA_DIR))
+    p.add_argument("--runs_dir",      default=str(RUNS_DIR))
+    p.add_argument("--data_dir",      default=str(DATA_DIR))
+    p.add_argument("--accuracy_dir",  default=str(ACCURACY_DIR))
+    p.add_argument("--workdirs_root", default=str(WORKDIRS_ROOT))
     return p.parse_args()
 
 
 def main():
+    global ACCURACY_DIR, WORKDIRS_ROOT
     args = parse_args()
+    ACCURACY_DIR = Path(args.accuracy_dir)
+    WORKDIRS_ROOT = Path(args.workdirs_root)
 
     if not args.all and not any([
         args.model_name, args.source, args.base,
-        args.algos, args.eval_subdir, args.steer_subdir,
+        args.cache_mode, args.steering_type,
     ]):
         print("Error: specify at least one filter or --all. Run --help for examples.")
         sys.exit(1)
 
     gen_files = discover_gen_files(
-        args.runs_dir, args.model_name, args.source, args.base, args.algos,
-        args.eval_subdir, args.steer_subdir,
+        args.runs_dir, args.model_name, args.source, args.base,
+        args.cache_mode, args.steering_type,
     )
     print(f"Found {len(gen_files)} gen files")
     print(f"Accuracy dir: {ACCURACY_DIR}\n")

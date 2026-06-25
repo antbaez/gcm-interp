@@ -24,3 +24,8 @@ normalized-results/**/*.json
 *eval_outputs.csv*
 *relevance_fluency_prompts.csv*
 *judge_prompts.csv*
+
+judge-evals/accuracy
+judge-evals/accuracy-cache-comparison
+judge-evals/workdirs
+results/

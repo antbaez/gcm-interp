@@ -28,37 +28,27 @@ from config import BASE_DIR, RUNS_DIR, DATA_DIR, GEN_RE
 
 
 def extract_path_metadata(path: str) -> dict:
-    """Pull model/task/method metadata from the directory structure."""
+    """Pull model/task/cache/steering metadata from the directory structure."""
     parts = Path(path).parts
     runs_idx = parts.index("results")
 
-    model_id = parts[runs_idx + 1]
-    from_to = parts[runs_idx + 2]
+    model_id      = parts[runs_idx + 1]
+    from_to       = parts[runs_idx + 2]
     _, source, _, base = from_to.split("_")
+    cache_mode    = parts[runs_idx + 3]   # "cache" or "no_cache"
+    steering_type = parts[runs_idx + 4]   # e.g. "positional", "last-token"
+    filename      = parts[runs_idx + 5]
 
-    method = parts[runs_idx + 3]
-    valid_methods = {"acp", "atp", "atp-zero", "probes", "random"}
-    if method not in valid_methods:
-        raise ValueError(f"Unexpected METHOD: {method} in path: {path}")
-
-    eval_sub_dir = parts[runs_idx + 4]
-    steer_sub_dir = parts[runs_idx + 5]
-    sub_dir = parts[runs_idx + 6]
-    if sub_dir != "eval":
-        raise ValueError(f"Unexpected SUB_DIR: {sub_dir} in path: {path}")
-
-    filename = parts[runs_idx + 7]
     m = GEN_RE.match(filename)
     if not m:
         raise ValueError(f"Filename does not match expected pattern: {filename}")
 
     return {
-        "MODEL_ID": model_id,
-        "SOURCE": source,
-        "BASE": base,
-        "METHOD": method,
-        "EVAL_SUB_DIR": eval_sub_dir,
-        "STEER_SUB_DIR": steer_sub_dir,
+        "MODEL_ID":      model_id,
+        "SOURCE":        source,
+        "BASE":          base,
+        "CACHE_MODE":    cache_mode,
+        "STEERING_TYPE": steering_type,
         **m.groupdict(),
         "filename": filename,
     }
@@ -94,29 +84,23 @@ def discover_gen_files(
     model_name: str | None = None,
     source: str | None = None,
     base: str | None = None,
-    algos: list[str] | None = None,
-    eval_subdir: str | None = None,
-    steer_subdir: str | None = None,
+    cache_mode: str | None = None,
+    steering_type: str | None = None,
 ) -> list[str]:
     """
-    Glob for *_gen.json files, optionally filtered by model/task/algo/eval_subdir.
+    Glob for *_gen.json files, optionally filtered by model/task/cache_mode/steering_type.
 
     Uses single-level wildcards (*) for each path component to avoid duplicates
     that arise from recursive (**) globbing.
     """
-    model_part = model_name or "*"
-    task_part = f"from_{source}_to_{base}" if (source and base) else "*"
-    eval_part = eval_subdir or "*"
-    steer_part = steer_subdir or "*"
-    algo_parts = algos or ["*"]
+    model_part   = model_name or "*"
+    task_part    = f"from_{source}_to_{base}" if (source and base) else "*"
+    cache_part   = cache_mode or "*"
+    steer_part   = steering_type or "*"
 
     gen_files = []
-    for algo in algo_parts:
-        pattern = (
-            f"{runs_dir}/{model_part}/{task_part}/{algo}"
-            f"/{eval_part}/{steer_part}/eval/*_gen.json"
-        )
-        gen_files.extend(glob.glob(pattern))
+    pattern = f"{runs_dir}/{model_part}/{task_part}/{cache_part}/{steer_part}/*_gen.json"
+    gen_files.extend(glob.glob(pattern))
 
     # Deduplicate and filter by filename pattern
     seen = set()
@@ -158,9 +142,8 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
             "MODEL_ID": meta["MODEL_ID"],
             "SOURCE": source,
             "BASE": base,
-            "METHOD": meta["METHOD"],
-            "EVAL_SUB_DIR": meta["EVAL_SUB_DIR"],
-            "STEER_SUB_DIR": meta["STEER_SUB_DIR"],
+            "CACHE_MODE": meta["CACHE_MODE"],
+            "STEERING_TYPE": meta["STEERING_TYPE"],
             "N": meta["N"],
             "REPS": meta["REPS"],
             "STEERING_METHOD": meta["STEERING_METHOD"],

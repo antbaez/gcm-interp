@@ -7,23 +7,21 @@ import matplotlib.pyplot as plt
 import random
 
 def load_logits(config, data_handler, which_patch, model_handler):
-    logits_path = f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{which_patch}"
-    # print('Loading logits from:', logits_path)
+    prefix = config.get_output_prefix()
+    heads_dir = f"{prefix}/heads"
+    logits_path = f"{heads_dir}/{which_patch}"
     all_logits = None
 
     name = 'numerator_1' if config.args.patch_algo != 'probes' else 'probes'
-    print('/'.join(config.get_output_prefix().split('/')[:-3]))
-    if os.path.exists(f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{name}_{which_patch}.pt"):
-        # print(f"Loading precomputed logits for {name} from {config.get_output_prefix()}/{name}_{which_patch}.pt")
-        all_logits = torch.load(f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{name}_{which_patch}.pt")
+    if os.path.exists(f"{heads_dir}/{name}_{which_patch}.pt"):
+        all_logits = torch.load(f"{heads_dir}/{name}_{which_patch}.pt")
     else:
-        print('Path does not exist {}, computing logits afresh.'.format(f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{name}_{which_patch}.pt"))
+        print('Path does not exist {}, computing logits afresh.'.format(f"{heads_dir}/{name}_{which_patch}.pt"))
         if config.args.patch_algo != 'probes':
             for i in range(data_handler.LEN):
                 try:
                     with open(f"{logits_path}_{i}.pt", 'rb') as f:
                         logits = torch.load(f)
-                        # print('atp-zero', logits.shape)
                         logits = logits.squeeze().unsqueeze(-1) if 'atp' in config.args.patch_algo else logits
                         all_logits = logits if all_logits is None else torch.cat([all_logits, logits], dim=-1)
                 except Exception as e:
@@ -51,7 +49,7 @@ def load_logits(config, data_handler, which_patch, model_handler):
             logits = [[float(head_val) for head_val in layer_dict.values()] for layer_dict in raw_logits.values()]
             all_logits = torch.tensor(logits)
         plot_logit_metrics(config, model_handler, all_logits, name, which_patch)
-        torch.save(all_logits, f"{'/'.join(config.get_output_prefix().split('/')[:-3])}/{name}_{which_patch}.pt")
+        torch.save(all_logits, f"{heads_dir}/{name}_{which_patch}.pt")
     return all_logits
 
 def get_top_k_layer_and_head(patches, top_k, patch_algo):
@@ -98,6 +96,6 @@ def plot_logit_metrics(config, model_handler, metric, name, which_patch):
     plt.xticks(ticks=range(model_handler.num_heads))
     plt.yticks(ticks=range(model_handler.model.config.num_hidden_layers))
     plt.tight_layout()
-    os.makedirs(f'{config.get_output_prefix()}/eval/', exist_ok=True)
-    plt.savefig(f"{config.get_output_prefix()}/eval/{name}_heatmap.png")
+    os.makedirs(config.get_output_prefix(), exist_ok=True)
+    plt.savefig(f"{config.get_output_prefix()}/{name}_heatmap.png")
     plt.close()

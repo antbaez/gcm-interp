@@ -180,9 +180,8 @@ def _compute_and_write(
             output_dir,
             str(row["MODEL_ID"]),
             f"from_{row['SOURCE']}_to_{row['BASE']}",
-            str(row["METHOD"]),
-            str(row["EVAL_SUB_DIR"]),
-            str(row["STEER_SUB_DIR"]),
+            str(row["CACHE_MODE"]),
+            str(row["STEERING_TYPE"]),
         )
         os.makedirs(base_dir, exist_ok=True)
         fn_base = (
