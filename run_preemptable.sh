@@ -7,8 +7,6 @@
 #SBATCH --requeue
 #SBATCH --output=logs/out/%j.out
 #SBATCH --error=logs/err/%j.err
-#SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=acbaez@mit.edu
 
 # Usage:
 #   sbatch run_jobs_preemptable.sh --model <olmo|qwen|qwen3|gemma|all> --dataset <harmful|sycophancy|verse|all> [--type last|positional] [--cache] [--judging]

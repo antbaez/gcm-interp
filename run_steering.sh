@@ -18,16 +18,22 @@ MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
 PATCH=true
-STEERING_TYPES="positional"
+STEERING_TYPES=(
+    last
+    mean
+    positional
+)
 KV_CACHING=true
+NORMALIZE=true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --model)   MODEL_TAG="$2";      shift 2 ;;
         --dataset) DATASET_TAG="$2";    shift 2 ;;
         --device)  DEVICE="$2";         shift 2 ;;
-        --type)    STEERING_TYPES="$2"; shift 2 ;;
-        --nocache) KV_CACHING=false;    shift ;;
+        --type)    IFS=' ' read -ra STEERING_TYPES <<< "$2"; shift 2 ;;
+        --nocache)      KV_CACHING=false;  shift ;;
+        --unnormalized) NORMALIZE=false;   shift ;;
         --patch)   PATCH=true;          shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
@@ -62,6 +68,7 @@ if [ "$PATCH" = true ];        then EVAL_FLAGS="$EVAL_FLAGS -patch_model"; fi
 if [ "$EVAL_MODEL" = true ];   then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
 if [ "$STEERING" = true ];     then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
 if [ "$KV_CACHING" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --kv_caching"; fi
+if [ "$NORMALIZE" = false ];   then EVAL_FLAGS="$EVAL_FLAGS --unnormalized"; fi
 
 run_experiments_for_model() {
     local M_TAG="$1"
@@ -91,7 +98,7 @@ run_experiments_for_model() {
     done
 
     echo ""
-    echo "[$M_TAG] datasets=[${D_TAGS[*]}]  steering_types=[$STEERING_TYPES]  N=[$STEERING_N]  k=[$TOPK_VALS]"
+    echo "[$M_TAG] datasets=[${D_TAGS[*]}]  steering_types=[${STEERING_TYPES[*]}]  N=[$STEERING_N]  k=[$TOPK_VALS]"
     local START_TIME=$SECONDS
 
     python -u run.py \
@@ -109,7 +116,7 @@ run_experiments_for_model() {
         -eval_batch_size "$BATCH_SIZE" \
         -steering_n $STEERING_N \
         -topk_vals $TOPK_VALS \
-        -steering_types $STEERING_TYPES \
+        -steering_types "${STEERING_TYPES[@]}" \
         $EVAL_FLAGS
 
     local ELAPSED=$(( SECONDS - START_TIME ))

@@ -170,7 +170,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                         _t0 = time.time()
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
                         print(f"    batch shape: {gen_qs_toks['input_ids'].shape}")
-                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=True, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching)
+                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching)
                         decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
                         gc.collect()
                         torch.cuda.empty_cache()

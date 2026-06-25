@@ -57,7 +57,7 @@ for M_TAG in "${MODELS[@]}"; do
     esac
 
     echo "[${M_TAG}] Generating datasets: ${DATASET_TAG}..."
-    python gen_data.py \
+    python "$(dirname "$0")/gen_data.py" \
         --model_id    "$MODEL_ID" \
         --dataset     "$DATASET_TAG" \
         --num_samples "$NUM_SAMPLES" \

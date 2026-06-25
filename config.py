@@ -46,6 +46,8 @@ class Config:
         parser.add_argument('-topk_vals', '--topk_vals', type=float, nargs='+', default=[1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5], help='Top-k fractions of heads to steer')
         parser.add_argument('-steering_types', '--steering_types', nargs='+', default=['last-token'], help='Steering vector aggregation types to run')
         parser.add_argument('--kv_caching', action='store_true', help='Steer prefill only using KV cache; decoding steps are not re-steered')
+        parser.add_argument('--normalize', action='store_true', default=True, help='L2-normalize steering vectors before applying')
+        parser.add_argument('--unnormalized', dest='normalize', action='store_false', help='Disable L2 normalization of steering vectors')
 
         args = parser.parse_args()
         if not (args.patch_model or args.eval_model):

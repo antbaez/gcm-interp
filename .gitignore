@@ -29,3 +29,5 @@ judge-evals/accuracy
 judge-evals/accuracy-cache-comparison
 judge-evals/workdirs
 results/
+logs/
+setup/

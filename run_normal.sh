@@ -6,8 +6,6 @@
 #SBATCH --time=06:00:00
 #SBATCH --output=logs/out/%j.out
 #SBATCH --error=logs/err/%j.err
-#SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=acbaez@mit.edu
 
 
 set -e

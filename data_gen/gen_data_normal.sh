@@ -33,4 +33,4 @@ echo "Running: model=$MODEL  dataset=$DATASET"
 source ~/gcm-interp/setup.sh
 cd ~/gcm-interp
 
-bash gen_data.sh --model "$MODEL" --dataset "$DATASET" ${MAX_TOKENS:+--max_tokens "$MAX_TOKENS"}
+bash data_gen/gen_data.sh --model "$MODEL" --dataset "$DATASET" ${MAX_TOKENS:+--max_tokens "$MAX_TOKENS"}
