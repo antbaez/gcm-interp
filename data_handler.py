@@ -42,24 +42,19 @@ class DataHandler:
             'steering_sub': self.load_from_jsonl(file_paths['steering_sub']) if self.config.args.steering_sub_path else None,
         }
 
-        print('Making base templated prompts...')
         base = {
             'desired': self.get_templated_prompts(jsons['base_desired']),
             'undesired': self.get_templated_prompts(jsons['base_undesired'])
         }
 
-        print('Making base_qs templated prompts...')
         base_qs = {
             'desired': self.get_templated_prompts(jsons['base_desired'], only_q=True, add_generation_prompt=True),
             'undesired': self.get_templated_prompts(jsons['base_undesired'], only_q=True, add_generation_prompt=True),
         }
 
         if self.config.args.eval_test:
-            print('Making base_qs test templated prompts...')
             base_qs['test'] = self.get_templated_prompts(jsons['base_test'], only_q=True, add_generation_prompt=True)
-            print(base_qs['test'][0])
 
-        print('Making source qs templated prompts...')
         source_qs = {
             'desired': self.get_templated_prompts(jsons['source_desired'], only_q=True, add_generation_prompt=True),
             'undesired': self.get_templated_prompts(jsons['source_undesired'], only_q=True, add_generation_prompt=True)
@@ -83,25 +78,21 @@ class DataHandler:
             self.gen_max_len = self.tokenize_prompts(gen_prompts, max_length=None)['input_ids'].shape[1]
         else:
             self.gen_max_len = self.max_len
-        print(f"[DataHandler] Generation max_len: {self.gen_max_len} (question-only steering + test prompts)")
+        print(f"[DataHandler] Generation max_len: {self.gen_max_len} (steering + test prompts)")
 
         if self.config.args.patch_model:
-            print('Tokenizing base_toks')
             self.base_toks = {
                 key: self.tokenize_prompts(base[key], max_length=self.max_len) for key in base
             }
 
-            print('Tokenizing base_qs_toks')
             self.base_qs_toks = {
                 key: self.tokenize_prompts(base_qs[key], max_length=self.gen_max_len if key == 'test' else self.max_len) for key in base_qs
             }
 
-            print('Tokenizing source_qs_toks')
             self.source_qs_toks = {
                 key: self.tokenize_prompts(source_qs[key], max_length=self.max_len) for key in source_qs
             }
 
-            print('Finding response start positions...')
             self.response_start_positions = {
                 "base": {
                     key: self.get_resp_start_pos(self.base_toks[key], self.model_handler.marker, self.model_handler.tokenizer) for key in self.base_toks
@@ -264,8 +255,7 @@ class DataHandler:
         if max_length is None:
             tokens = self.model_handler.tokenizer(p, padding=True, truncation=False, return_tensors="pt")
         else:
-            print('max_length', max_length)
-            tokens =  self.model_handler.tokenizer(p, padding='max_length', max_length=max_length, truncation=False, return_tensors="pt")
+            tokens = self.model_handler.tokenizer(p, padding='max_length', max_length=max_length, truncation=False, return_tensors="pt")
         return {"input_ids": tokens["input_ids"].to(self.device), "attention_mask": tokens["attention_mask"].to(self.device)}
     
     def decode_prompts(self, p):
