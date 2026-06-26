@@ -1,0 +1,869 @@
+
+================================================================================
+MODEL: allenai/OLMo-2-1124-13B-DPO  [olmo]
+================================================================================
+
+--- Example 1 ---
+PROMPT (with special tokens):
+<|endoftext|><|user|>
+Write a recipe for bread.
+<|assistant|>
+
+
+MARKER: '<|assistant|>\n'
+  Found at char 48 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+**Classic White Bread Recipe**
+
+*Ingredients:*
+
+- 4 cups (500g) all-purpose flour
+- 1 1/2 cups (360ml) warm water (about 100-110°F or 38-43°C)
+- 1 tablespoon (15ml) active dry yeast
+- 
+
+FULL OUTPUT:
+<|endoftext|><|user|>
+Write a recipe for bread.
+<|assistant|>
+**Classic White Bread Recipe**
+
+*Ingredients:*
+
+- 4 cups (500g) all-purpose flour
+- 1 1/2 cups (360ml) warm water (about 100-110°F or 38-43°C)
+- 1 tablespoon (15ml) active dry yeast
+- 
+------------------------------------------------------------
+
+--- Example 2 ---
+PROMPT (with special tokens):
+<|endoftext|><|user|>
+Guide me in starting yoga.
+<|assistant|>
+
+
+MARKER: '<|assistant|>\n'
+  Found at char 49 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Starting yoga can be a transformative journey towards better physical and mental health. Here's a step-by-step guide to help you begin:
+
+### 1. **Set Your Intention**
+
+Before you start, it's important to set an intention for your yoga practice. This could be anything from wanting to improve flexibility, reduce stress
+
+FULL OUTPUT:
+<|endoftext|><|user|>
+Guide me in starting yoga.
+<|assistant|>
+Starting yoga can be a transformative journey towards better physical and mental health. Here's a step-by-step guide to help you begin:
+
+### 1. **Set Your Intention**
+
+Before you start, it's important to set an intention for your yoga practice. This could be anything from wanting to improve flexibility, reduce stress
+------------------------------------------------------------
+
+--- Example 3 ---
+PROMPT (with special tokens):
+<|endoftext|><|user|>
+Guide me in writing a resume.
+<|assistant|>
+
+
+MARKER: '<|assistant|>\n'
+  Found at char 52 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Certainly! Crafting a resume is a crucial step in your job search journey. Here's a step-by-step guide to help you write an effective resume:
+
+### 1. **Choose the Right Format**
+
+- **Chronological:** Best for those with a steady work history.
+- **Functional:** Highlights skills over experience, good
+
+FULL OUTPUT:
+<|endoftext|><|user|>
+Guide me in writing a resume.
+<|assistant|>
+Certainly! Crafting a resume is a crucial step in your job search journey. Here's a step-by-step guide to help you write an effective resume:
+
+### 1. **Choose the Right Format**
+
+- **Chronological:** Best for those with a steady work history.
+- **Functional:** Highlights skills over experience, good
+------------------------------------------------------------
+
+--- Example 4 ---
+PROMPT (with special tokens):
+<|endoftext|><|user|>
+Explain how to make scrambled eggs.
+<|assistant|>
+
+
+MARKER: '<|assistant|>\n'
+  Found at char 58 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+To make scrambled eggs, you'll need eggs, a frying pan, a spatula, and a stove. Here's a simple step-by-step guide:
+
+1. **Gather Your Ingredients and Tools**: You'll need eggs (usually 1-2 per person), a bowl, a fork or whisk, a non
+
+FULL OUTPUT:
+<|endoftext|><|user|>
+Explain how to make scrambled eggs.
+<|assistant|>
+To make scrambled eggs, you'll need eggs, a frying pan, a spatula, and a stove. Here's a simple step-by-step guide:
+
+1. **Gather Your Ingredients and Tools**: You'll need eggs (usually 1-2 per person), a bowl, a fork or whisk, a non
+------------------------------------------------------------
+
+--- Example 5 ---
+PROMPT (with special tokens):
+<|endoftext|><|user|>
+Explain how to ride a skateboard.
+<|assistant|>
+
+
+MARKER: '<|assistant|>\n'
+  Found at char 56 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Sure, I can provide some basic steps on how to ride a skateboard. However, it's important to note that safety should always be your priority. Here are some beginner steps:
+
+1. **Stance**: Stand on the board with your dominant foot (usually the one you kick a ball with) in the middle to
+
+FULL OUTPUT:
+<|endoftext|><|user|>
+Explain how to ride a skateboard.
+<|assistant|>
+Sure, I can provide some basic steps on how to ride a skateboard. However, it's important to note that safety should always be your priority. Here are some beginner steps:
+
+1. **Stance**: Stand on the board with your dominant foot (usually the one you kick a ball with) in the middle to
+------------------------------------------------------------
+
+
+================================================================================
+MODEL: Qwen/Qwen1.5-14B-Chat  [qwen]
+================================================================================
+
+--- Example 1 ---
+PROMPT (with special tokens):
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Write a recipe for bread.<|im_end|>
+<|im_start|>assistant
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 111 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Sure, here's a simple recipe for classic white bread:
+
+Ingredients:
+- 3 cups all-purpose flour
+- 1 tablespoon active dry yeast
+- 1 teaspoon salt
+- 1 tablespoon sugar
+- 1 cup warm water (around 110°F)
+- 2 tablespoons vegetable oil
+
+Instructions
+
+FULL OUTPUT:
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Write a recipe for bread.<|im_end|>
+<|im_start|>assistant
+Sure, here's a simple recipe for classic white bread:
+
+Ingredients:
+- 3 cups all-purpose flour
+- 1 tablespoon active dry yeast
+- 1 teaspoon salt
+- 1 tablespoon sugar
+- 1 cup warm water (around 110°F)
+- 2 tablespoons vegetable oil
+
+Instructions
+------------------------------------------------------------
+
+--- Example 2 ---
+PROMPT (with special tokens):
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Guide me in starting yoga.<|im_end|>
+<|im_start|>assistant
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 112 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Starting yoga can be a wonderful journey towards physical, mental, and emotional well-being. Here's a step-by-step guide to help you get started:
+
+1. **Research and choose a style**: Yoga has many styles, such as Hatha, Vinyasa, Ashtanga, Bikram, Yin, or Rest
+
+FULL OUTPUT:
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Guide me in starting yoga.<|im_end|>
+<|im_start|>assistant
+Starting yoga can be a wonderful journey towards physical, mental, and emotional well-being. Here's a step-by-step guide to help you get started:
+
+1. **Research and choose a style**: Yoga has many styles, such as Hatha, Vinyasa, Ashtanga, Bikram, Yin, or Rest
+------------------------------------------------------------
+
+--- Example 3 ---
+PROMPT (with special tokens):
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Guide me in writing a resume.<|im_end|>
+<|im_start|>assistant
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 115 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Certainly! Writing a resume can be a daunting task, but with the right approach and guidance, you'll have a strong document that showcases your skills, experiences, and accomplishments. Here's a step-by-step guide to help you create an effective resume:
+
+1. **Choose a format**: There are three common formats: chronological
+
+FULL OUTPUT:
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Guide me in writing a resume.<|im_end|>
+<|im_start|>assistant
+Certainly! Writing a resume can be a daunting task, but with the right approach and guidance, you'll have a strong document that showcases your skills, experiences, and accomplishments. Here's a step-by-step guide to help you create an effective resume:
+
+1. **Choose a format**: There are three common formats: chronological
+------------------------------------------------------------
+
+--- Example 4 ---
+PROMPT (with special tokens):
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Explain how to make scrambled eggs.<|im_end|>
+<|im_start|>assistant
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 121 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Sure, here's a simple recipe for making scrambled eggs:
+
+Ingredients:
+- 2-3 large eggs
+- 1 tablespoon of milk or cream (optional)
+- Salt and pepper to taste
+- 1 tablespoon of butter or oil
+
+Instructions:
+
+1. Crack the eggs into a bowl and whisk them until the
+
+FULL OUTPUT:
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Explain how to make scrambled eggs.<|im_end|>
+<|im_start|>assistant
+Sure, here's a simple recipe for making scrambled eggs:
+
+Ingredients:
+- 2-3 large eggs
+- 1 tablespoon of milk or cream (optional)
+- Salt and pepper to taste
+- 1 tablespoon of butter or oil
+
+Instructions:
+
+1. Crack the eggs into a bowl and whisk them until the
+------------------------------------------------------------
+
+--- Example 5 ---
+PROMPT (with special tokens):
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Explain how to ride a skateboard.<|im_end|>
+<|im_start|>assistant
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 119 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Sure, I'd be happy to explain how to ride a skateboard!
+
+Here are the basic steps:
+
+1. Start by standing with your feet shoulder-width apart on the skateboard, with one foot on the tail (the back of the board) and the other foot on the nose (the front of the board).
+
+2.
+
+FULL OUTPUT:
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+Explain how to ride a skateboard.<|im_end|>
+<|im_start|>assistant
+Sure, I'd be happy to explain how to ride a skateboard!
+
+Here are the basic steps:
+
+1. Start by standing with your feet shoulder-width apart on the skateboard, with one foot on the tail (the back of the board) and the other foot on the nose (the front of the board).
+
+2.
+------------------------------------------------------------
+
+
+================================================================================
+MODEL: Qwen/Qwen3-14B  [qwen3]
+================================================================================
+
+--- Example 1 ---
+PROMPT (with special tokens):
+<|im_start|>user
+Write a recipe for bread.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 53 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Sure! Here's a simple and delicious recipe for **Basic Homemade Bread** that you can make in your own kitchen. This is a no-knead bread recipe, which is easy and requires minimal effort.
+
+---
+
+### 🍞 Basic No-Knead Bread Recipe
+
+#### 🧺 Ingredients (Makes 1
+
+FULL OUTPUT:
+<|im_start|>user
+Write a recipe for bread.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+Sure! Here's a simple and delicious recipe for **Basic Homemade Bread** that you can make in your own kitchen. This is a no-knead bread recipe, which is easy and requires minimal effort.
+
+---
+
+### 🍞 Basic No-Knead Bread Recipe
+
+#### 🧺 Ingredients (Makes 1
+------------------------------------------------------------
+
+--- Example 2 ---
+PROMPT (with special tokens):
+<|im_start|>user
+Guide me in starting yoga.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 54 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Starting yoga is a wonderful way to improve your physical, mental, and emotional well-being. Here's a step-by-step guide to help you begin your yoga journey:
+
+---
+
+### 🧘‍♀️ **1. Understand What Yoga Is**
+Yoga is more than just physical postures (asanas). It
+
+FULL OUTPUT:
+<|im_start|>user
+Guide me in starting yoga.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+Starting yoga is a wonderful way to improve your physical, mental, and emotional well-being. Here's a step-by-step guide to help you begin your yoga journey:
+
+---
+
+### 🧘‍♀️ **1. Understand What Yoga Is**
+Yoga is more than just physical postures (asanas). It
+------------------------------------------------------------
+
+--- Example 3 ---
+PROMPT (with special tokens):
+<|im_start|>user
+Guide me in writing a resume.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 57 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Absolutely! Writing a strong resume is a key step in landing interviews and ultimately, a job offer. Here's a step-by-step guide to help you craft a compelling resume:
+
+---
+
+## 📌 Step 1: Know the Job You're Applying For
+
+Before you start writing, **research the job description**.
+
+FULL OUTPUT:
+<|im_start|>user
+Guide me in writing a resume.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+Absolutely! Writing a strong resume is a key step in landing interviews and ultimately, a job offer. Here's a step-by-step guide to help you craft a compelling resume:
+
+---
+
+## 📌 Step 1: Know the Job You're Applying For
+
+Before you start writing, **research the job description**.
+------------------------------------------------------------
+
+--- Example 4 ---
+PROMPT (with special tokens):
+<|im_start|>user
+Explain how to make scrambled eggs.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 63 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Making scrambled eggs is a simple and delicious way to enjoy a classic breakfast. Here's a step-by-step guide on how to make them:
+
+---
+
+### **Ingredients:**
+- 2 large eggs (adjust based on how many people you're serving)
+- 1 tablespoon of butter or oil (optional, for added flavor
+
+FULL OUTPUT:
+<|im_start|>user
+Explain how to make scrambled eggs.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+Making scrambled eggs is a simple and delicious way to enjoy a classic breakfast. Here's a step-by-step guide on how to make them:
+
+---
+
+### **Ingredients:**
+- 2 large eggs (adjust based on how many people you're serving)
+- 1 tablespoon of butter or oil (optional, for added flavor
+------------------------------------------------------------
+
+--- Example 5 ---
+PROMPT (with special tokens):
+<|im_start|>user
+Explain how to ride a skateboard.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 61 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Riding a skateboard can be a fun and rewarding activity once you get the hang of it. Here's a step-by-step guide to help you learn how to ride a skateboard safely and confidently:
+
+---
+
+### **1. Choose the Right Skateboard**
+- **Beginner boards** are usually wider, have softer wheels,
+
+FULL OUTPUT:
+<|im_start|>user
+Explain how to ride a skateboard.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+Riding a skateboard can be a fun and rewarding activity once you get the hang of it. Here's a step-by-step guide to help you learn how to ride a skateboard safely and confidently:
+
+---
+
+### **1. Choose the Right Skateboard**
+- **Beginner boards** are usually wider, have softer wheels,
+------------------------------------------------------------
+
+
+================================================================================
+MODEL: google/gemma-3-12b-it  [gemma]
+================================================================================
+
+--- Example 1 ---
+PROMPT (with special tokens):
+<bos><bos><start_of_turn>user
+Write a recipe for bread.<end_of_turn>
+<start_of_turn>model
+
+
+MARKER: '<start_of_turn>model\n'
+  Found at char 69 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Okay, let's make a simple, classic loaf of bread! This recipe is for a basic white bread, perfect for sandwiches or toast. I'll give you options for both active dry yeast and instant/rapid rise yeast.  **Please read the "Important Notes" at the end - they're crucial
+
+FULL OUTPUT:
+<bos><bos><start_of_turn>user
+Write a recipe for bread.<end_of_turn>
+<start_of_turn>model
+Okay, let's make a simple, classic loaf of bread! This recipe is for a basic white bread, perfect for sandwiches or toast. I'll give you options for both active dry yeast and instant/rapid rise yeast.  **Please read the "Important Notes" at the end - they're crucial
+------------------------------------------------------------
+
+--- Example 2 ---
+PROMPT (with special tokens):
+<bos><bos><start_of_turn>user
+Guide me in starting yoga.<end_of_turn>
+<start_of_turn>model
+
+
+MARKER: '<start_of_turn>model\n'
+  Found at char 70 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Okay, let's get you started on your yoga journey! Here's a comprehensive guide, broken down into sections, covering everything from choosing a style to setting up your practice space.  I'll also include resources at the end.  **Please read the important disclaimer at the very bottom of this response.**
+
+FULL OUTPUT:
+<bos><bos><start_of_turn>user
+Guide me in starting yoga.<end_of_turn>
+<start_of_turn>model
+Okay, let's get you started on your yoga journey! Here's a comprehensive guide, broken down into sections, covering everything from choosing a style to setting up your practice space.  I'll also include resources at the end.  **Please read the important disclaimer at the very bottom of this response.**
+------------------------------------------------------------
+
+--- Example 3 ---
+PROMPT (with special tokens):
+<bos><bos><start_of_turn>user
+Guide me in writing a resume.<end_of_turn>
+<start_of_turn>model
+
+
+MARKER: '<start_of_turn>model\n'
+  Found at char 73 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Okay, let's break down how to write a great resume. This will be a comprehensive guide, covering everything from the basics to advanced tips. I'll organize it into sections: **1. Planning & Content, 2. Formatting & Structure, 3. Writing Style & Keywords, and 4.
+
+FULL OUTPUT:
+<bos><bos><start_of_turn>user
+Guide me in writing a resume.<end_of_turn>
+<start_of_turn>model
+Okay, let's break down how to write a great resume. This will be a comprehensive guide, covering everything from the basics to advanced tips. I'll organize it into sections: **1. Planning & Content, 2. Formatting & Structure, 3. Writing Style & Keywords, and 4.
+------------------------------------------------------------
+
+--- Example 4 ---
+PROMPT (with special tokens):
+<bos><bos><start_of_turn>user
+Explain how to make scrambled eggs.<end_of_turn>
+<start_of_turn>model
+
+
+MARKER: '<start_of_turn>model\n'
+  Found at char 79 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Okay, let's break down how to make delicious scrambled eggs! Here's a comprehensive guide, covering everything from basic to slightly more advanced techniques.
+
+**1. The Essentials: Ingredients & Equipment**
+
+*   **Eggs:** The star of the show! 2-3 eggs per person is a good
+
+FULL OUTPUT:
+<bos><bos><start_of_turn>user
+Explain how to make scrambled eggs.<end_of_turn>
+<start_of_turn>model
+Okay, let's break down how to make delicious scrambled eggs! Here's a comprehensive guide, covering everything from basic to slightly more advanced techniques.
+
+**1. The Essentials: Ingredients & Equipment**
+
+*   **Eggs:** The star of the show! 2-3 eggs per person is a good
+------------------------------------------------------------
+
+--- Example 5 ---
+PROMPT (with special tokens):
+<bos><bos><start_of_turn>user
+Explain how to ride a skateboard.<end_of_turn>
+<start_of_turn>model
+
+
+MARKER: '<start_of_turn>model\n'
+  Found at char 77 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Okay, let's break down how to ride a skateboard. It's a skill that takes practice and patience, but it's incredibly rewarding! This guide will cover the basics, from getting comfortable to your first rolls.  I'll divide it into sections: **Gear, Stance, Pushing,
+
+FULL OUTPUT:
+<bos><bos><start_of_turn>user
+Explain how to ride a skateboard.<end_of_turn>
+<start_of_turn>model
+Okay, let's break down how to ride a skateboard. It's a skill that takes practice and patience, but it's incredibly rewarding! This guide will cover the basics, from getting comfortable to your first rolls.  I'll divide it into sections: **Gear, Stance, Pushing,
+------------------------------------------------------------
+
+
+================================================================================
+MODEL: meta-llama/Llama-3.1-8B-Instruct  [llama]
+================================================================================
+
+--- Example 1 ---
+PROMPT (with special tokens):
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Write a recipe for bread.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+
+
+MARKER: '<|start_header_id|>assistant<|end_header_id|>'
+  Found at char 228 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+**Classic Homemade Bread Recipe**
+
+**Servings:** 1 large loaf (about 8-10 slices)
+
+**Ingredients:**
+
+- 3 cups of all-purpose flour
+- 1 teaspoon of salt
+- 1 teaspoon of sugar
+- 1 packet (2 1/4 teaspoons) of active dry
+
+FULL OUTPUT:
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Write a recipe for bread.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+**Classic Homemade Bread Recipe**
+
+**Servings:** 1 large loaf (about 8-10 slices)
+
+**Ingredients:**
+
+- 3 cups of all-purpose flour
+- 1 teaspoon of salt
+- 1 teaspoon of sugar
+- 1 packet (2 1/4 teaspoons) of active dry
+------------------------------------------------------------
+
+--- Example 2 ---
+PROMPT (with special tokens):
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Guide me in starting yoga.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+
+
+MARKER: '<|start_header_id|>assistant<|end_header_id|>'
+  Found at char 229 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Starting a yoga practice can be a wonderful way to improve your physical, mental, and emotional well-being. Here's a step-by-step guide to help you get started:
+
+**Step 1: Understand the Basics**
+
+*   Yoga is a physical, mental, and spiritual practice that originated in India over 5,000
+
+FULL OUTPUT:
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Guide me in starting yoga.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Starting a yoga practice can be a wonderful way to improve your physical, mental, and emotional well-being. Here's a step-by-step guide to help you get started:
+
+**Step 1: Understand the Basics**
+
+*   Yoga is a physical, mental, and spiritual practice that originated in India over 5,000
+------------------------------------------------------------
+
+--- Example 3 ---
+PROMPT (with special tokens):
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Guide me in writing a resume.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+
+
+MARKER: '<|start_header_id|>assistant<|end_header_id|>'
+  Found at char 232 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Writing a resume can be a challenging task, but with a clear guide, you'll be able to create a well-structured and effective resume. Here's a step-by-step guide to help you write a great resume:
+
+**Step 1: Choose a Resume Format**
+
+There are three main types of resume formats:
+
+1
+
+FULL OUTPUT:
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Guide me in writing a resume.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Writing a resume can be a challenging task, but with a clear guide, you'll be able to create a well-structured and effective resume. Here's a step-by-step guide to help you write a great resume:
+
+**Step 1: Choose a Resume Format**
+
+There are three main types of resume formats:
+
+1
+------------------------------------------------------------
+
+--- Example 4 ---
+PROMPT (with special tokens):
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Explain how to make scrambled eggs.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+
+
+MARKER: '<|start_header_id|>assistant<|end_header_id|>'
+  Found at char 238 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Making scrambled eggs is a simple process that requires just a few ingredients and some basic cooking skills. Here's a step-by-step guide:
+
+**Ingredients:**
+
+* 2 eggs per serving (you can adjust the number of eggs according to your needs)
+* Salt and pepper to taste
+* 1 tablespoon butter or oil
+
+FULL OUTPUT:
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Explain how to make scrambled eggs.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Making scrambled eggs is a simple process that requires just a few ingredients and some basic cooking skills. Here's a step-by-step guide:
+
+**Ingredients:**
+
+* 2 eggs per serving (you can adjust the number of eggs according to your needs)
+* Salt and pepper to taste
+* 1 tablespoon butter or oil
+------------------------------------------------------------
+
+--- Example 5 ---
+PROMPT (with special tokens):
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Explain how to ride a skateboard.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+
+
+MARKER: '<|start_header_id|>assistant<|end_header_id|>'
+  Found at char 236 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+Riding a skateboard requires a combination of balance, coordination, and practice. Here's a step-by-step guide to help you get started:
+
+**Preparation**
+
+1. **Wear protective gear**: Wear a helmet, knee pads, and elbow pads to prevent injuries in case you fall.
+2. **Choose a safe
+
+FULL OUTPUT:
+<|begin_of_text|><|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Explain how to ride a skateboard.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+Riding a skateboard requires a combination of balance, coordination, and practice. Here's a step-by-step guide to help you get started:
+
+**Preparation**
+
+1. **Wear protective gear**: Wear a helmet, knee pads, and elbow pads to prevent injuries in case you fall.
+2. **Choose a safe
+------------------------------------------------------------
+

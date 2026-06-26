@@ -1,0 +1,87 @@
+MODEL: Qwen/Qwen3-14B
+pad_token: '<|endoftext|>'  id=151643
+eos_token: '<|endoftext|>'  id=151643
+padding_side: left
+batch shape: [3, 20]
+
+======================================================================
+Example 1: Write a short poem about the ocean.
+Templated (repr): '<|im_start|>user\nWrite a short poem about the ocean.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+
+  idx    token_id  mask  token
+--------------------------------------------------
+    0      151644     1  '<|im_start|>'
+    1         872     1  'user'
+    2         198     1  'Ċ'
+    3        7985     1  'Write'
+    4         264     1  'Ġa'
+    5        2805     1  'Ġshort'
+    6       32794     1  'Ġpoem'
+    7         911     1  'Ġabout'
+    8         279     1  'Ġthe'
+    9       17951     1  'Ġocean'
+   10          13     1  '.'
+   11      151645     1  '<|im_end|>'
+   12         198     1  'Ċ'
+   13      151644     1  '<|im_start|>'
+   14       77091     1  'assistant'
+   15         198     1  'Ċ'
+   16      151667     1  '<think>'
+   17         271     1  'ĊĊ'
+   18      151668     1  '</think>'
+   19         271     1  'ĊĊ'
+
+======================================================================
+Example 2: What is 2 + 2?
+Templated (repr): '<|im_start|>user\nWhat is 2 + 2?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+
+  idx    token_id  mask  token
+--------------------------------------------------
+    0      151644     1  '<|im_start|>'
+    1         872     1  'user'
+    2         198     1  'Ċ'
+    3        3838     1  'What'
+    4         374     1  'Ġis'
+    5         220     1  'Ġ'
+    6          17     1  '2'
+    7         488     1  'Ġ+'
+    8         220     1  'Ġ'
+    9          17     1  '2'
+   10          30     1  '?'
+   11      151645     1  '<|im_end|>'
+   12         198     1  'Ċ'
+   13      151644     1  '<|im_start|>'
+   14       77091     1  'assistant'
+   15         198     1  'Ċ'
+   16      151667     1  '<think>'
+   17         271     1  'ĊĊ'
+   18      151668     1  '</think>'
+   19         271     1  'ĊĊ'
+
+======================================================================
+Example 3: Explain gravity in one sentence.
+Templated (repr): '<|im_start|>user\nExplain gravity in one sentence.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+
+  idx    token_id  mask  token
+--------------------------------------------------
+    0      151643     0  '<|endoftext|>'
+    1      151644     1  '<|im_start|>'
+    2         872     1  'user'
+    3         198     1  'Ċ'
+    4         840     1  'Ex'
+    5       20772     1  'plain'
+    6       23249     1  'Ġgravity'
+    7         304     1  'Ġin'
+    8         825     1  'Ġone'
+    9       11652     1  'Ġsentence'
+   10          13     1  '.'
+   11      151645     1  '<|im_end|>'
+   12         198     1  'Ċ'
+   13      151644     1  '<|im_start|>'
+   14       77091     1  'assistant'
+   15         198     1  'Ċ'
+   16      151667     1  '<think>'
+   17         271     1  'ĊĊ'
+   18      151668     1  '</think>'
+   19         271     1  'ĊĊ'
+

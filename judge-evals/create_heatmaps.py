@@ -225,13 +225,23 @@ def main():
                         help="Path to results_summary.csv from summarize_results.py")
     parser.add_argument("--diff", action="store_true",
                         help="Plot other−last difference instead of raw pass rates")
-    parser.add_argument("--norm_mode", default="normalized",
+    parser.add_argument("--unnormalized", action="store_true",
+                        help="Plot unnormalized data; outputs to figures_unnormalized / figures_full_unnormalized")
+    parser.add_argument("--norm_mode", default=None,
                         choices=["normalized", "unnormalized"],
-                        help="Which normalization condition to plot (default: normalized)")
+                        help="Which normalization condition to plot (overridden by --unnormalized)")
     parser.add_argument("--cache_mode", default="cache",
                         choices=["cache", "no_cache"],
                         help="Which cache condition to plot (default: cache)")
     args = parser.parse_args()
+
+    norm_mode    = "unnormalized" if args.unnormalized else (args.norm_mode or "normalized")
+    unnorm_suffix = "_unnormalized" if args.unnormalized else ""
+    diff_suffix   = "_diff" if args.diff else ""
+
+    figures_base = BASE_DIR / "figures"
+    simple_dir   = figures_base / f"simple{unnorm_suffix}{diff_suffix}"
+    full_dir     = figures_base / f"full{unnorm_suffix}{diff_suffix}"
 
     csv_path = Path(args.csv)
     if not csv_path.exists():
@@ -241,22 +251,20 @@ def main():
     df = pd.read_csv(csv_path)
     print(f"Loaded {len(df)} rows from {csv_path.name}")
 
-    figures_dir      = BASE_DIR / "figures"
-    figures_full_dir = BASE_DIR / "figures_full"
-    for d in (figures_dir, figures_full_dir):
+    for d in (simple_dir, full_dir):
         d.mkdir(parents=True, exist_ok=True)
 
     CANONICAL_BASES = {"harmless", "sycophancy", "prose"}
     canonical = df["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
     base_df = df[
         canonical &
-        (df["norm_mode"] == args.norm_mode) &
+        (df["norm_mode"] == norm_mode) &
         (df["cache_mode"] == args.cache_mode)
     ]
 
-    norm_label = args.norm_mode
-    make_heatmaps(base_df, figures_full_dir, diff=False, norm_label=norm_label)
-    make_simple_heatmaps(base_df, figures_dir, diff=args.diff, norm_label=norm_label)
+    norm_label = norm_mode
+    make_heatmaps(base_df, full_dir, diff=args.diff, norm_label=norm_label)
+    make_simple_heatmaps(base_df, simple_dir, diff=args.diff, norm_label=norm_label)
 
 
 if __name__ == "__main__":

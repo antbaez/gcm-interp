@@ -114,16 +114,11 @@ base_dir = os.path.join(
 
 ---
 
-## `judge-evals/summarize_results.py`
+## Marker changes (`model_handler.py`)
 
-Rewritten to compare `last` vs `positional` across `cache` and `no_cache`.
+**Llama-3:** marker extended to include `\n\n` so `response_start_position` lands on the first content token rather than the trailing newlines after `<|end_header_id|>`.
 
-**`collect_records`**: walks `workdirs/` and parses the 6-part path `(model, from_to, cache_mode, steering_type, exp_dir, filename)`. Records now include `cache_mode`, `steering_type`, and a composite `condition = "{cache_mode} / {steering_type}"` label. Only `w_rf` pass rates are computed (judge pass AND fluency==2 AND relevance==2) — `wo_rf` removed.
+**Qwen3:** split out from the generic `qwen` branch with its own marker that spans the empty thinking block — `'<|im_start|>assistant\n<think>\n\n</think>\n\n'` — so ATP loss is computed on actual response content, not think tokens.
 
-**`compute_diff`**: computes `other − last` per `cache_mode` by joining on `["model", "dataset", "source", "base", "N", "topk", "cache_mode"]`. Accepts `last` / `last-token` / `last_token` as equivalent reference conditions via a set membership check.
+**Qwen1.5:** removed a dead `source == 'harmful'` branch (condition was always False since source is `'harmful-long'`). Marker is now unconditionally `'<|im_start|>assistant\n'`.
 
-**`make_heatmaps`**: renders a 2D subplot grid — **rows = cache_mode, columns = steering_type** — so `cache/last`, `cache/positional`, `no_cache/last`, `no_cache/positional` are visually aligned. Each subplot is an N × topk heatmap. x-axis tick labels only appear on the bottom row to reduce clutter.
-
-**`make_simple_heatmaps`**: rows = conditions, columns = topk, each cell = max pass rate over all N values (w_rf).
-
-Plots are filtered to `no_cache` only before rendering. Output goes to `judge-evals/accuracy-cache-comparison/`.
