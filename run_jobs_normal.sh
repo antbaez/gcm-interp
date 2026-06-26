@@ -9,12 +9,6 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=acbaez@mit.edu
 
-# Usage:
-#   sbatch run_jobs_normal.sh --model <olmo|qwen|qwen3|gemma|all> --dataset <harmful|sycophancy|verse|all> [--judging]
-#   Defaults: --model all --dataset all (runs both steering and judging)
-
-set -e
-
 MODEL="all"
 DATASET="all"
 JUDGING_ONLY=false

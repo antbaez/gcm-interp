@@ -24,6 +24,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     if steering_type is None:
         raise ValueError("steering_type must be specified: 'last-token', 'mean', or 'positional'")
     patch_activations = patch_activations['desired'].to(model.device)
+    print("patch activations", patch_activations.shape, steering_type)
     positional = (steering_type == 'positional')
     total_len = gen_toks['input_ids'].shape[1]
     print(f"[steering] total_len={total_len}, steering_type={steering_type}, normalize={normalize}")
@@ -51,8 +52,11 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         temperature=None,
         max_new_tokens=max_new_tokens
     ) as tracer:
+        print("contribution", interventions[0][2].shape)
+        out_debug = _get_layers(model)[interventions[0][0]].self_attn.o_proj.output.save()
         for layer_idx, sl, contribution in interventions:
             out = _get_layers(model)[layer_idx].self_attn.o_proj.output
+            # print(f"[steer] layer={layer_idx}, slice={sl}, contribution shape={contribution.shape}")
             if contribution.dim() == 1:
                 if ablation_type == 'mean':
                     out[..., sl] = contribution
@@ -73,7 +77,39 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                         out[:, -P:, sl] = out[:, -P:, sl] + contribution
 
         generated = model.generator.output.save()
+    print(f"[debug] out shape on prefill: {out_debug.shape} [batch, seq_len, hidden_dim]")
     return generated
+
+    # no kv cache
+    #     with model.all():
+    #         for layer_idx, sl, contribution in interventions:
+    #             out = _get_layers(model)[layer_idx].self_attn.o_proj.output
+    #             # print(f"[steer] layer={layer_idx}, slice={sl}, contribution shape={contribution.shape}")
+    #             if contribution.dim() == 1:
+    #                 if ablation_type == 'mean':
+    #                     out[..., sl] = contribution
+    #                 else:
+    #                     out[..., :total_len, sl] = out[..., :total_len, sl] + contribution
+    #             else:
+    #                 # print("positional")
+    #                 P = contribution.shape[0]
+    #                 if total_len <= P:
+    #                     c = contribution[-total_len:]
+    #                     if ablation_type == 'mean':
+    #                         out[..., sl] = c
+    #                     else:
+    #                         out[..., sl] = out[..., sl] + c
+    #                 else:
+    #                     if ablation_type == 'mean':
+    #                         out[:, -P:, sl] = contribution
+    #                     else:
+    #                         out[:, -P:, sl] = out[:, -P:, sl] + contribution
+
+    #         generated = model.generator.output.save()
+    # return generated
+
+
+
 
 def decode_responses(model, inputs, originals, edited, base, answers=None):
     decoded = []
@@ -90,4 +126,5 @@ def decode_responses(model, inputs, originals, edited, base, answers=None):
             to_append['answer'] = answers[i]
         decoded.append(to_append)
     assert len(decoded) > 0, "No responses decoded. Check the generation process."
+    print(decoded[:3])
     return decoded

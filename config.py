@@ -2,6 +2,7 @@ from ast import parse
 import torch
 import os
 import random
+import numpy as np
 import datetime
 import time
 import argparse
@@ -91,8 +92,12 @@ class Config:
             
     def setup_environment(self, seed=42):
         random.seed(seed)
+        np.random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+        # torch.backends.cudnn.deterministic = True
+        # torch.backends.cudnn.benchmark = False
+        # torch.use_deterministic_algorithms(True, warn_only=True)
 
         if not self.args.dataset_list:
             os.makedirs(f'{self.set_output_prefix()}', exist_ok=True)

@@ -72,6 +72,15 @@ def steering_reps_cache(model, data_handler, batch_size=10, mean=True):
             cache.append(s - b)
         result = torch.stack(cache)  # [layers, H]
 
+
+        cache2 = []
+        for i in range(num_layers):
+            s = torch.cat(steer[i], dim=0).mean(0)  # [H]
+            b = torch.cat(base[i], dim=0).mean(0)   # [H]
+            cache2.append(s - b)
+        result2 = torch.stack(cache2)
+        print(result2.shape)
+
     elif steering_type == 'mean':
         # Masked mean over each example's non-padding tokens, then mean over examples.
         s_denom = source_mask.sum(dim=1, keepdim=True).clamp(min=1)  # [N, 1]

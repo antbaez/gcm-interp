@@ -51,7 +51,9 @@ BATCH_SIZE_SYCOPHANCY=50
 BATCH_SIZE_VERSE=50
 BATCH_SIZE_PARAGRAPH=10
 STEERING_N="1 3 5 8 10"
+# STEERING_N="1 5"
 TOPK_VALS="0.01 0.03 0.05 0.08 0.1 0.5 1.0"
+# TOPK_VALS="0.1 1.0"
 NORMALIZE=true
 
 
@@ -61,8 +63,8 @@ EVAL_TEST=true
 
 COMBINATIONS=(
     "last-token"
-    "mean"
-    "positional"
+    # "mean"
+    # "positional"
 )
 
 EVAL_FLAGS=""
