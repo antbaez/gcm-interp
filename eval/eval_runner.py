@@ -38,9 +38,7 @@ def load_patching_reps(data_handler, model_handler, mean=True):
     for ablation in [data_handler.config.args.ablation]:
         patching_reps[ablation] = {}
         for key in ['desired', 'undesired']:
-            print(f"Loading patching reps for {ablation} - {key}")
             patching_reps[ablation][key] = get_patch_activations(model, data_handler, ablation, key=key, mean=mean)
-    print('Returning patching reps')
     return patching_reps
 
 def get_patch_activations(model, data_handler, ablation_type, key='desired', mean=True):
@@ -60,19 +58,17 @@ def save_prompt_responses(responses, path):
             f.write('-' * 40 + '\n')
     with open(path.replace('.txt', '.json'), 'w') as jf:
         json.dump(responses, jf)
-    print(f"Saved responses to {path} and {path.replace('.txt', '.json')}")
 
-def save_top_k(reps_type, config, model, topk, logits, logit_metric):
+def save_top_k(reps_type, config, model_handler, topk, logits, logit_metric):
     if reps_type == 'random':
         topk_df = retrieve_random_k(
-            model.config.num_hidden_layers,
-            model.config.num_attention_heads,
+            model_handler.num_layers,
+            model_handler.num_heads,
             topk
         )
     else:
         topk_df = get_top_k_layer_and_head(logits, topk, config.args.patch_algo)
 
-    print("Saving topk to CSV at ", f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv")
     os.makedirs(config.get_output_prefix(), exist_ok=True)
     topk_df.to_csv(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv", index=False)
     return topk_df
@@ -113,10 +109,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
     baseline_total = len(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size))
     print(f"\nBASELINE GENERATION — {baseline_total} batches")
     for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size), start=1):
-        print(f"  Baseline batch {batch_num}/{baseline_total} — starting")
         _t0 = time.time()
         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-        print(f"    batch shape: {gen_qs_toks['input_ids'].shape}")
         with model.generate(gen_qs_toks,
         pad_token_id=model.tokenizer.eos_token_id,
         use_cache=True,
@@ -129,6 +123,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
         original_outputs += op.cpu().numpy().tolist()
         batch_handler.update()
         print(f"  Baseline batch {batch_num}/{baseline_total} — done in {time.time()-_t0:.1f}s")
+    print("\nSTEERING GENERATION")
     for N in config.args.steering_n:
         config.args.N = N
         for ablation in tqdm(ablations, desc="Ablations"):
@@ -136,40 +131,44 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             for reps_type in tqdm(reps_types, desc="Reps Types"):
                 decoded_responses[ablation][reps_type] = {}
                 for topk in tqdm(topk_vals, desc="TopK Values"):
+                    norm_dir  = "normalized" if config.args.normalize else "unnormalized"
                     cache_dir = "cache" if config.args.kv_caching else "no_cache"
-                    steer_eval_dir = f"{config.get_output_prefix()}/{cache_dir}/{config.args.steering_type}"
-                    if os.path.exists(f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.txt") and os.path.exists(f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.json"):
-                        with open(f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.json", 'r') as jf:
+                    steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{cache_dir}/{config.args.steering_type}"
+                    new_stem = f"{steer_eval_dir}/N={config.args.N}_{ablation}_topk={topk}_{config.args.test_dataset}_gen"
+                    old_stem = f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen"
+                    existing_stem = (
+                        new_stem if os.path.exists(f"{new_stem}.txt") and os.path.exists(f"{new_stem}.json")
+                        else old_stem if os.path.exists(f"{old_stem}.txt") and os.path.exists(f"{old_stem}.json")
+                        else None
+                    )
+                    if existing_stem:
+                        with open(f"{existing_stem}.json", 'r') as jf:
                             decoded_responses[ablation][reps_type][topk] = json.load(jf)
 
                         for item_iix, item in enumerate(decoded_responses[ablation][reps_type][topk]):
                             query = item['query']
                             item[f'old_{config.args.base}'] = model.tokenizer.decode(original_outputs[item_iix], skip_special_tokens=True).split(query)[-1]
-                        gen_file = f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.txt"
+                        gen_file = f"{new_stem}.txt"
                         save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
-                        print(f"Skipping evaluation for {ablation}, {reps_type}, {topk} {config.args.N} as gen files already exist.")
+                        print(f"Skipping evaluation for {ablation}, {topk}, N={config.args.N} as gen files already exist.")
                         continue
                     decoded_responses[ablation][reps_type][topk] = []
-                    gen_file = f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen.txt"
-                    print(f"Eval [[LOGITS]] → Ablation: {ablation}, Reps: {reps_type}, TopK: {topk}, N: {config.args.N}, algo: {config.args.patch_algo}, task: {config.args.source} -> {config.args.base}")
+                    gen_file = f"{new_stem}.txt"
 
                     if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')) and os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
                         print(f"Skipping generation as all relevant files exist.")
                         continue
                     if not os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
-                        topk_df = save_top_k(reps_type, config, model, topk, logits, logit_metric)
+                        topk_df = save_top_k(reps_type, config, model_handler, topk, logits, logit_metric)
                     else:
                         topk_df = pd.read_csv(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv")
 
                     batch_handler = BatchHandler(config, data_handler)
                     len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
                     steer_total = len(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size))
-                    print(f"\nSTEERING GENERATION — N={config.args.N}, topk={topk}, {steer_total} batches")
                     for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size), start=1):
-                        print(f"  Steering batch {batch_num}/{steer_total} — N={config.args.N}, topk={topk} — starting")
                         _t0 = time.time()
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                        print(f"    batch shape: {gen_qs_toks['input_ids'].shape}")
                         edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching)
                         decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
                         gc.collect()

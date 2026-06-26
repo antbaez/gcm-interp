@@ -52,7 +52,7 @@ class Patching:
             attn_desired_effects = []
             attn_undesired_effects = []
             net_effects = []
-            for idx in range(len(model.model.layers)):
+            for idx in range(self.model_handler.num_layers):
                 attn_desired_effects.append(
                     base_desired_attn[idx].value.grad *
                     (source_q_des_attn[idx] - base_desired_attn[idx])

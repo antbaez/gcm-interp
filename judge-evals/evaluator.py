@@ -12,6 +12,8 @@ import torch
 
 # Suppress vLLM's verbose startup and inference logs before importing
 os.environ.setdefault("VLLM_LOGGING_LEVEL", "WARNING")
+os.environ.setdefault("TORCH_DISTRIBUTED_DEBUG", "OFF")
+os.environ.setdefault("GLOO_LOG_LEVEL", "ERROR")
 logging.getLogger("vllm").setLevel(logging.WARNING)
 
 from vllm import LLM, SamplingParams
@@ -40,7 +42,7 @@ def make_llm(model_name: str = JUDGE_MODEL_NAME) -> LLM:
         pipeline_parallel_size=1,
         dtype="auto",
         max_num_seqs=64,
-        max_model_len=4096,
+        max_model_len=8192,
         seed=SEED,
     )
 

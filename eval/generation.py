@@ -3,6 +3,12 @@ from tqdm import tqdm
 import torch
 from pathlib import Path
 
+def _get_layers(model):
+    inner = model.model
+    if hasattr(inner._module, 'language_model'):
+        return inner.language_model.layers
+    return inner.layers
+
 def select_gen_qs_toks(config, batch_handler):
     if config.args.eval_train:
         print("Evaluating on training set.")
@@ -27,7 +33,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         with model.generate(gen_toks, use_cache=True, **gen_kwargs) as tracer:
             for layer_idx in layer_ids:
                 head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
-                layer = model.model.layers[layer_idx]
+                layer = _get_layers(model)[layer_idx]
                 for head_idx in head_ids:
                     sl = slice(DIM * head_idx, DIM * (head_idx + 1))
                     if steering_type in ('last_token', 'last-token', 'last'):
@@ -51,7 +57,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
             with model.all():
                 for layer_idx in layer_ids:
                     head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
-                    layer = model.model.layers[layer_idx]
+                    layer = _get_layers(model)[layer_idx]
                     for head_idx in head_ids:
                         sl = slice(DIM * head_idx, DIM * (head_idx + 1))
                         if steering_type in ('last_token', 'last-token', 'last'):

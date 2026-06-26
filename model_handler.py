@@ -17,8 +17,10 @@ class ModelHandler:
         self.model = self.load_model(model_id, self.device)
         self.model.tokenizer = self.tokenizer
         model_config = self.model.config.to_dict()
-        hidden_size = model_config['hidden_size']
-        self.num_heads = model_config['num_attention_heads']
+        tc = model_config.get('text_config', model_config)
+        hidden_size = tc['hidden_size']
+        self.num_heads = tc['num_attention_heads']
+        self.num_layers = tc['num_hidden_layers']
         self.dim = hidden_size // self.num_heads
 
         if 'solar' in model_id.lower():
@@ -39,6 +41,9 @@ class ModelHandler:
         elif 'olmo' in model_id.lower():
             self.marker = '<|assistant|>\n'
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0]
+        elif 'google' in model_id.lower():
+            self.marker = '<start_of_turn>model\n'
+            self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0][1:]
 
     def load_tokenizer(self, model_id):
         if 'qwen'  in model_id.lower():
@@ -49,7 +54,7 @@ class ModelHandler:
             tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.environ['HF_TOKEN'])
             tokenizer.pad_token = tokenizer.eos_token
             tokenizer.padding_side = 'left'
-        print('Tokenizer loaded, padding side is', tokenizer.padding_side)
+        print(f"Loading model {model_id} (padding: {tokenizer.padding_side})...")
         return tokenizer
 
     def load_model(self, model_id, device, model_type="causal"):
@@ -60,7 +65,7 @@ class ModelHandler:
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_compute_dtype=torch.bfloat16
             )
-            return AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, quantization_config=bnb_config, device_map=device, attn_implementation="eager", trust_remote_code=True)
+            return AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.bfloat16, quantization_config=bnb_config, device_map=device, attn_implementation="eager", trust_remote_code=True)
         else:
-            return LanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, torch_dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True)
+            return LanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True)
     

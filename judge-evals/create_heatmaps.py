@@ -225,6 +225,12 @@ def main():
                         help="Path to results_summary.csv from summarize_results.py")
     parser.add_argument("--diff", action="store_true",
                         help="Plot other−last difference instead of raw pass rates")
+    parser.add_argument("--norm_mode", default="normalized",
+                        choices=["normalized", "unnormalized"],
+                        help="Which normalization condition to plot (default: normalized)")
+    parser.add_argument("--cache_mode", default="cache",
+                        choices=["cache", "no_cache"],
+                        help="Which cache condition to plot (default: cache)")
     args = parser.parse_args()
 
     csv_path = Path(args.csv)
@@ -242,10 +248,15 @@ def main():
 
     CANONICAL_BASES = {"harmless", "sycophancy", "prose"}
     canonical = df["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
-    base_df = df[canonical & (df["cache_mode"] == "cache")]
+    base_df = df[
+        canonical &
+        (df["norm_mode"] == args.norm_mode) &
+        (df["cache_mode"] == args.cache_mode)
+    ]
 
-    make_heatmaps(base_df, figures_full_dir, diff=False)
-    make_simple_heatmaps(base_df, figures_dir, diff=args.diff)
+    norm_label = args.norm_mode
+    make_heatmaps(base_df, figures_full_dir, diff=False, norm_label=norm_label)
+    make_simple_heatmaps(base_df, figures_dir, diff=args.diff, norm_label=norm_label)
 
 
 if __name__ == "__main__":

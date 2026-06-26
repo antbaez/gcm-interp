@@ -35,14 +35,15 @@ def collect_records(workdirs_dir: Path) -> pd.DataFrame:
     for judge_path in sorted(workdirs_dir.rglob("judge_ratings.jsonl")):
         rel   = judge_path.relative_to(workdirs_dir)
         parts = rel.parts
-        # Expected layout: (model, from_to, cache_mode, steering_type, exp_dir, filename)
-        if len(parts) < 6:
+        # Expected layout: (model, from_to, norm_mode, cache_mode, steering_type, exp_dir, filename)
+        if len(parts) < 7:
             continue
 
         model         = parts[0]
         from_to       = parts[1]
-        cache_mode    = parts[2]   # "cache" or "no_cache"
-        steering_type = parts[3]   # e.g. "positional", "last-token"
+        norm_mode     = parts[2]   # "normalized" or "unnormalized"
+        cache_mode    = parts[3]   # "cache" or "no_cache"
+        steering_type = parts[4]   # e.g. "positional", "last-token"
 
         ft = re.match(r"^from_(.+)_to_(.+)$", from_to)
         if not ft:
@@ -84,6 +85,7 @@ def collect_records(workdirs_dir: Path) -> pd.DataFrame:
             model=model, source=source, base=base,
             dataset=f"{source} → {base}",
             N=int(N), topk=float(topk),
+            norm_mode=norm_mode,
             cache_mode=cache_mode,
             steering_type=steering_type,
             condition=condition,
@@ -110,7 +112,7 @@ def main():
         return
 
     csv_path = accuracy_dir / "results_summary.csv"
-    df.sort_values(["model", "dataset", "cache_mode", "steering_type", "N", "topk"]) \
+    df.sort_values(["model", "dataset", "norm_mode", "cache_mode", "steering_type", "N", "topk"]) \
       .to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path}  ({len(df)} rows)")
 

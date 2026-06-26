@@ -37,7 +37,6 @@ def main():
         config.set_output_prefix()
         os.makedirs(config.get_output_prefix(), exist_ok=True)
         config.save_to_yaml(f"{config.output_prefix}/config.yml", config.args)
-        print(f'Saved config to file {config.get_output_prefix()}/config.yml')
 
         print(f'\n=== Dataset: {source} -> {base} ===')
         data_handler = DataHandler(config, model_handler)

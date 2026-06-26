@@ -19,13 +19,15 @@ TOKENIZER_MODEL_NAME = "meta-llama/Llama-3.1-70B-Instruct"
 
 RATING_REGEX = re.compile(r"(\d+)\]\]")
 
-# Filename pattern for generation outputs
+# Filename pattern for generation outputs — accepts both formats:
+#   new: N=5_steer_topk=0.5_harmless-test_gen.json
+#   old: 5_targeted_steer_0.5_harmless-test_gen.json
 GEN_RE = re.compile(
     r"""
-    (?P<N>\d+)_
-    (?P<REPS>random|targeted)_
+    (?:N=)?(?P<N>\d+)_
+    (?:(?P<REPS>random|targeted)_)?
     (?P<STEERING_METHOD>steer|mean)_
-    (?P<topk>\d\.\d+)_
+    (?:topk=)?(?P<topk>\d+\.\d+)_
     (?P<TEST_FILE>.+?-(?:long|single|test))
     _gen\.json$
     """,
@@ -151,9 +153,10 @@ SOURCE_TO_TEMPLATE = {
     "verse":            "verse",
     "verse-long":       "verse",
     "verse-single":     "verse",
-    "sycophancy":       "sycophancy",
-    "sycophancy-long":  "sycophancy",
-    "sycophancy-single":"sycophancy",
+    "sycophancy":           "sycophancy",
+    "sycophancy-long":      "sycophancy",
+    "sycophancy-single":    "sycophancy",
+    "non-sycophantic-long": "sycophancy",
 }
 
 # Templates that compare two responses (need old + new)

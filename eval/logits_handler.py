@@ -94,7 +94,7 @@ def plot_logit_metrics(config, model_handler, metric, name, which_patch):
     }
     plt.title(titles.get(name, name))
     plt.xticks(ticks=range(model_handler.num_heads))
-    plt.yticks(ticks=range(model_handler.model.config.num_hidden_layers))
+    plt.yticks(ticks=range(model_handler.num_layers))
     plt.tight_layout()
     os.makedirs(config.get_output_prefix(), exist_ok=True)
     plt.savefig(f"{config.get_output_prefix()}/{name}_heatmap.png")

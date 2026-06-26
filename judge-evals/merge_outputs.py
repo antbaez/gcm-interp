@@ -35,9 +35,10 @@ def extract_path_metadata(path: str) -> dict:
     model_id      = parts[runs_idx + 1]
     from_to       = parts[runs_idx + 2]
     _, source, _, base = from_to.split("_")
-    cache_mode    = parts[runs_idx + 3]   # "cache" or "no_cache"
-    steering_type = parts[runs_idx + 4]   # e.g. "positional", "last-token"
-    filename      = parts[runs_idx + 5]
+    norm_mode     = parts[runs_idx + 3]   # "normalized" or "unnormalized"
+    cache_mode    = parts[runs_idx + 4]   # "cache" or "no_cache"
+    steering_type = parts[runs_idx + 5]   # e.g. "positional", "last-token"
+    filename      = parts[runs_idx + 6]
 
     m = GEN_RE.match(filename)
     if not m:
@@ -47,6 +48,7 @@ def extract_path_metadata(path: str) -> dict:
         "MODEL_ID":      model_id,
         "SOURCE":        source,
         "BASE":          base,
+        "NORM_MODE":     norm_mode,
         "CACHE_MODE":    cache_mode,
         "STEERING_TYPE": steering_type,
         **m.groupdict(),
@@ -54,9 +56,17 @@ def extract_path_metadata(path: str) -> dict:
     }
 
 
+SOURCE_TO_DIR = {
+    "harmful-long":         "harmful-long",
+    "non-sycophantic-long": "sycophancy-long",
+    "verse-long":           "verse-long",
+}
+
+
 def load_test_queries(data_dir: str, model_id: str, source: str, base: str) -> list[str]:
     """Load the user-turn text from the test JSONL."""
-    logits_path = f"{data_dir}/{model_id}/{source}/{base}-test.jsonl"
+    source_dir = SOURCE_TO_DIR.get(source, source)
+    logits_path = f"{data_dir}/{model_id}/{source_dir}/{base}-test.jsonl"
     queries = []
     with open(logits_path) as f:
         for line in f:
@@ -84,22 +94,24 @@ def discover_gen_files(
     model_name: str | None = None,
     source: str | None = None,
     base: str | None = None,
+    norm_mode: str | None = None,
     cache_mode: str | None = None,
     steering_type: str | None = None,
 ) -> list[str]:
     """
-    Glob for *_gen.json files, optionally filtered by model/task/cache_mode/steering_type.
+    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/cache_mode/steering_type.
 
     Uses single-level wildcards (*) for each path component to avoid duplicates
     that arise from recursive (**) globbing.
     """
     model_part   = model_name or "*"
     task_part    = f"from_{source}_to_{base}" if (source and base) else "*"
+    norm_part    = norm_mode or "*"
     cache_part   = cache_mode or "*"
     steer_part   = steering_type or "*"
 
     gen_files = []
-    pattern = f"{runs_dir}/{model_part}/{task_part}/{cache_part}/{steer_part}/*_gen.json"
+    pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{cache_part}/{steer_part}/*_gen.json"
     gen_files.extend(glob.glob(pattern))
 
     # Deduplicate and filter by filename pattern
@@ -145,7 +157,7 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
             "CACHE_MODE": meta["CACHE_MODE"],
             "STEERING_TYPE": meta["STEERING_TYPE"],
             "N": meta["N"],
-            "REPS": meta["REPS"],
+            "REPS": meta["REPS"] if meta["REPS"] is not None else "targeted",
             "STEERING_METHOD": meta["STEERING_METHOD"],
             "topk": meta["topk"],
             "TEST_FILE": meta["TEST_FILE"],
@@ -167,7 +179,7 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
 def default_csv_path(gen_path: str) -> str:
     """Derive the default CSV output path from a gen.json path."""
     p = Path(gen_path)
-    stem = p.stem  # e.g. "1_targeted_steer_0.01_sycophancy-single_gen"
+    stem = p.stem  # e.g. "N=1_steer_topk=0.01_sycophancy-test_gen"
     if stem.endswith("_gen"):
         stem = stem[:-4]
     return str(p.parent / f"{stem}_eval.csv")

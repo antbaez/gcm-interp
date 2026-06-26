@@ -42,13 +42,16 @@ done
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
 ALL_DATASETS=("harmful" "sycophancy" "verse")
 
-# Expand model tag
+# Expand model tag (supports comma-separated values, e.g. "olmo,qwen,gemma")
 if [ "$MODEL_TAG" = "all" ]; then
     MODELS=("${ALL_MODELS[@]}")
-elif [[ " ${ALL_MODELS[*]} " == *" $MODEL_TAG "* ]]; then
-    MODELS=("$MODEL_TAG")
 else
-    echo "Error: --model must be one of: olmo, qwen, qwen3, gemma, llama, all"; exit 1
+    IFS=',' read -ra MODELS <<< "$MODEL_TAG"
+    for M in "${MODELS[@]}"; do
+        if [[ ! " ${ALL_MODELS[*]} " == *" $M "* ]]; then
+            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, qwen3, gemma, llama, all"; exit 1
+        fi
+    done
 fi
 
 # Expand dataset tag (supports comma-separated values, e.g. "harmful,sycophancy")

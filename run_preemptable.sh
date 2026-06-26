@@ -9,36 +9,48 @@
 #SBATCH --error=logs/err/%j.err
 
 # Usage:
-#   sbatch run_jobs_preemptable.sh --model <olmo|qwen|qwen3|gemma|all> --dataset <harmful|sycophancy|verse|all> [--type last|positional] [--cache] [--judging]
-#   Defaults: --model all --dataset all --type positional (no cache)
+#   sbatch run_preemptable.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--nocache] [--unnormalized] [--judging]
+#   Defaults: --model all --dataset all (uses steering types from run_steering.sh)
 
 set -e
 
 MODEL="all"
 DATASET="all"
-STEERING_TYPE="positional"
-CACHE_FLAG=""
+TYPE_VAL=""
+NOCACHE=false
+UNNORMALIZED=false
 JUDGING_ONLY=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --model)   MODEL="$2";           shift 2 ;;
-        --dataset) DATASET="$2";         shift 2 ;;
-        --type)    STEERING_TYPE="$2";   shift 2 ;;
-        --cache)   CACHE_FLAG="--cache"; shift ;;
-        --judging) JUDGING_ONLY=true;    shift ;;
+        --model)        MODEL="$2";        shift 2 ;;
+        --dataset)      DATASET="$2";      shift 2 ;;
+        --type)         TYPE_VAL="$2";     shift 2 ;;
+        --nocache)      NOCACHE=true;      shift ;;
+        --unnormalized) UNNORMALIZED=true; shift ;;
+        --judging)      JUDGING_ONLY=true; shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
-echo "Running: model=$MODEL  dataset=$DATASET  type=$STEERING_TYPE  cache=${CACHE_FLAG:-none}  judging_only=$JUDGING_ONLY"
+EXTRA_FLAGS=()
+[ -n "$TYPE_VAL" ]         && EXTRA_FLAGS+=(--type "$TYPE_VAL")
+[ "$NOCACHE" = true ]      && EXTRA_FLAGS+=(--nocache)
+[ "$UNNORMALIZED" = true ] && EXTRA_FLAGS+=(--unnormalized)
+
+JUDGE_FLAGS=()
+[ "$NOCACHE" = true ]      && JUDGE_FLAGS+=(--nocache)
+[ "$UNNORMALIZED" = true ] && JUDGE_FLAGS+=(--unnormalized)
+[ "$UNNORMALIZED" = false ] && JUDGE_FLAGS+=(--normalized)
+
+echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  nocache=$NOCACHE  unnormalized=$UNNORMALIZED  judging_only=$JUDGING_ONLY"
 
 cd ~/gcm-interp
 
 if [ "$JUDGING_ONLY" = false ]; then
     source ~/gcm-interp/setup/setup.sh
-    bash run_steering.sh --model "$MODEL" --dataset "$DATASET" --type "$STEERING_TYPE" $CACHE_FLAG --patch
+    bash run_steering.sh --model "$MODEL" --dataset "$DATASET" "${EXTRA_FLAGS[@]}" --patch
 fi
 
 source ~/gcm-interp/setup/setup_judging.sh
-bash run_judging.sh --model "$MODEL" --dataset "$DATASET"
+bash run_judging.sh --model "$MODEL" --dataset "$DATASET" "${JUDGE_FLAGS[@]}"

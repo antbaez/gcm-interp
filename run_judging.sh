@@ -7,16 +7,22 @@ JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 BATCH_SIZE=128
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
-# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--device <cuda:0>]
+# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--normalized|--unnormalized] [--cache|--nocache] [--device <cuda:0>]
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
+NORM_MODE=""
+CACHE_MODE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --model)   MODEL_TAG="$2";   shift 2 ;;
-        --dataset) DATASET_TAG="$2"; shift 2 ;;
-        --device)  DEVICE="$2";      shift 2 ;;
+        --model)        MODEL_TAG="$2";   shift 2 ;;
+        --dataset)      DATASET_TAG="$2"; shift 2 ;;
+        --device)       DEVICE="$2";      shift 2 ;;
+        --normalized)   NORM_MODE="normalized";   shift ;;
+        --unnormalized) NORM_MODE="unnormalized"; shift ;;
+        --cache)        CACHE_MODE="cache";        shift ;;
+        --nocache)      CACHE_MODE="no_cache";     shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -73,8 +79,12 @@ for M_TAG in "${MODELS[@]}"; do
 
         esac
 
+        JUDGE_FLAGS=()
+        [ -n "$NORM_MODE" ]  && JUDGE_FLAGS+=(--norm_mode  "$NORM_MODE")
+        [ -n "$CACHE_MODE" ] && JUDGE_FLAGS+=(--cache_mode "$CACHE_MODE")
+
         echo ""
-        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  device=$DEVICE"
+        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  cache=${CACHE_MODE:-any}  device=$DEVICE"
         cd "$JUDGE_DIR" && python run_judge.py \
             --model_name "$MODEL_NAME" \
             --source "$SOURCE" \
@@ -84,7 +94,8 @@ for M_TAG in "${MODELS[@]}"; do
             --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy" \
             --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" \
             --batch_size "$BATCH_SIZE" \
-            --force
+            --force \
+            "${JUDGE_FLAGS[@]}"
         cd "$SCRIPT_DIR"
     done
 done

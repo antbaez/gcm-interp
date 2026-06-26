@@ -89,7 +89,6 @@ class Config:
     def set_output_prefix(self):
         model = self.args.model_id.split('/')[-1]
         self.output_prefix = f"./results/{model}/from_{self.args.source}_to_{self.args.base}/"
-        print("op prefix ", self.output_prefix)
         return self.output_prefix
     
     def update_config(self, key, value):

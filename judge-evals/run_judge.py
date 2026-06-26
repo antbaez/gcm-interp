@@ -86,6 +86,7 @@ def accuracy_paths(meta: dict) -> tuple[Path, Path]:
         ACCURACY_DIR
         / meta["MODEL_ID"]
         / f"from_{meta['SOURCE']}_to_{meta['BASE']}"
+        / meta["NORM_MODE"]
         / meta["CACHE_MODE"]
         / meta["STEERING_TYPE"]
     )
@@ -179,7 +180,6 @@ def phase1_prepare(
 
         rf_csv = workdir / "relevance_fluency_prompts.csv"
         if not rf_csv.exists():
-            print(f"  Building fluency+relevance prompts: {name}")
             rf_df = build_fluency_prompts(df.copy(), tokenizer)
             rf_df = build_relevance_prompts(rf_df, tokenizer)
             rf_df.to_csv(rf_csv, index=False)
@@ -187,7 +187,6 @@ def phase1_prepare(
         if not skip_judge:
             jp_csv = workdir / "judge_prompts.csv"
             if not jp_csv.exists():
-                print(f"  Building judge prompts: {name}")
                 try:
                     jp_df = build_judge_prompts(df.copy(), tokenizer)
                     jp_df.to_csv(jp_csv, index=False)
@@ -263,7 +262,9 @@ def _evaluate_all_workdirs_batched(
 
         # Single large batched inference
         outputs = []
-        for batch in generate_in_batches(llm, prompts, sp, batch_size):
+        total_batches = (len(prompts) + batch_size - 1) // batch_size
+        for batch_num, batch in enumerate(generate_in_batches(llm, prompts, sp, batch_size), start=1):
+            print(f"  [{mode}] Batch {batch_num}/{total_batches} — {len(batch)} prompts")
             outputs.extend(batch)
 
         # Group results back by workdir and write JSONL
@@ -364,6 +365,8 @@ def parse_args():
     p.add_argument("--model_name",   default=None)
     p.add_argument("--source",       default=None)
     p.add_argument("--base",         default=None)
+    p.add_argument("--norm_mode",     default=None,
+                   help="normalized or unnormalized")
     p.add_argument("--cache_mode",    default=None,
                    help="cache or no_cache")
     p.add_argument("--steering_type", default=None,
@@ -398,7 +401,7 @@ def main():
 
     gen_files = discover_gen_files(
         args.runs_dir, args.model_name, args.source, args.base,
-        args.cache_mode, args.steering_type,
+        args.norm_mode, args.cache_mode, args.steering_type,
     )
     print(f"Found {len(gen_files)} gen files")
     print(f"Accuracy dir: {ACCURACY_DIR}\n")
