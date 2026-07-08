@@ -33,7 +33,7 @@ if [ -z "$MODEL_TAG" ] || [ -z "$DATASET_TAG" ]; then
 fi
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse")
+ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -73,9 +73,13 @@ for M_TAG in "${MODELS[@]}"; do
 
     for D_TAG in "${DATASETS[@]}"; do
         case "$D_TAG" in
-            harmful)    SOURCE="harmful-long";         BASE="harmless";          DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-            sycophancy) SOURCE="non-sycophantic-long"; BASE="sycophancy";        DATA_SOURCE="sycophancy-long"; DATA_BASE="sycophancy" ;;
-            verse)      SOURCE="verse-long";           BASE="prose";             DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+            harmful)                  SOURCE="harmful-long";               BASE="harmless";                DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+            sycophancy)               SOURCE="non-sycophantic-long";       BASE="sycophancy";              DATA_SOURCE="sycophancy-long"; DATA_BASE="sycophancy" ;;
+            verse)                    SOURCE="verse-long";                 BASE="prose";                   DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+            sycophancy-haiku)         SOURCE="non-sycophantic-haiku-long"; BASE="sycophancy-haiku";        DATA_SOURCE="sycophancy-haiku-long"; DATA_BASE="$BASE" ;;
+            sycophancy-poem)          SOURCE="non-sycophantic-poem-long";  BASE="sycophancy-poem";         DATA_SOURCE="sycophancy-poem-long"; DATA_BASE="$BASE" ;;
+            sycophancy-haiku-concise) SOURCE="non-sycophantic-haiku-concise-long"; BASE="sycophancy-haiku-concise"; DATA_SOURCE="sycophancy-haiku-concise-long"; DATA_BASE="$BASE" ;;
+            sycophancy-poem-concise)  SOURCE="non-sycophantic-poem-concise-long";  BASE="sycophancy-poem-concise";  DATA_SOURCE="sycophancy-poem-concise-long"; DATA_BASE="$BASE" ;;
 
         esac
 

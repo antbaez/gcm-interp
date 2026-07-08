@@ -15,8 +15,11 @@ from transformers import AutoTokenizer
 DATA_ROOT = "./data"
 
 MODELS = {
-    "olmo": "allenai/OLMo-2-1124-13B-DPO",
-    "qwen": "Qwen/Qwen1.5-14B-Chat",
+    "olmo":  "allenai/OLMo-2-1124-13B-DPO",
+    "qwen":  "Qwen/Qwen1.5-14B-Chat",
+    "qwen3": "Qwen/Qwen3-14B",
+    "gemma": "google/gemma-3-12b-it",
+    "llama": "meta-llama/Llama-3.1-8B-Instruct",
 }
 
 # (dir, add file, sub file)

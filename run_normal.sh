@@ -19,6 +19,7 @@ TYPE_VAL=""
 NOCACHE=false
 UNNORMALIZED=false
 JUDGING_ONLY=false
+RESID=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -28,14 +29,17 @@ while [[ $# -gt 0 ]]; do
         --nocache)      NOCACHE=true;      shift ;;
         --unnormalized) UNNORMALIZED=true; shift ;;
         --judging)      JUDGING_ONLY=true; shift ;;
+        --resid)        RESID=true;        shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
 EXTRA_FLAGS=()
-[ -n "$TYPE_VAL" ]        && EXTRA_FLAGS+=(--type "$TYPE_VAL")
-[ "$NOCACHE" = true ]     && EXTRA_FLAGS+=(--nocache)
+[ -n "$TYPE_VAL" ]         && EXTRA_FLAGS+=(--type "$TYPE_VAL")
+[ "$NOCACHE" = true ]      && EXTRA_FLAGS+=(--nocache)
 [ "$UNNORMALIZED" = true ] && EXTRA_FLAGS+=(--unnormalized)
+[ "$RESID" = true ]        && EXTRA_FLAGS+=(--resid)
+[ "$RESID" = false ]       && EXTRA_FLAGS+=(--patch)
 
 JUDGE_FLAGS=()
 [ "$NOCACHE" = true ]     && JUDGE_FLAGS+=(--nocache)
@@ -48,7 +52,7 @@ cd ~/gcm-interp
 
 if [ "$JUDGING_ONLY" = false ]; then
     source ~/gcm-interp/setup/setup.sh
-    bash run_steering.sh --model "$MODEL" --dataset "$DATASET" "${EXTRA_FLAGS[@]}" --patch
+    bash run_steering.sh --model "$MODEL" --dataset "$DATASET" "${EXTRA_FLAGS[@]}"
 fi
 
 source ~/gcm-interp/setup/setup_judging.sh

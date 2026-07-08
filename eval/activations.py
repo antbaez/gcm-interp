@@ -25,8 +25,10 @@ def mean_ablations_cache(model, data_handler, batch_size=9, key='desired'):
 def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=True):
     model_name = data_handler.config.args.model_id.split('/')[-1]
     source = data_handler.config.args.source
+    resid = getattr(data_handler.config.args, 'resid', False)
     cache_dir = data_handler.config.get_output_prefix()
-    cache_path = f'{cache_dir}{model_name}_steering_cache_{source}.pt'
+    suffix = '_resid' if resid else ''
+    cache_path = f'{cache_dir}{model_name}_steering_cache_{source}{suffix}.pt'
 
     if os.path.exists(cache_path):
         return torch.load(cache_path, map_location=model.device)
@@ -37,6 +39,7 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
     num_layers = len(layers)
     steer = [[] for _ in range(num_layers)]
     base = [[] for _ in range(num_layers)]
+    resid_out_is_tuple = resid and not hasattr(model.model._module, 'language_model')
 
     for i in range(0, source_toks['input_ids'].shape[0], batch_size):
         s_slice = {
@@ -50,16 +53,34 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
 
         with model.trace(s_slice) as _:
             for idx, layer in enumerate(layers):
-                steer[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
+                if resid:
+                    act = layer.output[0] if resid_out_is_tuple else layer.output
+                    steer[idx].append(act.detach().cpu().save())
+                else:
+                    steer[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
         with model.trace(b_slice) as _:
             for idx, layer in enumerate(layers):
-                base[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
+                if resid:
+                    act = layer.output[0] if resid_out_is_tuple else layer.output
+                    base[idx].append(act.detach().cpu().save())
+                else:
+                    base[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
+        if resid and i == 0:
+            out = steer[0][0]
+            if isinstance(out, (tuple, list)):
+                for j, t in enumerate(out):
+                    print(f'[activations] layer.output[{j}] shape: {t.shape if hasattr(t, "shape") else type(t)}')
+            else:
+                print(f'[activations] layer.output shape: {out.shape}')
 
     if mean:
         cache = [torch.cat(steer[i], dim=0).mean(0) - torch.cat(base[i], dim=0).mean(0) for i in range(num_layers)]
     else:
         cache = [torch.cat(steer[i], dim=0) - torch.cat(base[i], dim=0) for i in range(num_layers)]
     os.makedirs(cache_dir, exist_ok=True)
-    torch.save(torch.stack(cache), cache_path)
+    result = torch.stack(cache)
+    if resid:
+        print(f'[activations] resid steering cache shape: {result.shape}')
+    torch.save(result, cache_path)
     print(f'Saved steering cache: {cache_path}')
-    return torch.stack(cache)
+    return result

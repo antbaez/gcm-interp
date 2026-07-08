@@ -20,10 +20,20 @@ def select_gen_qs_toks(config, batch_handler):
         return batch_handler.eval_transfer['queries']
     else:
         raise ValueError("Either eval_train or eval_test must be True.")
-def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False):
+def _get_steering_vector(patch_activations, layer_idx, sl, steering_type):
+    if steering_type in ('last_token', 'last-token', 'last'):
+        return patch_activations[layer_idx][-1, sl]
+    elif steering_type in ('all_tokens', 'all-tokens', 'mean'):
+        return patch_activations[layer_idx][:, sl].mean(dim=0)
+    elif steering_type == 'positional':
+        return patch_activations[layer_idx][:, sl]
+    else:
+        raise ValueError(f"Unknown steering_type: {steering_type!r}")
+
+def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False, resid=False):
     patch_activations = patch_activations['desired'].to(model.device)
     layer_ids = topk_df['layer'].unique()
-    print(gen_toks['input_ids'].shape, " normalize:", normalize, " steering type:", steering_type, " kv_caching:", kv_caching)
+    print(gen_toks['input_ids'].shape, " normalize:", normalize, " steering type:", steering_type, " kv_caching:", kv_caching, " resid:", resid)
 
     gen_kwargs = dict(pad_token_id=model.tokenizer.eos_token_id, do_sample=False,
                       top_p=None, top_k=None, temperature=None, max_new_tokens=max_new_tokens)
@@ -31,49 +41,61 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     if kv_caching:
         # No model.all() — interventions apply to prefill only; decoding uses KV cache
         with model.generate(gen_toks, use_cache=True, **gen_kwargs) as tracer:
+            _printed_sv_shape = False
             for layer_idx in layer_ids:
-                head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
                 layer = _get_layers(model)[layer_idx]
-                for head_idx in head_ids:
-                    sl = slice(DIM * head_idx, DIM * (head_idx + 1))
-                    if steering_type in ('last_token', 'last-token', 'last'):
-                        steering_vector = patch_activations[layer_idx][-1, sl]
-                    elif steering_type in ('all_tokens', 'all-tokens', 'mean'):
-                        steering_vector = patch_activations[layer_idx][:, sl].mean(dim=0)
-                    elif steering_type == 'positional':
-                        steering_vector = patch_activations[layer_idx][:, sl]
-                    else:
-                        raise ValueError(f"Unknown steering_type: {steering_type!r}")
+                if resid:
+                    sv = _get_steering_vector(patch_activations, layer_idx, slice(None), steering_type)
+                    if not _printed_sv_shape:
+                        print(f'[generation] resid sv shape (layer {layer_idx}): {sv.shape}')
+                        _printed_sv_shape = True
                     if normalize:
-                        steering_vector = steering_vector / (torch.norm(steering_vector, dim=-1, keepdim=True) + 1e-12)
+                        sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
                     if ablation_type == 'mean':
-                        layer.self_attn.o_proj.output[..., sl] = N * steering_vector
+                        layer.output = N * sv
                     elif ablation_type == 'steer':
-                        layer.self_attn.o_proj.output[..., sl] += N * steering_vector
+                        layer.output += N * sv
+                else:
+                    head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
+                    for head_idx in head_ids:
+                        sl = slice(DIM * head_idx, DIM * (head_idx + 1))
+                        sv = _get_steering_vector(patch_activations, layer_idx, sl, steering_type)
+                        if normalize:
+                            sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
+                        if ablation_type == 'mean':
+                            layer.self_attn.o_proj.output[..., sl] = N * sv
+                        elif ablation_type == 'steer':
+                            layer.self_attn.o_proj.output[..., sl] += N * sv
             generated = model.generator.output.save()
     else:
         # model.all() reapplies interventions on every decoding step; use_cache=False required
         with model.generate(gen_toks, use_cache=False, **gen_kwargs) as tracer:
             with model.all():
+                _printed_sv_shape = False
                 for layer_idx in layer_ids:
-                    head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
                     layer = _get_layers(model)[layer_idx]
-                    for head_idx in head_ids:
-                        sl = slice(DIM * head_idx, DIM * (head_idx + 1))
-                        if steering_type in ('last_token', 'last-token', 'last'):
-                            steering_vector = patch_activations[layer_idx][-1, sl]
-                        elif steering_type in ('all_tokens', 'all-tokens', 'mean'):
-                            steering_vector = patch_activations[layer_idx][:, sl].mean(dim=0)
-                        elif steering_type == 'positional':
-                            steering_vector = patch_activations[layer_idx][:, sl]
-                        else:
-                            raise ValueError(f"Unknown steering_type: {steering_type!r}")
+                    if resid:
+                        sv = _get_steering_vector(patch_activations, layer_idx, slice(None), steering_type)
+                        if not _printed_sv_shape:
+                            print(f'[generation] resid sv shape (layer {layer_idx}): {sv.shape}')
+                            _printed_sv_shape = True
                         if normalize:
-                            steering_vector = steering_vector / (torch.norm(steering_vector, dim=-1, keepdim=True) + 1e-12)
+                            sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
                         if ablation_type == 'mean':
-                            layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] = N * steering_vector
+                            layer.output = N * sv
                         elif ablation_type == 'steer':
-                            layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] += N * steering_vector
+                            layer.output = layer.output + N * sv
+                    else:
+                        head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
+                        for head_idx in head_ids:
+                            sl = slice(DIM * head_idx, DIM * (head_idx + 1))
+                            sv = _get_steering_vector(patch_activations, layer_idx, sl, steering_type)
+                            if normalize:
+                                sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
+                            if ablation_type == 'mean':
+                                layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] = N * sv
+                            elif ablation_type == 'steer':
+                                layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] += N * sv
             generated = model.generator.output.save()
 
     return generated

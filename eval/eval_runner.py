@@ -78,7 +78,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
     print(f"Starting evaluation — task: {config.args.source} -> {config.args.base}, test: {config.args.test_dataset}, algo: {config.args.patch_algo}, N={config.args.steering_n}, topk={config.args.topk_vals}")
 
     model = model_handler.model
-    if not config.args.patch_algo == 'random':
+    resid = getattr(config.args, 'resid', False)
+    if not resid and not config.args.patch_algo == 'random':
         if os.path.exists(f"{config.get_output_prefix()}/heads/numerator_1_{which_patch}.pt"):
             logits = torch.load(f"{config.get_output_prefix()}/heads/numerator_1_{which_patch}.pt")
         else:
@@ -158,7 +159,9 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                     if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')) and os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
                         print(f"Skipping generation as all relevant files exist.")
                         continue
-                    if not os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
+                    if resid:
+                        topk_df = pd.DataFrame({'layer': list(range(model_handler.num_layers))})
+                    elif not os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
                         topk_df = save_top_k(reps_type, config, model_handler, topk, logits, logit_metric)
                     else:
                         topk_df = pd.read_csv(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv")
@@ -169,7 +172,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
                     for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size), start=1):
                         _t0 = time.time()
                         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching)
+                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching, resid=resid)
                         decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
                         gc.collect()
                         torch.cuda.empty_cache()

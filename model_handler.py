@@ -13,6 +13,7 @@ class ModelHandler:
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16
         )
+        self.is_qwen3 = 'qwen3' in model_id.lower()
         self.tokenizer = self.load_tokenizer(model_id)
         self.model = self.load_model(model_id, self.device)
         self.model.tokenizer = self.tokenizer
@@ -26,17 +27,17 @@ class ModelHandler:
         if 'solar' in model_id.lower():
             self.marker = '### Assistant'
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0][2:]
+        elif 'qwen3' in model_id.lower():
+            self.marker = "<|im_start|>assistant\n<think>\n\n</think>\n\n"
+            self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0]
         elif 'qwen' in model_id.lower():
-            if self.config.args.source == 'harmful':
-                self.marker = "<|im_start|>assistant" ## Something weird about data processing here, doesn't work with \n
-            else:
-                self.marker = "<|im_start|>assistant\n"
+            self.marker = "<|im_start|>assistant\n"
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0]
         elif 'llama-2-7b-chat-hf' in model_id.lower():
             self.marker = "[/INST] "
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0][1:-1]
         elif 'meta-llama' in model_id.lower():
-            self.marker = '<|start_header_id|>assistant<|end_header_id|>'
+            self.marker = '<|start_header_id|>assistant<|end_header_id|>\n\n'
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0][1:]
         elif 'olmo' in model_id.lower():
             self.marker = '<|assistant|>\n'

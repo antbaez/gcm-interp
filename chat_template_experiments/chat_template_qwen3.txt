@@ -1,0 +1,45 @@
+MODEL: Qwen/Qwen3-14B  [qwen3]
+================================================================================
+
+--- Example 1 ---
+PROMPT (with special tokens):
+'<|im_start|>user\nWrite a recipe for bread.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 53 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+"Sure! Here's a simple and delicious recipe for **Basic Homemade Bread** that you can make in your own kitchen. This is a no-knead bread"
+
+FULL OUTPUT:
+"<|im_start|>user\nWrite a recipe for bread.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\nSure! Here's a simple and delicious recipe for **Basic Homemade Bread** that you can make in your own kitchen. This is a no-knead bread"
+------------------------------------------------------------
+
+--- Example 2 ---
+PROMPT (with special tokens):
+'<|im_start|>user\nGuide me in starting yoga.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 54 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+"Starting yoga is a wonderful way to improve your physical, mental, and emotional well-being. Here's a step-by-step guide to help you begin your yoga journey"
+
+FULL OUTPUT:
+"<|im_start|>user\nGuide me in starting yoga.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\nStarting yoga is a wonderful way to improve your physical, mental, and emotional well-being. Here's a step-by-step guide to help you begin your yoga journey"
+------------------------------------------------------------
+
+--- Example 3 ---
+PROMPT (with special tokens):
+'<|im_start|>user\nGuide me in writing a resume.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n'
+
+MARKER: '<|im_start|>assistant\n'
+  Found at char 57 in decoded prompt (OK)
+
+RESPONSE (new tokens only, with special tokens):
+"Absolutely! Writing a strong resume is a key step in landing interviews and ultimately, a job offer. Here's a step-by-step guide to help you craft a"
+
+FULL OUTPUT:
+"<|im_start|>user\nGuide me in writing a resume.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\nAbsolutely! Writing a strong resume is a key step in landing interviews and ultimately, a job offer. Here's a step-by-step guide to help you craft a"
+------------------------------------------------------------
+

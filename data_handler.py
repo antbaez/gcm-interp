@@ -1,3 +1,4 @@
+
 import torch
 import random
 import torch.nn.functional as F
@@ -5,7 +6,6 @@ import json
 import ast
 import re
 from tqdm import tqdm
-random.seed(42)
 import pandas as pd
 class DataHandler:
     def __init__(self, config, model_handler):
@@ -205,6 +205,7 @@ class DataHandler:
                 self.response_start_positions["pyreft"] = self.get_resp_start_pos(self.pyreft_toks, self.model_handler.marker, self.model_handler.tokenizer)
 
     def get_templated_prompts(self, prompts, _base_completion=None, only_q=False, add_generation_prompt=False):
+        extra_kwargs = {"enable_thinking": False} if self.model_handler.is_qwen3 else {}
         if only_q:
             prompt_lengths = None
             if self.no_generation_prompt_for_eval_transfer:
@@ -219,21 +220,24 @@ class DataHandler:
                 self.model_handler.tokenizer.apply_chat_template(
                     [p['prompt'][i] for i in range(prompt_lengths[pdx])],
                     add_generation_prompt=add_generation_prompt,
-                    tokenize=False
+                    tokenize=False,
+                    **extra_kwargs
                 ) for pdx, p in enumerate(prompts)]
         elif _base_completion is not None:
             assert len(prompts) == len(_base_completion), f"Length of prompts and base completion do not match: {len(prompts)} vs {len(_base_completion)}"
             return [
                 self.model_handler.tokenizer.apply_chat_template(
                     [p['prompt'][i] for i in range(len(p['prompt']) - 1)] + [_base_completion[pi]['prompt'][-1]],
-                    tokenize=False
+                    tokenize=False,
+                    **extra_kwargs
                 ) for pi, p in enumerate(prompts)]
         else:
             return [
                 self.model_handler.tokenizer.apply_chat_template(
-                    p['prompt'], 
+                    p['prompt'],
                     add_generation_prompt=False,
-                    tokenize=False
+                    tokenize=False,
+                    **extra_kwargs
                 ) for p in prompts]
         
     def get_resp_start_pos(self, tokens, marker, tokenizer):

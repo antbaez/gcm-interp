@@ -6,11 +6,9 @@
 #SBATCH --time=06:00:00
 #SBATCH --output=logs/out/%j.out
 #SBATCH --error=logs/err/%j.err
-#SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=acbaez@mit.edu
 
 # Usage:
-#   sbatch gen_data_normal.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|all> [--max_tokens <N>]
+#   sbatch gen_data_normal.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|sycophancy-haiku|sycophancy-poem|sycophancy-haiku-concise|sycophancy-poem-concise|all> [--max_tokens <N>]
 #   Defaults: --model all --dataset all
 
 set -e

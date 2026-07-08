@@ -60,12 +60,18 @@ SOURCE_TO_DIR = {
     "harmful-long":         "harmful-long",
     "non-sycophantic-long": "sycophancy-long",
     "verse-long":           "verse-long",
+    ("non-sycophantic-haiku-long",         "sycophancy-haiku"):         "sycophancy-haiku-long",
+    ("non-sycophantic-haiku-long",         "sycophancy-haiku-concise"): "sycophancy-haiku-concise-long",
+    ("non-sycophantic-haiku-concise-long", "sycophancy-haiku-concise"): "sycophancy-haiku-concise-long",
+    ("non-sycophantic-poem-long",          "sycophancy-poem"):          "sycophancy-poem-long",
+    ("non-sycophantic-poem-long",          "sycophancy-poem-concise"):  "sycophancy-poem-concise-long",
+    ("non-sycophantic-poem-concise-long",  "sycophancy-poem-concise"):  "sycophancy-poem-concise-long",
 }
 
 
 def load_test_queries(data_dir: str, model_id: str, source: str, base: str) -> list[str]:
     """Load the user-turn text from the test JSONL."""
-    source_dir = SOURCE_TO_DIR.get(source, source)
+    source_dir = SOURCE_TO_DIR.get((source, base)) or SOURCE_TO_DIR.get(source, source)
     logits_path = f"{data_dir}/{model_id}/{source_dir}/{base}-test.jsonl"
     queries = []
     with open(logits_path) as f:

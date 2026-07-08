@@ -153,10 +153,14 @@ SOURCE_TO_TEMPLATE = {
     "verse":            "verse",
     "verse-long":       "verse",
     "verse-single":     "verse",
-    "sycophancy":           "sycophancy",
-    "sycophancy-long":      "sycophancy",
-    "sycophancy-single":    "sycophancy",
-    "non-sycophantic-long": "sycophancy",
+    "sycophancy":                    "sycophancy",
+    "sycophancy-long":               "sycophancy",
+    "sycophancy-single":             "sycophancy",
+    "non-sycophantic-long":          "sycophancy",
+    "non-sycophantic-haiku-long":         "sycophancy",
+    "non-sycophantic-poem-long":          "sycophancy",
+    "non-sycophantic-haiku-concise-long": "sycophancy",
+    "non-sycophantic-poem-concise-long":  "sycophancy",
 }
 
 # Templates that compare two responses (need old + new)

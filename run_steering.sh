@@ -18,6 +18,7 @@ MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
 PATCH=true
+RESID=false
 STEERING_TYPES=(
     last
     mean
@@ -35,12 +36,14 @@ while [[ $# -gt 0 ]]; do
         --nocache)      KV_CACHING=false;  shift ;;
         --unnormalized) NORMALIZE=false;   shift ;;
         --patch)   PATCH=true;          shift ;;
+        --resid)   RESID=true; PATCH=false; shift ;;
+        --seed)    SEED="$2";           shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse")
+ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen,gemma")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -66,12 +69,15 @@ else
     done
 fi
 
+if [ "$RESID" = true ]; then TOPK_VALS="1.0"; fi
+
 EVAL_FLAGS=""
 if [ "$PATCH" = true ];        then EVAL_FLAGS="$EVAL_FLAGS -patch_model"; fi
 if [ "$EVAL_MODEL" = true ];   then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
 if [ "$STEERING" = true ];     then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
 if [ "$KV_CACHING" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --kv_caching"; fi
 if [ "$NORMALIZE" = false ];   then EVAL_FLAGS="$EVAL_FLAGS --unnormalized"; fi
+if [ "$RESID" = true ];        then EVAL_FLAGS="$EVAL_FLAGS --resid"; fi
 
 run_experiments_for_model() {
     local M_TAG="$1"
@@ -89,9 +95,13 @@ run_experiments_for_model() {
     local SOURCES=() BASES=() DIRS=() ADD_PATHS=() SUB_PATHS=()
     for D_TAG in "${D_TAGS[@]}"; do
         case "$D_TAG" in
-            harmful)    D_SOURCE="harmful-long";         D_BASE="harmless";   D_DIR="harmful-long" ;;
-            sycophancy) D_SOURCE="non-sycophantic-long"; D_BASE="sycophancy"; D_DIR="sycophancy-long" ;;
-            verse)      D_SOURCE="verse-long";           D_BASE="prose";      D_DIR="verse-long" ;;
+            harmful)                D_SOURCE="harmful-long";              D_BASE="harmless";               D_DIR="harmful-long" ;;
+            sycophancy)             D_SOURCE="non-sycophantic-long";      D_BASE="sycophancy";             D_DIR="sycophancy-long" ;;
+            verse)                  D_SOURCE="verse-long";                D_BASE="prose";                  D_DIR="verse-long" ;;
+            sycophancy-haiku)       D_SOURCE="non-sycophantic-haiku-long"; D_BASE="sycophancy-haiku";        D_DIR="sycophancy-haiku-long" ;;
+            sycophancy-poem)        D_SOURCE="non-sycophantic-poem-long";  D_BASE="sycophancy-poem";         D_DIR="sycophancy-poem-long" ;;
+            sycophancy-haiku-concise) D_SOURCE="non-sycophantic-haiku-concise-long"; D_BASE="sycophancy-haiku-concise"; D_DIR="sycophancy-haiku-concise-long" ;;
+            sycophancy-poem-concise)  D_SOURCE="non-sycophantic-poem-concise-long";  D_BASE="sycophancy-poem-concise";  D_DIR="sycophancy-poem-concise-long" ;;
         esac
         SOURCES+=("$D_SOURCE")
         BASES+=("$D_BASE")
