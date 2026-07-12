@@ -132,9 +132,10 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
             for reps_type in tqdm(reps_types, desc="Reps Types"):
                 decoded_responses[ablation][reps_type] = {}
                 for topk in tqdm(topk_vals, desc="TopK Values"):
-                    norm_dir  = "normalized" if config.args.normalize else "unnormalized"
-                    cache_dir = "cache" if config.args.kv_caching else "no_cache"
-                    steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{cache_dir}/{config.args.steering_type}"
+                    norm_dir   = "normalized" if config.args.normalize else "unnormalized"
+                    stream_dir = "residuals" if resid else "attention"
+                    cache_dir  = "cache" if config.args.kv_caching else "no_cache"
+                    steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{stream_dir}/{cache_dir}/{config.args.steering_type}"
                     new_stem = f"{steer_eval_dir}/N={config.args.N}_{ablation}_topk={topk}_{config.args.test_dataset}_gen"
                     old_stem = f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen"
                     existing_stem = (

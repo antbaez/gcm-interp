@@ -30,20 +30,24 @@ def _read_jsonl(path: Path):
                 yield json.loads(line)
 
 
-def collect_records(workdirs_dir: Path) -> pd.DataFrame:
+def collect_records(workdirs_dir: Path, stream_mode: str | None = None) -> pd.DataFrame:
     records = []
     for judge_path in sorted(workdirs_dir.rglob("judge_ratings.jsonl")):
         rel   = judge_path.relative_to(workdirs_dir)
         parts = rel.parts
-        # Expected layout: (model, from_to, norm_mode, cache_mode, steering_type, exp_dir, filename)
-        if len(parts) < 7:
+        # Expected layout: (model, from_to, norm_mode, stream_mode, cache_mode, steering_type, exp_dir, filename)
+        if len(parts) < 8:
             continue
 
         model         = parts[0]
         from_to       = parts[1]
         norm_mode     = parts[2]   # "normalized" or "unnormalized"
-        cache_mode    = parts[3]   # "cache" or "no_cache"
-        steering_type = parts[4]   # e.g. "positional", "last-token"
+        stream_mode_i = parts[3]   # "attention" or "residuals"
+        cache_mode    = parts[4]   # "cache" or "no_cache"
+        steering_type = parts[5]   # e.g. "positional", "last-token"
+
+        if stream_mode is not None and stream_mode_i != stream_mode:
+            continue
 
         ft = re.match(r"^from_(.+)_to_(.+)$", from_to)
         if not ft:
@@ -86,6 +90,7 @@ def collect_records(workdirs_dir: Path) -> pd.DataFrame:
             dataset=f"{source} → {base}",
             N=int(N), topk=float(topk),
             norm_mode=norm_mode,
+            stream_mode=stream_mode_i,
             cache_mode=cache_mode,
             steering_type=steering_type,
             condition=condition,
@@ -100,19 +105,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--workdirs_dir", default=str(WORKDIRS_JSONL))
     parser.add_argument("--accuracy_dir", default=str(ACCURACY_DIR))
+    parser.add_argument("--stream_mode", default=None,
+                        help="Restrict to 'attention' or 'residuals'; omit for both")
     args = parser.parse_args()
 
     workdirs_dir = Path(args.workdirs_dir)
     accuracy_dir = Path(args.accuracy_dir)
     accuracy_dir.mkdir(parents=True, exist_ok=True)
 
-    df = collect_records(workdirs_dir)
+    df = collect_records(workdirs_dir, stream_mode=args.stream_mode)
     if df.empty:
         print("No rating files found.")
         return
 
     csv_path = accuracy_dir / "results_summary.csv"
-    df.sort_values(["model", "dataset", "norm_mode", "cache_mode", "steering_type", "N", "topk"]) \
+    df.sort_values(["model", "dataset", "norm_mode", "stream_mode", "cache_mode", "steering_type", "N", "topk"]) \
       .to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path}  ({len(df)} rows)")
 

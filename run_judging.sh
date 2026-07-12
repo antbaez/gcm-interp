@@ -7,12 +7,13 @@ JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 BATCH_SIZE=128
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
-# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--normalized|--unnormalized] [--cache|--nocache] [--device <cuda:0>]
+# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--normalized|--unnormalized] [--cache|--nocache] [--resid] [--device <cuda:0>]
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
 NORM_MODE=""
 CACHE_MODE=""
+RESID=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -23,9 +24,17 @@ while [[ $# -gt 0 ]]; do
         --unnormalized) NORM_MODE="unnormalized"; shift ;;
         --cache)        CACHE_MODE="cache";        shift ;;
         --nocache)      CACHE_MODE="no_cache";     shift ;;
+        --resid)        RESID=true;                shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
+
+STREAM_MODE="attention"
+ACCURACY_SUBDIR="accuracy"
+if [ "$RESID" = true ]; then
+    STREAM_MODE="residuals"
+    ACCURACY_SUBDIR="accuracy_residual"
+fi
 
 if [ -z "$MODEL_TAG" ] || [ -z "$DATASET_TAG" ]; then
     echo "Usage: ./run_judge.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--device <cuda:0>]"
@@ -86,16 +95,17 @@ for M_TAG in "${MODELS[@]}"; do
         JUDGE_FLAGS=()
         [ -n "$NORM_MODE" ]  && JUDGE_FLAGS+=(--norm_mode  "$NORM_MODE")
         [ -n "$CACHE_MODE" ] && JUDGE_FLAGS+=(--cache_mode "$CACHE_MODE")
+        JUDGE_FLAGS+=(--stream_mode "$STREAM_MODE")
 
         echo ""
-        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  cache=${CACHE_MODE:-any}  device=$DEVICE"
+        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  cache=${CACHE_MODE:-any}  stream=$STREAM_MODE  device=$DEVICE"
         cd "$JUDGE_DIR" && python run_judge.py \
             --model_name "$MODEL_NAME" \
             --source "$SOURCE" \
             --base "$BASE" \
             --runs_dir "$SCRIPT_DIR/results" \
             --data_dir "$SCRIPT_DIR/data" \
-            --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy" \
+            --accuracy_dir "$SCRIPT_DIR/judge-evals/$ACCURACY_SUBDIR" \
             --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" \
             --batch_size "$BATCH_SIZE" \
             --force \
@@ -106,4 +116,7 @@ done
 
 echo ""
 echo "Summarizing results..."
-python "$JUDGE_DIR/summarize_results.py" --accuracy_dir "$SCRIPT_DIR/judge-evals/accuracy"
+python "$JUDGE_DIR/summarize_results.py" \
+    --accuracy_dir "$SCRIPT_DIR/judge-evals/$ACCURACY_SUBDIR" \
+    --workdirs_dir "$SCRIPT_DIR/judge-evals/workdirs" \
+    --stream_mode "$STREAM_MODE"

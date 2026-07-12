@@ -39,7 +39,6 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
     num_layers = len(layers)
     steer = [[] for _ in range(num_layers)]
     base = [[] for _ in range(num_layers)]
-    resid_out_is_tuple = resid and not hasattr(model.model._module, 'language_model')
 
     for i in range(0, source_toks['input_ids'].shape[0], batch_size):
         s_slice = {
@@ -54,24 +53,36 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
         with model.trace(s_slice) as _:
             for idx, layer in enumerate(layers):
                 if resid:
-                    act = layer.output[0] if resid_out_is_tuple else layer.output
-                    steer[idx].append(act.detach().cpu().save())
+                    steer[idx].append(layer.output.save())
                 else:
                     steer[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
+        if resid:
+            if i == 0:
+                raw = steer[0][-1]
+                try:
+                    print(f'[activations] layer.output shape: {raw.shape}')
+                except Exception:
+                    print(f'[activations] layer.output type: {type(raw)}')
+                    print(f'[activations] layer.output[0] shape: {raw[0].shape}')
+            for idx in range(num_layers):
+                raw = steer[idx][-1]
+                try:
+                    steer[idx][-1] = raw.detach().cpu()
+                except Exception:
+                    steer[idx][-1] = raw[0].detach().cpu()
         with model.trace(b_slice) as _:
             for idx, layer in enumerate(layers):
                 if resid:
-                    act = layer.output[0] if resid_out_is_tuple else layer.output
-                    base[idx].append(act.detach().cpu().save())
+                    base[idx].append(layer.output.save())
                 else:
                     base[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
-        if resid and i == 0:
-            out = steer[0][0]
-            if isinstance(out, (tuple, list)):
-                for j, t in enumerate(out):
-                    print(f'[activations] layer.output[{j}] shape: {t.shape if hasattr(t, "shape") else type(t)}')
-            else:
-                print(f'[activations] layer.output shape: {out.shape}')
+        if resid:
+            for idx in range(num_layers):
+                raw = base[idx][-1]
+                try:
+                    base[idx][-1] = raw.detach().cpu()
+                except Exception:
+                    base[idx][-1] = raw[0].detach().cpu()
 
     if mean:
         cache = [torch.cat(steer[i], dim=0).mean(0) - torch.cat(base[i], dim=0).mean(0) for i in range(num_layers)]

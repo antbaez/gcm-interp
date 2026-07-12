@@ -1,14 +1,10 @@
 #!/bin/bash
-#SBATCH -p mit_normal_gpu
-#SBATCH --gres=gpu:h200:1
-#SBATCH -c 8
-#SBATCH --mem=100G
-#SBATCH --time=06:00:00
-#SBATCH --output=logs/out/%j.out
-#SBATCH --error=logs/err/%j.err
-
+# Dispatcher — run this with `bash`, NOT `sbatch` (it holds no GPU allocation
+# itself). Expands --model/--dataset tags and submits one sbatch job per
+# model x dataset combo via run_normal_job.sh.
+#
 # Usage:
-#   sbatch run_normal.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--nocache] [--unnormalized] [--judging]
+#   bash run_normal.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--nocache] [--unnormalized] [--resid] [--judging]
 #   Defaults: --model all --dataset all (uses steering types from run_steering.sh)
 
 set -e
@@ -34,26 +30,24 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-EXTRA_FLAGS=()
-[ -n "$TYPE_VAL" ]         && EXTRA_FLAGS+=(--type "$TYPE_VAL")
-[ "$NOCACHE" = true ]      && EXTRA_FLAGS+=(--nocache)
-[ "$UNNORMALIZED" = true ] && EXTRA_FLAGS+=(--unnormalized)
-[ "$RESID" = true ]        && EXTRA_FLAGS+=(--resid)
-[ "$RESID" = false ]       && EXTRA_FLAGS+=(--patch)
+ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
+ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
 
-JUDGE_FLAGS=()
-[ "$NOCACHE" = true ]     && JUDGE_FLAGS+=(--nocache)
-[ "$UNNORMALIZED" = true ] && JUDGE_FLAGS+=(--unnormalized)
-[ "$UNNORMALIZED" = false ] && JUDGE_FLAGS+=(--normalized)
+if [ "$MODEL" = "all" ]; then MODELS=("${ALL_MODELS[@]}"); else IFS=',' read -ra MODELS <<< "$MODEL"; fi
+if [ "$DATASET" = "all" ]; then DATASETS=("${ALL_DATASETS[@]}"); else IFS=',' read -ra DATASETS <<< "$DATASET"; fi
 
-echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  nocache=$NOCACHE  unnormalized=$UNNORMALIZED  judging_only=$JUDGING_ONLY"
+JOB_FLAGS=()
+[ -n "$TYPE_VAL" ]         && JOB_FLAGS+=(--type "$TYPE_VAL")
+[ "$NOCACHE" = true ]      && JOB_FLAGS+=(--nocache)
+[ "$UNNORMALIZED" = true ] && JOB_FLAGS+=(--unnormalized)
+[ "$JUDGING_ONLY" = true ] && JOB_FLAGS+=(--judging)
+[ "$RESID" = true ]        && JOB_FLAGS+=(--resid)
 
-cd ~/gcm-interp
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ "$JUDGING_ONLY" = false ]; then
-    source ~/gcm-interp/setup/setup.sh
-    bash run_steering.sh --model "$MODEL" --dataset "$DATASET" "${EXTRA_FLAGS[@]}"
-fi
-
-source ~/gcm-interp/setup/setup_judging.sh
-bash run_judging.sh --model "$MODEL" --dataset "$DATASET" "${JUDGE_FLAGS[@]}"
+echo "Submitting $(( ${#MODELS[@]} * ${#DATASETS[@]} )) job(s) (one per model x dataset combo)..."
+for M in "${MODELS[@]}"; do
+    for D in "${DATASETS[@]}"; do
+        sbatch "$SCRIPT_DIR/run_normal_job.sh" --model "$M" --dataset "$D" "${JOB_FLAGS[@]}"
+    done
+done

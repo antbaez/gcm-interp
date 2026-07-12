@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-# Usage: ./run_steering.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|all> [--type last|positional|mean] [--nocache] [--device <cuda:0>]
+# Usage: ./run_steering.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|all> [--type last|positional|mean] [--nocache] [--resid] [--device <cuda:0>]
 
 PATCHING_BATCH_SIZE=100
 PATCH_ALGO="atp"
 SEED=42
 MAX_NEW_TOKENS=512
 BATCH_SIZE=50
-STEERING_N="1 3 5 8 10"
-TOPK_VALS="0.01 0.03 0.05 0.08 0.1 0.5 1.0"
+STEERING_N="1 2 3 4 5 6 8 10"
+TOPK_VALS="1.0"
 
 EVAL_MODEL=true
 STEERING=true

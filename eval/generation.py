@@ -9,6 +9,10 @@ def _get_layers(model):
         return inner.language_model.layers
     return inner.layers
 
+def _layer_output_is_tuple(model):
+    # gemma's decoder layer forward() returns (hidden_states,) instead of a bare tensor
+    return 'gemma' in model.config._name_or_path.lower()
+
 def select_gen_qs_toks(config, batch_handler):
     if config.args.eval_train:
         print("Evaluating on training set.")
@@ -33,6 +37,7 @@ def _get_steering_vector(patch_activations, layer_idx, sl, steering_type):
 def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False, resid=False):
     patch_activations = patch_activations['desired'].to(model.device)
     layer_ids = topk_df['layer'].unique()
+    tuple_output = resid and _layer_output_is_tuple(model)
     print(gen_toks['input_ids'].shape, " normalize:", normalize, " steering type:", steering_type, " kv_caching:", kv_caching, " resid:", resid)
 
     gen_kwargs = dict(pad_token_id=model.tokenizer.eos_token_id, do_sample=False,
@@ -52,9 +57,15 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                     if normalize:
                         sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
                     if ablation_type == 'mean':
-                        layer.output = N * sv
+                        if tuple_output:
+                            layer.output = (N * sv,)
+                        else:
+                            layer.output = N * sv
                     elif ablation_type == 'steer':
-                        layer.output += N * sv
+                        if tuple_output:
+                            layer.output = (layer.output[0] + N * sv,)
+                        else:
+                            layer.output += N * sv
                 else:
                     head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
                     for head_idx in head_ids:
@@ -82,9 +93,15 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                         if normalize:
                             sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
                         if ablation_type == 'mean':
-                            layer.output = N * sv
+                            if tuple_output:
+                                layer.output = (N * sv,)
+                            else:
+                                layer.output = N * sv
                         elif ablation_type == 'steer':
-                            layer.output = layer.output + N * sv
+                            if tuple_output:
+                                layer.output = (layer.output[0] + N * sv,)
+                            else:
+                                layer.output = layer.output + N * sv
                     else:
                         head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
                         for head_idx in head_ids:

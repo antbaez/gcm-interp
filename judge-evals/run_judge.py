@@ -367,6 +367,8 @@ def parse_args():
     p.add_argument("--base",         default=None)
     p.add_argument("--norm_mode",     default=None,
                    help="normalized or unnormalized")
+    p.add_argument("--stream_mode",   default=None,
+                   help="attention or residuals")
     p.add_argument("--cache_mode",    default=None,
                    help="cache or no_cache")
     p.add_argument("--steering_type", default=None,
@@ -394,7 +396,7 @@ def main():
 
     if not args.all and not any([
         args.model_name, args.source, args.base,
-        args.cache_mode, args.steering_type,
+        args.cache_mode, args.steering_type, args.stream_mode,
     ]):
         print("Error: specify at least one filter or --all. Run --help for examples.")
         sys.exit(1)
@@ -402,6 +404,7 @@ def main():
     gen_files = discover_gen_files(
         args.runs_dir, args.model_name, args.source, args.base,
         args.norm_mode, args.cache_mode, args.steering_type,
+        args.stream_mode,
     )
     print(f"Found {len(gen_files)} gen files")
     print(f"Accuracy dir: {ACCURACY_DIR}\n")
