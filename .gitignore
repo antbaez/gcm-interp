@@ -35,3 +35,9 @@ setup/
 judge-evals/accuracy_residual/
 judge-evals/workdirs_residual/
 results-resid/
+judge-evals/accuracy_old/
+judge-evals/accuracy_residual_old/
+judge-evals/workdirs_old/
+judge-evals/workdirs_residual_old/
+results-resid_old/
+results_old/

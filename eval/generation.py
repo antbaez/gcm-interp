@@ -9,10 +9,6 @@ def _get_layers(model):
         return inner.language_model.layers
     return inner.layers
 
-def _layer_output_is_tuple(model):
-    # gemma's decoder layer forward() returns (hidden_states,) instead of a bare tensor
-    return 'gemma' in model.config._name_or_path.lower()
-
 def select_gen_qs_toks(config, batch_handler):
     if config.args.eval_train:
         print("Evaluating on training set.")
@@ -37,7 +33,7 @@ def _get_steering_vector(patch_activations, layer_idx, sl, steering_type):
 def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False, resid=False):
     patch_activations = patch_activations['desired'].to(model.device)
     layer_ids = topk_df['layer'].unique()
-    tuple_output = resid and _layer_output_is_tuple(model)
+    tuple_output = resid and 'gemma' in model.config._name_or_path.lower()
     print(gen_toks['input_ids'].shape, " normalize:", normalize, " steering type:", steering_type, " kv_caching:", kv_caching, " resid:", resid)
 
     gen_kwargs = dict(pad_token_id=model.tokenizer.eos_token_id, do_sample=False,
@@ -46,16 +42,15 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
     if kv_caching:
         # No model.all() — interventions apply to prefill only; decoding uses KV cache
         with model.generate(gen_toks, use_cache=True, **gen_kwargs) as tracer:
-            _printed_sv_shape = False
-            for layer_idx in layer_ids:
+            for i, layer_idx in enumerate(layer_ids):
                 layer = _get_layers(model)[layer_idx]
                 if resid:
                     sv = _get_steering_vector(patch_activations, layer_idx, slice(None), steering_type)
-                    if not _printed_sv_shape:
-                        print(f'[generation] resid sv shape (layer {layer_idx}): {sv.shape}')
-                        _printed_sv_shape = True
+                    if i == 0:
+                        print(f'[generation] resid sv shape: {sv.shape}')
                     if normalize:
                         sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
+                    print(f'[generation] resid sv norm (layer {layer_idx}): {sv.norm().item():.4f}')
                     if ablation_type == 'mean':
                         if tuple_output:
                             layer.output = (N * sv,)
@@ -82,16 +77,15 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
         # model.all() reapplies interventions on every decoding step; use_cache=False required
         with model.generate(gen_toks, use_cache=False, **gen_kwargs) as tracer:
             with model.all():
-                _printed_sv_shape = False
-                for layer_idx in layer_ids:
+                for i, layer_idx in enumerate(layer_ids):
                     layer = _get_layers(model)[layer_idx]
                     if resid:
                         sv = _get_steering_vector(patch_activations, layer_idx, slice(None), steering_type)
-                        if not _printed_sv_shape:
-                            print(f'[generation] resid sv shape (layer {layer_idx}): {sv.shape}')
-                            _printed_sv_shape = True
+                        if i == 0:
+                            print(f'[generation] resid sv shape: {sv.shape}')
                         if normalize:
                             sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
+                        print(f'[generation] resid sv norm (layer {layer_idx}): {sv.norm().item():.4f}')
                         if ablation_type == 'mean':
                             if tuple_output:
                                 layer.output = (N * sv,)

@@ -12,7 +12,8 @@
 # "all" model/dataset values, it will not fan out.
 #
 # Usage:
-#   sbatch run_normal_job.sh --model <olmo|qwen|qwen3|gemma|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--nocache] [--unnormalized] [--resid] [--judging]
+#   sbatch run_normal_job.sh --model <olmo|qwen|qwen3|gemma|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--nocache] [--unnormalized] [--resid] [--patch] [--judging]
+#   Note: ATP head localization/patching is OFF by default. Pass --patch to run it.
 
 set -e
 
@@ -23,6 +24,7 @@ NOCACHE=false
 UNNORMALIZED=false
 JUDGING_ONLY=false
 RESID=false
+PATCH=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -33,6 +35,7 @@ while [[ $# -gt 0 ]]; do
         --unnormalized) UNNORMALIZED=true; shift ;;
         --judging)      JUDGING_ONLY=true; shift ;;
         --resid)        RESID=true;        shift ;;
+        --patch)        PATCH=true;        shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -42,7 +45,7 @@ EXTRA_FLAGS=()
 [ "$NOCACHE" = true ]      && EXTRA_FLAGS+=(--nocache)
 [ "$UNNORMALIZED" = true ] && EXTRA_FLAGS+=(--unnormalized)
 [ "$RESID" = true ]        && EXTRA_FLAGS+=(--resid)
-[ "$RESID" = false ]       && EXTRA_FLAGS+=(--patch)
+[ "$PATCH" = true ]        && EXTRA_FLAGS+=(--patch)
 
 JUDGE_FLAGS=()
 [ "$NOCACHE" = true ]     && JUDGE_FLAGS+=(--nocache)
@@ -50,7 +53,7 @@ JUDGE_FLAGS=()
 [ "$UNNORMALIZED" = false ] && JUDGE_FLAGS+=(--normalized)
 [ "$RESID" = true ]        && JUDGE_FLAGS+=(--resid)
 
-echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  nocache=$NOCACHE  unnormalized=$UNNORMALIZED  resid=$RESID  judging_only=$JUDGING_ONLY"
+echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  nocache=$NOCACHE  unnormalized=$UNNORMALIZED  resid=$RESID  patch=$PATCH  judging_only=$JUDGING_ONLY"
 
 cd ~/gcm-interp
 

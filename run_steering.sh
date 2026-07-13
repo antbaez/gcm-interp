@@ -17,7 +17,7 @@ STEERING=true
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
-PATCH=true
+PATCH=false
 RESID=false
 STEERING_TYPES=(
     last

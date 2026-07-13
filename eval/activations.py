@@ -50,39 +50,24 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
             'attention_mask': base_toks['attention_mask'][i:i+batch_size].to(model.device)
         }
 
+        is_gemma = 'gemma' in model.config._name_or_path.lower()
+        print('is gemma', is_gemma)
         with model.trace(s_slice) as _:
             for idx, layer in enumerate(layers):
                 if resid:
-                    steer[idx].append(layer.output.save())
+                    raw = layer.output[0] if is_gemma else layer.output
+                    steer[idx].append(raw.detach().cpu().save())
                 else:
                     steer[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
-        if resid:
-            if i == 0:
-                raw = steer[0][-1]
-                try:
-                    print(f'[activations] layer.output shape: {raw.shape}')
-                except Exception:
-                    print(f'[activations] layer.output type: {type(raw)}')
-                    print(f'[activations] layer.output[0] shape: {raw[0].shape}')
-            for idx in range(num_layers):
-                raw = steer[idx][-1]
-                try:
-                    steer[idx][-1] = raw.detach().cpu()
-                except Exception:
-                    steer[idx][-1] = raw[0].detach().cpu()
+        if resid and i == 0:
+            print(f'[activations] layer.output shape: {steer[0][-1].shape}')
         with model.trace(b_slice) as _:
             for idx, layer in enumerate(layers):
                 if resid:
-                    base[idx].append(layer.output.save())
+                    raw = layer.output[0] if is_gemma else layer.output
+                    base[idx].append(raw.detach().cpu().save())
                 else:
                     base[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
-        if resid:
-            for idx in range(num_layers):
-                raw = base[idx][-1]
-                try:
-                    base[idx][-1] = raw.detach().cpu()
-                except Exception:
-                    base[idx][-1] = raw[0].detach().cpu()
 
     if mean:
         cache = [torch.cat(steer[i], dim=0).mean(0) - torch.cat(base[i], dim=0).mean(0) for i in range(num_layers)]

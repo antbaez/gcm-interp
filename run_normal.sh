@@ -4,8 +4,9 @@
 # model x dataset combo via run_normal_job.sh.
 #
 # Usage:
-#   bash run_normal.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--nocache] [--unnormalized] [--resid] [--judging]
+#   bash run_normal.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--nocache] [--unnormalized] [--resid] [--patch] [--judging]
 #   Defaults: --model all --dataset all (uses steering types from run_steering.sh)
+#   Note: ATP head localization/patching is OFF by default. Pass --patch to run it.
 
 set -e
 
@@ -16,6 +17,7 @@ NOCACHE=false
 UNNORMALIZED=false
 JUDGING_ONLY=false
 RESID=false
+PATCH=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -26,6 +28,7 @@ while [[ $# -gt 0 ]]; do
         --unnormalized) UNNORMALIZED=true; shift ;;
         --judging)      JUDGING_ONLY=true; shift ;;
         --resid)        RESID=true;        shift ;;
+        --patch)        PATCH=true;        shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -42,6 +45,7 @@ JOB_FLAGS=()
 [ "$UNNORMALIZED" = true ] && JOB_FLAGS+=(--unnormalized)
 [ "$JUDGING_ONLY" = true ] && JOB_FLAGS+=(--judging)
 [ "$RESID" = true ]        && JOB_FLAGS+=(--resid)
+[ "$PATCH" = true ]        && JOB_FLAGS+=(--patch)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
