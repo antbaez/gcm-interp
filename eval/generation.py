@@ -30,7 +30,7 @@ def _get_steering_vector(patch_activations, layer_idx, sl, steering_type):
     else:
         raise ValueError(f"Unknown steering_type: {steering_type!r}")
 
-def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False, resid=False):
+def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False, resid=False):
     patch_activations = patch_activations['desired'].to(model.device)
     layer_ids = topk_df['layer'].unique()
     tuple_output = resid and 'gemma' in model.config._name_or_path.lower()
@@ -51,16 +51,10 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                     if normalize:
                         sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
                     print(f'[generation] resid sv norm (layer {layer_idx}): {sv.norm().item():.4f}')
-                    if ablation_type == 'mean':
-                        if tuple_output:
-                            layer.output = (N * sv,)
-                        else:
-                            layer.output = N * sv
-                    elif ablation_type == 'steer':
-                        if tuple_output:
-                            layer.output = (layer.output[0] + N * sv,)
-                        else:
-                            layer.output += N * sv
+                    if tuple_output:
+                        layer.output = (layer.output[0] + N * sv,)
+                    else:
+                        layer.output += N * sv
                 else:
                     head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
                     for head_idx in head_ids:
@@ -68,10 +62,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                         sv = _get_steering_vector(patch_activations, layer_idx, sl, steering_type)
                         if normalize:
                             sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
-                        if ablation_type == 'mean':
-                            layer.self_attn.o_proj.output[..., sl] = N * sv
-                        elif ablation_type == 'steer':
-                            layer.self_attn.o_proj.output[..., sl] += N * sv
+                        layer.self_attn.o_proj.output[..., sl] += N * sv
             generated = model.generator.output.save()
     else:
         # model.all() reapplies interventions on every decoding step; use_cache=False required
@@ -86,16 +77,10 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                         if normalize:
                             sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
                         print(f'[generation] resid sv norm (layer {layer_idx}): {sv.norm().item():.4f}')
-                        if ablation_type == 'mean':
-                            if tuple_output:
-                                layer.output = (N * sv,)
-                            else:
-                                layer.output = N * sv
-                        elif ablation_type == 'steer':
-                            if tuple_output:
-                                layer.output = (layer.output[0] + N * sv,)
-                            else:
-                                layer.output = layer.output + N * sv
+                        if tuple_output:
+                            layer.output = (layer.output[0] + N * sv,)
+                        else:
+                            layer.output = layer.output + N * sv
                     else:
                         head_ids = topk_df[topk_df['layer'] == layer_idx]['neuron'].unique()
                         for head_idx in head_ids:
@@ -103,10 +88,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablati
                             sv = _get_steering_vector(patch_activations, layer_idx, sl, steering_type)
                             if normalize:
                                 sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
-                            if ablation_type == 'mean':
-                                layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] = N * sv
-                            elif ablation_type == 'steer':
-                                layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] += N * sv
+                            layer.self_attn.o_proj.output[..., :patch_activations.shape[1], sl] += N * sv
             generated = model.generator.output.save()
 
     return generated

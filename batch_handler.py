@@ -34,14 +34,6 @@ class BatchHandler:
             }
 
         elif self.config.args.eval_model:
-            if self.config.args.ablation == 'pyreft':
-                self.pyreft_toks = {
-                    "input_ids": self.data_handler.pyreft_toks["input_ids"][self.start:self.stop],
-                    "attention_mask": self.data_handler.pyreft_toks["attention_mask"][self.start:self.stop]
-                }
-
-                self.response_start_positions['pyreft'] = self.data_handler.response_start_positions['pyreft'][self.start:self.stop]
-
             if self.config.args.eval_test:
                 self.base_qs_toks = {
                     'test': { "input_ids": self.data_handler.base_qs_toks['test']["input_ids"][self.start:self.stop], "attention_mask": self.data_handler.base_qs_toks['test']["attention_mask"][self.start:self.stop]}
@@ -82,13 +74,6 @@ class BatchHandler:
             }
 
         elif self.config.args.eval_model:
-            if self.config.args.ablation == 'pyreft':
-                self.pyreft_toks = {
-                    "input_ids": self.data_handler.pyreft_toks["input_ids"][self.start:self.stop],
-                    "attention_mask": self.data_handler.pyreft_toks["attention_mask"][self.start:self.stop]
-                }
-
-                self.response_start_positions['pyreft'] = self.data_handler.response_start_positions['pyreft'][self.start:self.stop]
             if self.config.args.eval_test:
                 self.base_qs_toks = {
                     'test': { "input_ids": self.data_handler.base_qs_toks['test']["input_ids"][self.start:self.stop], "attention_mask": self.data_handler.base_qs_toks['test']["attention_mask"][self.start:self.stop]}

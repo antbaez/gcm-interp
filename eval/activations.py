@@ -7,21 +7,6 @@ def _get_layers(model):
         return inner.language_model.layers
     return inner.layers
 
-def mean_ablations_cache(model, data_handler, batch_size=9, key='desired'):
-    toks = data_handler.source_qs_toks[key]
-    layers = _get_layers(model)
-    attn_layer_cache = [[] for _ in range(len(layers))]
-    for i in range(0, toks['input_ids'].shape[0], batch_size):
-        input_slice = {
-            'input_ids': toks['input_ids'][i:i+batch_size].to(model.device),
-            'attention_mask': toks['attention_mask'][i:i+batch_size].to(model.device)
-        }
-        with model.trace(input_slice) as _:
-            for idx, layer in enumerate(layers):
-                attn_layer_cache[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
-    attn_cache = [torch.cat(attns_in_layer, dim=0).mean(dim=0).to(model.device) for attns_in_layer in attn_layer_cache]
-    return torch.stack(attn_cache)
-
 def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=True):
     model_name = data_handler.config.args.model_id.split('/')[-1]
     source = data_handler.config.args.source

@@ -65,9 +65,7 @@ def main():
             patching = Patching(model_handler, batch_handler, config)
             patching_utils = PatchingUtils(patching)
 
-            if config.args.pyreft:
-                run_eval_pyreft(config, data_handler, model_handler, batch_handler)
-            elif config.args.steering:
+            if config.args.steering:
                 for steering_type in config.args.steering_types:
                     config.args.steering_type = steering_type
                     print(f'\n--- Steering type: {steering_type} ---')

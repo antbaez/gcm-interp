@@ -1,7 +1,7 @@
 from asyncio import log
 # from setup import set_seed
 from eval.logits_handler import load_logits, get_top_k_layer_and_head, retrieve_random_k
-from eval.activations import mean_ablations_cache, steering_reps_cache
+from eval.activations import steering_reps_cache
 from eval.generation import select_gen_qs_toks, generate_with_patches, decode_responses
 import random
 import os
@@ -15,7 +15,6 @@ import torch
 import time
 sys.path.append('../')  # Adjust path to import modules correctly
 from batch_handler import BatchHandler
-import pyreft
 from model_handler import ModelHandler
 best_mmlu_topk_combined = {
     'Qwen1.5-14B-Chat': {
@@ -35,19 +34,9 @@ best_mmlu_topk_combined = {
 def load_patching_reps(data_handler, model_handler, mean=True):
     model = model_handler.model
     patching_reps = {}
-    for ablation in [data_handler.config.args.ablation]:
-        patching_reps[ablation] = {}
-        for key in ['desired', 'undesired']:
-            patching_reps[ablation][key] = get_patch_activations(model, data_handler, ablation, key=key, mean=mean)
+    for key in ['desired', 'undesired']:
+        patching_reps[key] = steering_reps_cache(model, data_handler, key=key, mean=mean)
     return patching_reps
-
-def get_patch_activations(model, data_handler, ablation_type, key='desired', mean=True):
-    if ablation_type == 'mean':
-        return mean_ablations_cache(model, data_handler, key=key)
-    elif ablation_type == 'steer':
-        return steering_reps_cache(model, data_handler, key=key, mean=mean)
-    else:
-        raise ValueError(f"Unknown ablation type: {ablation_type}")
 
 def save_prompt_responses(responses, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -87,7 +76,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
     else:
         logits = None
     patching_reps = load_patching_reps(data_handler, model_handler)
-    ablations = [data_handler.config.args.ablation]
+    ablation = data_handler.config.args.ablation
     reps_types = ['random'] if config.args.patch_algo == 'random' else ['targeted']
 
     if topk_vals is None:
@@ -127,159 +116,64 @@ def run_eval(config, data_handler, model_handler, batch_handler, patching_utils,
     print("\nSTEERING GENERATION")
     for N in config.args.steering_n:
         config.args.N = N
-        for ablation in tqdm(ablations, desc="Ablations"):
-            decoded_responses[ablation] = {}
-            for reps_type in tqdm(reps_types, desc="Reps Types"):
-                decoded_responses[ablation][reps_type] = {}
-                for topk in tqdm(topk_vals, desc="TopK Values"):
-                    norm_dir   = "normalized" if config.args.normalize else "unnormalized"
-                    stream_dir = "residuals" if resid else "attention"
-                    cache_dir  = "cache" if config.args.kv_caching else "no_cache"
-                    steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{stream_dir}/{cache_dir}/{config.args.steering_type}"
-                    new_stem = f"{steer_eval_dir}/N={config.args.N}_{ablation}_topk={topk}_{config.args.test_dataset}_gen"
-                    old_stem = f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen"
-                    existing_stem = (
-                        new_stem if os.path.exists(f"{new_stem}.txt") and os.path.exists(f"{new_stem}.json")
-                        else old_stem if os.path.exists(f"{old_stem}.txt") and os.path.exists(f"{old_stem}.json")
-                        else None
-                    )
-                    if existing_stem:
-                        with open(f"{existing_stem}.json", 'r') as jf:
-                            decoded_responses[ablation][reps_type][topk] = json.load(jf)
-
-                        for item_iix, item in enumerate(decoded_responses[ablation][reps_type][topk]):
-                            query = item['query']
-                            item[f'old_{config.args.base}'] = model.tokenizer.decode(original_outputs[item_iix], skip_special_tokens=True).split(query)[-1]
-                        gen_file = f"{new_stem}.txt"
-                        save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
-                        print(f"Skipping evaluation for {ablation}, {topk}, N={config.args.N} as gen files already exist.")
-                        continue
-                    decoded_responses[ablation][reps_type][topk] = []
-                    gen_file = f"{new_stem}.txt"
-
-                    if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')) and os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
-                        print(f"Skipping generation as all relevant files exist.")
-                        continue
-                    if resid:
-                        topk_df = pd.DataFrame({'layer': list(range(model_handler.num_layers))})
-                    elif not os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
-                        topk_df = save_top_k(reps_type, config, model_handler, topk, logits, logit_metric)
-                    else:
-                        topk_df = pd.read_csv(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv")
-
-                    batch_handler = BatchHandler(config, data_handler)
-                    len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
-                    steer_total = len(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size))
-                    for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size), start=1):
-                        _t0 = time.time()
-                        gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching, resid=resid)
-                        decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
-                        gc.collect()
-                        torch.cuda.empty_cache()
-                        if len(decoded_responses[ablation][reps_type][topk]) == 0:
-                            decoded_responses[ablation][reps_type][topk] = decoded
-                        else:
-                            decoded_responses[ablation][reps_type][topk] += decoded
-                        batch_handler.update()
-                        print(f"  Steering batch {batch_num}/{steer_total} — N={config.args.N}, topk={topk} — done in {time.time()-_t0:.1f}s")
-                    
-                    os.makedirs(steer_eval_dir, exist_ok=True)
-                    save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
-    print("Evaluation complete.")
-
-def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
-    topk_vals = [0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5, 1.0]
-    del model_handler.model
-    torch.cuda.empty_cache()
-    gc.collect()
-    model = model_handler.load_model(config.args.model_id, config.args.device)
-    model.tokenizer = model_handler.tokenizer
-    print(f"Running PyReFT evaluation with topk values: {topk_vals} and patching algorithm: {config.args.patch_algo}")
-    original_outputs = []
-    len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
-    for idx in tqdm(range(0, min(len_gen_qs, data_handler.LEN), config.args.batch_size)):
-        gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-        op = model.generate(**gen_qs_toks, do_sample=False, max_new_tokens=config.args.max_new_tokens)
-        original_outputs += op.cpu().numpy().tolist()
-        batch_handler.update()
-    print('Original inputs length ', len(original_outputs))
-    for topk in tqdm(topk_vals, desc="TopK Values"):
-        if config.args.patch_algo == 'random':
-            topk_df = pd.read_csv(f"{config.get_output_prefix()}/random_random_{topk}.csv")
-        elif config.args.patch_algo == 'probes':
-            topk_df = pd.read_csv(f"{config.get_output_prefix()}/probes_targeted_{topk}.csv")    
-        else:
-            topk_df = pd.read_csv(f"{config.get_output_prefix()}/numerator_1_targeted_{topk}.csv")
-        reps = "targeted" if config.args.patch_algo != 'random' else "random"
-        for N in range(1, 11):
-            gen_file = f"{config.get_output_prefix()}/{N}_{reps}_pyreft_{topk}_gen.txt"
-            print('Entering generation loop for PyReFT...')
-            if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')):
-                print(f"Skipping generation as all relevant files exist.")
-                continue
-            else:
-                break
-        if N >= 10:
-            print(f"All generations for PyReFT with topk {topk} exist. Skipping to next topk.")
-            continue
-        reft_layers_config = get_reft_layers_config(topk_df, model)
-
-        reft_model = pyreft.get_reft_model(model, reft_layers_config)
-        reft_model.set_device(config.args.device)
-        reft_model.print_trainable_parameters()
-        data = data_handler.pyreft_prompts
-        cf_data = {
-            'input_ids': data_handler.pyreft_toks['input_ids'].clone(),
-            'attention_mask': data_handler.pyreft_toks['attention_mask'].clone()
-        }
-        labels = cf_data['input_ids'].clone()
-        for i in range(labels.shape[0]):
-            start_pos = data_handler.response_start_positions['pyreft'][i]
-            labels[i, :start_pos] = -100  # Ignore tokens before the response start position
-        labels[cf_data['attention_mask'] == 0] = -100
-        reft_model = reft_train(topk_df, reft_model, cf_data, labels, batch_size=10, lr=4e-3, num_epochs=100, device=config.args.device, display_bar=True)
-        for N in range(1, 11):
-            batch_handler = BatchHandler(config, data_handler)
-            decoded_responses = {
-                "pyreft": {
-                    reps: {
-                        str(topk): []
-                    }
-                }
-            }
-            gen_file = f"{config.get_output_prefix()}/{N}_{reps}_pyreft_{topk}_gen.txt"
-            print('Entering generation loop for PyReFT...')
-            if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')):
-                print(f"Skipping generation as all relevant files exist.")
-                continue
-            for idx in tqdm(range(0, min(len_gen_qs, data_handler.LEN), config.args.batch_size)):
-                gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                topk_heads = get_intervention_locations(topk_df, gen_qs_toks["input_ids"])
-                _, edited_outputs = reft_model.generate(
-                    gen_qs_toks, unit_locations={
-                        'sources->base': (
-                            None,  # copy from
-                            topk_heads  # paste to
-                        )
-                    },
-                    intervene_on_prompt=True, max_new_tokens=config.args.max_new_tokens, do_sample=True, 
-                    eos_token_id=model_handler.tokenizer.eos_token_id, early_stopping=True,
-                    intervention_additional_kwargs={'S': N}
+        for reps_type in tqdm(reps_types, desc="Reps Types"):
+            decoded_responses[reps_type] = {}
+            for topk in tqdm(topk_vals, desc="TopK Values"):
+                norm_dir   = "normalized" if config.args.normalize else "unnormalized"
+                stream_dir = "residuals" if resid else "attention"
+                cache_dir  = "cache" if config.args.kv_caching else "no_cache"
+                steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{stream_dir}/{cache_dir}/{config.args.steering_type}"
+                new_stem = f"{steer_eval_dir}/N={config.args.N}_{ablation}_topk={topk}_{config.args.test_dataset}_gen"
+                old_stem = f"{steer_eval_dir}/{config.args.N}_{reps_type}_{ablation}_{topk}_{config.args.test_dataset}_gen"
+                existing_stem = (
+                    new_stem if os.path.exists(f"{new_stem}.txt") and os.path.exists(f"{new_stem}.json")
+                    else old_stem if os.path.exists(f"{old_stem}.txt") and os.path.exists(f"{old_stem}.json")
+                    else None
                 )
-                decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx + config.args.batch_size], edited_outputs, config.args.base)
-                decoded_responses["pyreft"][reps][str(topk)] += decoded
+                if existing_stem:
+                    with open(f"{existing_stem}.json", 'r') as jf:
+                        decoded_responses[reps_type][topk] = json.load(jf)
 
-                batch_handler.update()
-            save_prompt_responses(decoded_responses["pyreft"][reps][str(topk)], gen_file)
+                    for item_iix, item in enumerate(decoded_responses[reps_type][topk]):
+                        query = item['query']
+                        item[f'old_{config.args.base}'] = model.tokenizer.decode(original_outputs[item_iix], skip_special_tokens=True).split(query)[-1]
+                    gen_file = f"{new_stem}.txt"
+                    save_prompt_responses(decoded_responses[reps_type][topk], gen_file)
+                    print(f"Skipping evaluation for {topk}, N={config.args.N} as gen files already exist.")
+                    continue
+                decoded_responses[reps_type][topk] = []
+                gen_file = f"{new_stem}.txt"
 
-        # Delete and reload model to clear PyReFT modifications
-        del model
-        torch.cuda.empty_cache()
-        gc.collect()
-        model = model_handler.load_model(config.args.model_id, config.args.device)
-        model.tokenizer = model_handler.tokenizer
+                if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')) and os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
+                    print(f"Skipping generation as all relevant files exist.")
+                    continue
+                if resid:
+                    topk_df = pd.DataFrame({'layer': list(range(model_handler.num_layers))})
+                elif not os.path.exists(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv"):
+                    topk_df = save_top_k(reps_type, config, model_handler, topk, logits, logit_metric)
+                else:
+                    topk_df = pd.read_csv(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv")
 
+                batch_handler = BatchHandler(config, data_handler)
+                len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
+                steer_total = len(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size))
+                for batch_num, idx in enumerate(range(0, min(data_handler.LEN, len_gen_qs), config.args.batch_size), start=1):
+                    _t0 = time.time()
+                    gen_qs_toks = select_gen_qs_toks(config, batch_handler)
+                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, topk_df, config.args.N, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching, resid=resid)
+                    decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
+                    gc.collect()
+                    torch.cuda.empty_cache()
+                    if len(decoded_responses[reps_type][topk]) == 0:
+                        decoded_responses[reps_type][topk] = decoded
+                    else:
+                        decoded_responses[reps_type][topk] += decoded
+                    batch_handler.update()
+                    print(f"  Steering batch {batch_num}/{steer_total} — N={config.args.N}, topk={topk} — done in {time.time()-_t0:.1f}s")
+
+                os.makedirs(steer_eval_dir, exist_ok=True)
+                save_prompt_responses(decoded_responses[reps_type][topk], gen_file)
+    print("Evaluation complete.")
 
 def run_eval_transfer(config, data_handler, model_handler, batch_handler, patching_utils):
     best_algorithms = pd.read_csv('/mnt/align4_drive/arunas/multi-token/gcm-interp/results/new-accuracies/plots/best_topk_N_per_method_per_ablation.csv')
@@ -320,10 +214,8 @@ def run_eval_transfer(config, data_handler, model_handler, batch_handler, patchi
     original_outputs = []
 
     decoded_responses = {
-        ablation: {
-            reps_type: {
-                topk: []
-            }
+        reps_type: {
+            topk: []
         }
     }
     batch_handler = BatchHandler(config, data_handler)
@@ -334,7 +226,7 @@ def run_eval_transfer(config, data_handler, model_handler, batch_handler, patchi
             print(f"Skipping generation as all relevant files exist.")
             return
         gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps[ablation], topk_df, config.args.N, ablation, model_handler.dim, max_new_tokens=256, normalize=False, steering_type=config.args.steering_type)
+        edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, topk_df, config.args.N, model_handler.dim, max_new_tokens=256, normalize=False, steering_type=config.args.steering_type)
         with model.generate(gen_qs_toks, do_sample=False, max_new_tokens=256) as _:
             original_outputs = model.generator.output.save()
         if config.args.eval_transfer:
@@ -343,14 +235,14 @@ def run_eval_transfer(config, data_handler, model_handler, batch_handler, patchi
             answers = None
         decoded = decode_responses(model, gen_qs_toks, original_outputs, edited_outputs, config.args.base, answers=answers)
 
-        if len(decoded_responses[ablation][reps_type][topk]) == 0:
-            decoded_responses[ablation][reps_type][topk] = decoded
+        if len(decoded_responses[reps_type][topk]) == 0:
+            decoded_responses[reps_type][topk] = decoded
         else:
-            decoded_responses[ablation][reps_type][topk] += decoded
+            decoded_responses[reps_type][topk] += decoded
         batch_handler.update()
 
         os.makedirs(config.get_output_prefix(), exist_ok=True)
-        save_prompt_responses(decoded_responses[ablation][reps_type][topk], gen_file)
+        save_prompt_responses(decoded_responses[reps_type][topk], gen_file)
 
     del model_handler.model
     del model_handler.tokenizer

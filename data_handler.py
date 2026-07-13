@@ -158,13 +158,6 @@ class DataHandler:
                     'test': self.tokenize_prompts(base_qs['test'], max_length=self.gen_max_len)
                 }
 
-            elif self.config.args.ablation == 'pyreft':
-                print('Tokenizing pyreft prompts...')
-                self.pyreft_prompts = self.get_templated_prompts(jsons['base_desired'], _base_completion=jsons['source_desired'], add_generation_prompt=False)
-                self.pyreft_toks = self.tokenize_prompts(self.pyreft_prompts, max_length=self.max_len)
-
-                self.response_start_positions['pyreft'] = self.get_resp_start_pos(self.pyreft_toks, self.model_handler.marker, self.model_handler.tokenizer) if self.config.args.ablation == 'pyreft' else None
-        
         if steering["add_qs"] and steering["sub_qs"]:
             self.steering_qs_toks = {
                 "add": self.tokenize_prompts(steering["add_qs"], max_length=self.gen_max_len),
@@ -191,18 +184,12 @@ class DataHandler:
             for key in self.source_qs_toks:
                 self.source_qs_toks[key] = {k: v[:L] for k, v in self.source_qs_toks[key].items()}
 
-        if hasattr(self, "pyreft_toks") and self.pyreft_toks:
-            for key in self.pyreft_toks:
-                self.pyreft_toks[key] = {k: v[:L] for k, v in self.pyreft_toks[key].items()}
-
         if hasattr(self, 'response_start_positions') and self.response_start_positions:
             self.response_start_positions = {
                 "base": {
                     key: self.response_start_positions["base"][key][:L] for key in self.response_start_positions["base"]
                 }
             }
-            if "pyreft" in self.response_start_positions:
-                self.response_start_positions["pyreft"] = self.get_resp_start_pos(self.pyreft_toks, self.model_handler.marker, self.model_handler.tokenizer)
 
     def get_templated_prompts(self, prompts, _base_completion=None, only_q=False, add_generation_prompt=False):
         extra_kwargs = {"enable_thinking": False} if self.model_handler.is_qwen3 else {}

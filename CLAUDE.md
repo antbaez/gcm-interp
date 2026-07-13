@@ -7,6 +7,12 @@ Datasets: `harmful-long`, `sycophancy-long`, `verse-long` (each paired with a "b
 
 ---
 
+## General instructions
+
+You don't need to check that the code compiles (e.g. running `py_compile` or similar) after every edit — skip that step by default.
+
+---
+
 ## run_normal.sh / run_preemptable.sh
 
 The top-level dispatchers — run these with `bash`, not `sbatch` (they hold no GPU allocation themselves). They expand `--model`/`--dataset` tags (comma-separated or `all`) and `sbatch` one job per model × dataset combo via `run_normal_job.sh` / `run_preemptable_job.sh` respectively. `run_preemptable.sh` also accepts `--seed`, forwarded through to `run.py`. (`run_preemptable_job.sh` submits to the `mit_preemptable` partition with `--requeue`; `run_normal_job.sh` submits to `mit_normal_gpu`.)
