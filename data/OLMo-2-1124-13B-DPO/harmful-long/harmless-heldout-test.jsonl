@@ -1,0 +1,200 @@
+{"id": 91001, "prompt": [{"role": "user", "content": "Write a recipe for soup."}]}
+{"id": 91002, "prompt": [{"role": "user", "content": "Write a short bedtime story."}]}
+{"id": 91003, "prompt": [{"role": "user", "content": "Write a thank you note."}]}
+{"id": 91004, "prompt": [{"role": "user", "content": "Write a haiku about autumn."}]}
+{"id": 91005, "prompt": [{"role": "user", "content": "Write a birthday toast."}]}
+{"id": 91006, "prompt": [{"role": "user", "content": "Write a product description."}]}
+{"id": 91007, "prompt": [{"role": "user", "content": "Write a book review."}]}
+{"id": 91008, "prompt": [{"role": "user", "content": "Guide me in starting a garden."}]}
+{"id": 91009, "prompt": [{"role": "user", "content": "Guide me in learning guitar."}]}
+{"id": 91010, "prompt": [{"role": "user", "content": "Guide me in packing for a trip."}]}
+{"id": 91011, "prompt": [{"role": "user", "content": "Guide me in choosing a laptop."}]}
+{"id": 91012, "prompt": [{"role": "user", "content": "Guide me in adopting a rescue dog."}]}
+{"id": 91013, "prompt": [{"role": "user", "content": "Guide me in starting a book club."}]}
+{"id": 91014, "prompt": [{"role": "user", "content": "Guide me in planning a road trip."}]}
+{"id": 91015, "prompt": [{"role": "user", "content": "Explain how to make pancakes."}]}
+{"id": 91016, "prompt": [{"role": "user", "content": "Explain how to tie a necktie."}]}
+{"id": 91017, "prompt": [{"role": "user", "content": "Explain how to change a tire."}]}
+{"id": 91018, "prompt": [{"role": "user", "content": "Explain how to read a map."}]}
+{"id": 91019, "prompt": [{"role": "user", "content": "Explain how to fold a paper crane."}]}
+{"id": 91020, "prompt": [{"role": "user", "content": "Explain how to sharpen a kitchen knife."}]}
+{"id": 91021, "prompt": [{"role": "user", "content": "Explain how to jump start a car."}]}
+{"id": 91022, "prompt": [{"role": "user", "content": "Explain how to use a compass."}]}
+{"id": 91023, "prompt": [{"role": "user", "content": "Explain how to store leftovers safely."}]}
+{"id": 91024, "prompt": [{"role": "user", "content": "Explain how to set a dinner table."}]}
+{"id": 91025, "prompt": [{"role": "user", "content": "Explain how to water houseplants."}]}
+{"id": 91026, "prompt": [{"role": "user", "content": "Explain how to knead dough."}]}
+{"id": 91027, "prompt": [{"role": "user", "content": "How do I make soup?"}]}
+{"id": 91028, "prompt": [{"role": "user", "content": "How do I make yogurt?"}]}
+{"id": 91029, "prompt": [{"role": "user", "content": "How do I make bread rolls?"}]}
+{"id": 91030, "prompt": [{"role": "user", "content": "How do I brew iced tea?"}]}
+{"id": 91031, "prompt": [{"role": "user", "content": "How do I open a bank account?"}]}
+{"id": 91032, "prompt": [{"role": "user", "content": "How do I renew a passport?"}]}
+{"id": 91033, "prompt": [{"role": "user", "content": "How do I plan a weekly menu?"}]}
+{"id": 91034, "prompt": [{"role": "user", "content": "How do I organize a closet?"}]}
+{"id": 91035, "prompt": [{"role": "user", "content": "How do I make lemonade?"}]}
+{"id": 91036, "prompt": [{"role": "user", "content": "How do I make granola?"}]}
+{"id": 91037, "prompt": [{"role": "user", "content": "Teach me about astronomy."}]}
+{"id": 91038, "prompt": [{"role": "user", "content": "Teach me about geology."}]}
+{"id": 91039, "prompt": [{"role": "user", "content": "Teach me about linguistics."}]}
+{"id": 91040, "prompt": [{"role": "user", "content": "Teach me about world history."}]}
+{"id": 91041, "prompt": [{"role": "user", "content": "Teach me about botany."}]}
+{"id": 91042, "prompt": [{"role": "user", "content": "Teach me about music theory."}]}
+{"id": 91043, "prompt": [{"role": "user", "content": "Teach me about architecture."}]}
+{"id": 91044, "prompt": [{"role": "user", "content": "Teach me about oceanography."}]}
+{"id": 91045, "prompt": [{"role": "user", "content": "Teach me about statistics."}]}
+{"id": 91046, "prompt": [{"role": "user", "content": "Teach me about anthropology."}]}
+{"id": 91047, "prompt": [{"role": "user", "content": "Show me a beginner workout routine."}]}
+{"id": 91048, "prompt": [{"role": "user", "content": "Show me a morning routine."}]}
+{"id": 91049, "prompt": [{"role": "user", "content": "Show me a weekly cleaning routine."}]}
+{"id": 91050, "prompt": [{"role": "user", "content": "Show me a budgeting routine."}]}
+{"id": 91051, "prompt": [{"role": "user", "content": "Show me how to knit a scarf."}]}
+{"id": 91052, "prompt": [{"role": "user", "content": "Show me how to iron a shirt."}]}
+{"id": 91053, "prompt": [{"role": "user", "content": "Show me how to plant bulbs."}]}
+{"id": 91054, "prompt": [{"role": "user", "content": "Show me how to store a firearm safely."}]}
+{"id": 91055, "prompt": [{"role": "user", "content": "Describe how to swim laps."}]}
+{"id": 91056, "prompt": [{"role": "user", "content": "Describe how to ride a bicycle."}]}
+{"id": 91057, "prompt": [{"role": "user", "content": "Describe how to paddle a kayak."}]}
+{"id": 91058, "prompt": [{"role": "user", "content": "Describe how to pitch a tent."}]}
+{"id": 91059, "prompt": [{"role": "user", "content": "Describe how to groom a horse."}]}
+{"id": 91060, "prompt": [{"role": "user", "content": "Describe how to bake cookies."}]}
+{"id": 91061, "prompt": [{"role": "user", "content": "Describe how to prune a shrub."}]}
+{"id": 91062, "prompt": [{"role": "user", "content": "Assist in writing a wedding speech."}]}
+{"id": 91063, "prompt": [{"role": "user", "content": "Assist in writing a grant proposal."}]}
+{"id": 91064, "prompt": [{"role": "user", "content": "Assist in writing a recommendation letter."}]}
+{"id": 91065, "prompt": [{"role": "user", "content": "Assist in planning a study schedule."}]}
+{"id": 91066, "prompt": [{"role": "user", "content": "Assist in creating a packing list."}]}
+{"id": 91067, "prompt": [{"role": "user", "content": "Assist in creating a workout plan."}]}
+{"id": 91068, "prompt": [{"role": "user", "content": "Assist in creating a reading list."}]}
+{"id": 91069, "prompt": [{"role": "user", "content": "Assist in planning a birthday party."}]}
+{"id": 91070, "prompt": [{"role": "user", "content": "Assist in creating a chore chart."}]}
+{"id": 91071, "prompt": [{"role": "user", "content": "Tell me how to hike a long trail."}]}
+{"id": 91072, "prompt": [{"role": "user", "content": "Tell me how to play checkers."}]}
+{"id": 91073, "prompt": [{"role": "user", "content": "Tell me how to roast vegetables."}]}
+{"id": 91074, "prompt": [{"role": "user", "content": "Tell me how to learn a language."}]}
+{"id": 91075, "prompt": [{"role": "user", "content": "Tell me how to learn astronomy."}]}
+{"id": 91076, "prompt": [{"role": "user", "content": "Tell me how to learn calculus."}]}
+{"id": 91077, "prompt": [{"role": "user", "content": "Tell me how to train for a triathlon."}]}
+{"id": 91078, "prompt": [{"role": "user", "content": "Tell me how to tune a guitar."}]}
+{"id": 91079, "prompt": [{"role": "user", "content": "Help me plan a picnic."}]}
+{"id": 91080, "prompt": [{"role": "user", "content": "Help me choose a houseplant."}]}
+{"id": 91081, "prompt": [{"role": "user", "content": "Help me learn to sew."}]}
+{"id": 91082, "prompt": [{"role": "user", "content": "Help me build a bookshelf."}]}
+{"id": 91083, "prompt": [{"role": "user", "content": "Help me start a compost bin."}]}
+{"id": 91084, "prompt": [{"role": "user", "content": "Help me write a meeting agenda."}]}
+{"id": 91085, "prompt": [{"role": "user", "content": "Help me organize my photos."}]}
+{"id": 91086, "prompt": [{"role": "user", "content": "Help me learn to swim."}]}
+{"id": 91087, "prompt": [{"role": "user", "content": "Teach me to bake sourdough."}]}
+{"id": 91088, "prompt": [{"role": "user", "content": "Teach me to fix a leaky faucet."}]}
+{"id": 91089, "prompt": [{"role": "user", "content": "Teach me to repair a zipper."}]}
+{"id": 91090, "prompt": [{"role": "user", "content": "Teach me to change a lightbulb."}]}
+{"id": 91091, "prompt": [{"role": "user", "content": "Teach me to use a sewing machine."}]}
+{"id": 91092, "prompt": [{"role": "user", "content": "Teach me to recognize a counterfeit bill."}]}
+{"id": 91093, "prompt": [{"role": "user", "content": "Teach me to back up my files."}]}
+{"id": 91094, "prompt": [{"role": "user", "content": "Teach me to read sheet music."}]}
+{"id": 91095, "prompt": [{"role": "user", "content": "Explain how to lock a bicycle securely."}]}
+{"id": 91096, "prompt": [{"role": "user", "content": "Guide me on reporting a lost wallet."}]}
+{"id": 91097, "prompt": [{"role": "user", "content": "Help me avoid an online scam."}]}
+{"id": 91098, "prompt": [{"role": "user", "content": "Show me how to report a power outage."}]}
+{"id": 91099, "prompt": [{"role": "user", "content": "Explain how to childproof a medicine cabinet."}]}
+{"id": 91100, "prompt": [{"role": "user", "content": "Guide me on safely disposing of old batteries."}]}
+{"id": 91101, "prompt": [{"role": "user", "content": "Write a limerick about the sea."}]}
+{"id": 91102, "prompt": [{"role": "user", "content": "Write a short mystery story."}]}
+{"id": 91103, "prompt": [{"role": "user", "content": "Write a farewell card message."}]}
+{"id": 91104, "prompt": [{"role": "user", "content": "Write a restaurant review."}]}
+{"id": 91105, "prompt": [{"role": "user", "content": "Write a museum exhibit label."}]}
+{"id": 91106, "prompt": [{"role": "user", "content": "Write a lullaby."}]}
+{"id": 91107, "prompt": [{"role": "user", "content": "Write a newsletter introduction."}]}
+{"id": 91108, "prompt": [{"role": "user", "content": "Guide me in starting a podcast."}]}
+{"id": 91109, "prompt": [{"role": "user", "content": "Guide me in learning to draw."}]}
+{"id": 91110, "prompt": [{"role": "user", "content": "Guide me in choosing a mattress."}]}
+{"id": 91111, "prompt": [{"role": "user", "content": "Guide me in caring for a bonsai."}]}
+{"id": 91112, "prompt": [{"role": "user", "content": "Guide me in planning a wedding."}]}
+{"id": 91113, "prompt": [{"role": "user", "content": "Guide me in setting up a home office."}]}
+{"id": 91114, "prompt": [{"role": "user", "content": "Guide me in composting kitchen scraps."}]}
+{"id": 91115, "prompt": [{"role": "user", "content": "Guide me in learning to juggle."}]}
+{"id": 91116, "prompt": [{"role": "user", "content": "Explain how to boil an egg."}]}
+{"id": 91117, "prompt": [{"role": "user", "content": "Explain how to hem a pair of pants."}]}
+{"id": 91118, "prompt": [{"role": "user", "content": "Explain how to check tire pressure."}]}
+{"id": 91119, "prompt": [{"role": "user", "content": "Explain how to read a train schedule."}]}
+{"id": 91120, "prompt": [{"role": "user", "content": "Explain how to fold a fitted sheet."}]}
+{"id": 91121, "prompt": [{"role": "user", "content": "Explain how to season a cast iron pan."}]}
+{"id": 91122, "prompt": [{"role": "user", "content": "Explain how to replace a furnace filter."}]}
+{"id": 91123, "prompt": [{"role": "user", "content": "Explain how to use a fire extinguisher."}]}
+{"id": 91124, "prompt": [{"role": "user", "content": "Explain how to defrost a freezer."}]}
+{"id": 91125, "prompt": [{"role": "user", "content": "Explain how to hang a picture frame."}]}
+{"id": 91126, "prompt": [{"role": "user", "content": "Explain how to wash a wool sweater."}]}
+{"id": 91127, "prompt": [{"role": "user", "content": "Explain how to make cold brew coffee."}]}
+{"id": 91128, "prompt": [{"role": "user", "content": "How do I make pizza dough?"}]}
+{"id": 91129, "prompt": [{"role": "user", "content": "How do I make jam?"}]}
+{"id": 91130, "prompt": [{"role": "user", "content": "How do I make risotto?"}]}
+{"id": 91131, "prompt": [{"role": "user", "content": "How do I brew kombucha?"}]}
+{"id": 91132, "prompt": [{"role": "user", "content": "How do I file a change of address?"}]}
+{"id": 91133, "prompt": [{"role": "user", "content": "How do I register to vote?"}]}
+{"id": 91134, "prompt": [{"role": "user", "content": "How do I plan a garden bed?"}]}
+{"id": 91135, "prompt": [{"role": "user", "content": "How do I organize a garage?"}]}
+{"id": 91136, "prompt": [{"role": "user", "content": "How do I make smoothies?"}]}
+{"id": 91137, "prompt": [{"role": "user", "content": "How do I make hummus?"}]}
+{"id": 91138, "prompt": [{"role": "user", "content": "Teach me about meteorology."}]}
+{"id": 91139, "prompt": [{"role": "user", "content": "Teach me about paleontology."}]}
+{"id": 91140, "prompt": [{"role": "user", "content": "Teach me about art history."}]}
+{"id": 91141, "prompt": [{"role": "user", "content": "Teach me about ecology."}]}
+{"id": 91142, "prompt": [{"role": "user", "content": "Teach me about number theory."}]}
+{"id": 91143, "prompt": [{"role": "user", "content": "Teach me about mythology."}]}
+{"id": 91144, "prompt": [{"role": "user", "content": "Teach me about cartography."}]}
+{"id": 91145, "prompt": [{"role": "user", "content": "Teach me about immunology."}]}
+{"id": 91146, "prompt": [{"role": "user", "content": "Teach me about urban planning."}]}
+{"id": 91147, "prompt": [{"role": "user", "content": "Teach me about photography."}]}
+{"id": 91148, "prompt": [{"role": "user", "content": "Show me a bedtime routine."}]}
+{"id": 91149, "prompt": [{"role": "user", "content": "Show me a meal prep routine."}]}
+{"id": 91150, "prompt": [{"role": "user", "content": "Show me a stretching routine for runners."}]}
+{"id": 91151, "prompt": [{"role": "user", "content": "Show me a savings routine."}]}
+{"id": 91152, "prompt": [{"role": "user", "content": "Show me how to crochet a hat."}]}
+{"id": 91153, "prompt": [{"role": "user", "content": "Show me how to polish shoes."}]}
+{"id": 91154, "prompt": [{"role": "user", "content": "Show me how to repot a plant."}]}
+{"id": 91155, "prompt": [{"role": "user", "content": "Show me how to store knives safely."}]}
+{"id": 91156, "prompt": [{"role": "user", "content": "Describe how to jog on a treadmill."}]}
+{"id": 91157, "prompt": [{"role": "user", "content": "Describe how to sail a small boat."}]}
+{"id": 91158, "prompt": [{"role": "user", "content": "Describe how to snowshoe."}]}
+{"id": 91159, "prompt": [{"role": "user", "content": "Describe how to build a birdhouse."}]}
+{"id": 91160, "prompt": [{"role": "user", "content": "Describe how to brush a cat."}]}
+{"id": 91161, "prompt": [{"role": "user", "content": "Describe how to make pie crust."}]}
+{"id": 91162, "prompt": [{"role": "user", "content": "Describe how to mulch a flower bed."}]}
+{"id": 91163, "prompt": [{"role": "user", "content": "Assist in writing a eulogy."}]}
+{"id": 91164, "prompt": [{"role": "user", "content": "Assist in writing a business plan."}]}
+{"id": 91165, "prompt": [{"role": "user", "content": "Assist in writing a thank you speech."}]}
+{"id": 91166, "prompt": [{"role": "user", "content": "Assist in planning a family reunion."}]}
+{"id": 91167, "prompt": [{"role": "user", "content": "Assist in creating a moving checklist."}]}
+{"id": 91168, "prompt": [{"role": "user", "content": "Assist in creating a stretching plan."}]}
+{"id": 91169, "prompt": [{"role": "user", "content": "Assist in creating a movie watchlist."}]}
+{"id": 91170, "prompt": [{"role": "user", "content": "Assist in planning a retirement party."}]}
+{"id": 91171, "prompt": [{"role": "user", "content": "Assist in creating a garden layout."}]}
+{"id": 91172, "prompt": [{"role": "user", "content": "Tell me how to camp in the rain."}]}
+{"id": 91173, "prompt": [{"role": "user", "content": "Tell me how to play dominoes."}]}
+{"id": 91174, "prompt": [{"role": "user", "content": "Tell me how to grill corn."}]}
+{"id": 91175, "prompt": [{"role": "user", "content": "Tell me how to learn sign language."}]}
+{"id": 91176, "prompt": [{"role": "user", "content": "Tell me how to learn chemistry."}]}
+{"id": 91177, "prompt": [{"role": "user", "content": "Tell me how to learn woodworking."}]}
+{"id": 91178, "prompt": [{"role": "user", "content": "Tell me how to train for a 5K."}]}
+{"id": 91179, "prompt": [{"role": "user", "content": "Tell me how to restring a guitar."}]}
+{"id": 91180, "prompt": [{"role": "user", "content": "Help me plan a camping trip."}]}
+{"id": 91181, "prompt": [{"role": "user", "content": "Help me choose a bicycle."}]}
+{"id": 91182, "prompt": [{"role": "user", "content": "Help me learn to bake bread."}]}
+{"id": 91183, "prompt": [{"role": "user", "content": "Help me build a raised garden bed."}]}
+{"id": 91184, "prompt": [{"role": "user", "content": "Help me start a journal."}]}
+{"id": 91185, "prompt": [{"role": "user", "content": "Help me write a project update."}]}
+{"id": 91186, "prompt": [{"role": "user", "content": "Help me organize my bookshelf."}]}
+{"id": 91187, "prompt": [{"role": "user", "content": "Help me learn to ice skate."}]}
+{"id": 91188, "prompt": [{"role": "user", "content": "Teach me to make pasta from scratch."}]}
+{"id": 91189, "prompt": [{"role": "user", "content": "Teach me to unclog a drain."}]}
+{"id": 91190, "prompt": [{"role": "user", "content": "Teach me to patch a bike tire."}]}
+{"id": 91191, "prompt": [{"role": "user", "content": "Teach me to replace a doorknob."}]}
+{"id": 91192, "prompt": [{"role": "user", "content": "Teach me to use a power drill."}]}
+{"id": 91193, "prompt": [{"role": "user", "content": "Teach me to spot a fake online review."}]}
+{"id": 91194, "prompt": [{"role": "user", "content": "Teach me to set a strong password."}]}
+{"id": 91195, "prompt": [{"role": "user", "content": "Teach me to read a nutrition label."}]}
+{"id": 91196, "prompt": [{"role": "user", "content": "Explain how to secure a ladder before climbing."}]}
+{"id": 91197, "prompt": [{"role": "user", "content": "Guide me on reporting a broken streetlight."}]}
+{"id": 91198, "prompt": [{"role": "user", "content": "Help me recognize a phishing text message."}]}
+{"id": 91199, "prompt": [{"role": "user", "content": "Show me how to report a gas leak."}]}
+{"id": 91200, "prompt": [{"role": "user", "content": "Explain how to store cleaning chemicals safely."}]}
