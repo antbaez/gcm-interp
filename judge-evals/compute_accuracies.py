@@ -59,25 +59,13 @@ def fix_empty_response_ratings(df: pd.DataFrame) -> pd.DataFrame:
 # Data loading with caching
 # ---------------------------------------------------------------------------
 
-def load_or_cache(json_path: str, cache_name: str) -> pd.DataFrame:
-    """Load from JSON, or use CSV cache if available.
-    Cache file is placed next to the JSON source.
-    """
-    parent = os.path.dirname(json_path) or "."
-    csv_cache = os.path.join(parent, cache_name)
-
-    if os.path.exists(csv_cache):
-        return pd.read_csv(csv_cache)
-
+def load_ratings(json_path: str) -> pd.DataFrame:
+    """Load ratings from a JSONL/JSON file."""
     if not os.path.exists(json_path):
         return pd.DataFrame()
 
     items = load_jsonl_or_json(json_path)
-    df = pd.DataFrame(items)
-    df = df.drop_duplicates()
-
-    df.to_csv(csv_cache, index=False)
-    return df
+    return pd.DataFrame(items).drop_duplicates()
 
 
 # ---------------------------------------------------------------------------
@@ -226,9 +214,9 @@ def compute_accuracy_for_workdir(
     rel_path  = workdir / "relevance_ratings.jsonl"
     jp_path   = workdir / "judge_ratings.jsonl"
 
-    jp_df     = load_or_cache(str(jp_path),  "jp_ratings.csv")  if (not skip_judge and jp_path.exists())  else pd.DataFrame()
-    rf_flu_df = load_or_cache(str(flu_path), "flu_ratings.csv") if flu_path.exists() else pd.DataFrame()
-    rf_rel_df = load_or_cache(str(rel_path), "rel_ratings.csv") if rel_path.exists() else pd.DataFrame()
+    jp_df     = load_ratings(str(jp_path))  if (not skip_judge and jp_path.exists())  else pd.DataFrame()
+    rf_flu_df = load_ratings(str(flu_path)) if flu_path.exists() else pd.DataFrame()
+    rf_rel_df = load_ratings(str(rel_path)) if rel_path.exists() else pd.DataFrame()
 
     _compute_and_write(jp_df, rf_flu_df, rf_rel_df, str(accuracy_dir))
 
@@ -266,9 +254,9 @@ def main():
         )
         return
 
-    jp_df     = load_or_cache(args.jp_path,  "jp_ratings.csv")
-    rf_flu_df = load_or_cache(args.flu_path, "rf_fluency_ratings.csv")
-    rf_rel_df = load_or_cache(args.rel_path, "rf_relevance_ratings.csv")
+    jp_df     = load_ratings(args.jp_path)
+    rf_flu_df = load_ratings(args.flu_path)
+    rf_rel_df = load_ratings(args.rel_path)
 
     _compute_and_write(jp_df, rf_flu_df, rf_rel_df, args.output_dir)
 

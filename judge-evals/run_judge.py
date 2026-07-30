@@ -90,6 +90,13 @@ def accuracy_paths(meta: dict) -> tuple[Path, Path]:
         / meta["CACHE_MODE"]
         / meta["STEERING_TYPE"]
     )
+    # Held-out (true test) runs get their own subdir so their accuracies never
+    # overwrite the validation sweep's. The default `<base>-test` split keeps the
+    # original layout on purpose: changing it would make every already-judged
+    # condition look unprocessed to accuracy_exists() and trigger a full re-judge.
+    test_file = meta.get("TEST_FILE") or ""
+    if test_file and test_file != f"{meta['BASE']}-test":
+        base_dir = base_dir / test_file
     fn_base = f"{meta['N']}_{meta['REPS']}_{meta['STEERING_METHOD']}_topk_{meta['topk']}"
     wo_rf = base_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
     w_rf  = base_dir / f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"
@@ -373,6 +380,9 @@ def parse_args():
                    help="cache or no_cache")
     p.add_argument("--steering_type", default=None,
                    help="e.g. positional, last-token, all-tokens")
+    p.add_argument("--test_file",     default=None,
+                   help="Only judge generations from this split, e.g. 'harmless-test' "
+                        "(validation) or 'harmless-heldout-test' (true test)")
     p.add_argument("--all",          action="store_true")
     p.add_argument("--skip_judge",   action="store_true",
                    help="Skip behavioral judge (fluency + relevance only)")
@@ -404,7 +414,7 @@ def main():
     gen_files = discover_gen_files(
         args.runs_dir, args.model_name, args.source, args.base,
         args.norm_mode, args.cache_mode, args.steering_type,
-        args.stream_mode,
+        args.stream_mode, test_file=args.test_file,
     )
     print(f"Found {len(gen_files)} gen files")
     print(f"Accuracy dir: {ACCURACY_DIR}\n")

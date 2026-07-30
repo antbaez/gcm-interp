@@ -14,6 +14,11 @@ class ModelHandler:
             bnb_4bit_compute_dtype=torch.bfloat16
         )
         self.is_qwen3 = 'qwen3' in model_id.lower()
+        self.is_gemma4 = 'gemma-4' in model_id.lower()
+        self.thinking = getattr(config.args, 'thinking', False)
+        self.template_kwargs = (
+            {'enable_thinking': self.thinking} if self.is_qwen3 or self.is_gemma4 else {}
+        )
         self.tokenizer = self.load_tokenizer(model_id)
         self.model = self.load_model(model_id, self.device)
         self.model.tokenizer = self.tokenizer
@@ -28,7 +33,7 @@ class ModelHandler:
             self.marker = '### Assistant'
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0][2:]
         elif 'qwen3' in model_id.lower():
-            self.marker = "<|im_start|>assistant\n<think>\n\n</think>\n\n"
+            self.marker = "<|im_start|>assistant\n" if self.thinking else "<|im_start|>assistant\n<think>\n\n</think>\n\n"
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0]
         elif 'qwen' in model_id.lower():
             self.marker = "<|im_start|>assistant\n"
@@ -41,6 +46,9 @@ class ModelHandler:
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0][1:]
         elif 'olmo' in model_id.lower():
             self.marker = '<|assistant|>\n'
+            self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0]
+        elif self.is_gemma4:
+            self.marker = '<|turn>model\n' if self.thinking else '<|turn>model\n<|channel>thought\n<channel|>'
             self.alignment_tokens = self.tokenizer(self.marker, return_tensors="pt")["input_ids"][0]
         elif 'google' in model_id.lower():
             self.marker = '<start_of_turn>model\n'

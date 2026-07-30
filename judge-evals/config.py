@@ -19,15 +19,19 @@ TOKENIZER_MODEL_NAME = "meta-llama/Llama-3.1-70B-Instruct"
 
 RATING_REGEX = re.compile(r"(\d+)\]\]")
 
-# Filename pattern for generation outputs — accepts both formats:
-#   new: N=5_steer_topk=0.5_harmless-test_gen.json
-#   old: 5_targeted_steer_0.5_harmless-test_gen.json
+# Filename pattern for generation outputs — accepts these formats:
+#   layer sweep: N=5_steer_layer=13_harmless-test_gen.json   (topk group holds the layer idx)
+#   global:      N=5_steer_layer=all_harmless-test_gen.json  (all layers steered at once)
+#   topk sweep:  N=5_steer_topk=0.5_harmless-test_gen.json
+#   old:         5_targeted_steer_0.5_harmless-test_gen.json
+# The layer index (or the `all` sentinel in global mode) reuses the `topk`
+# capture group (there is no top-k in layer/global mode).
 GEN_RE = re.compile(
     r"""
-    (?:N=)?(?P<N>\d+)_
+    (?:N=)?(?P<N>\d+(?:\.\d+)?)_
     (?:(?P<REPS>random|targeted)_)?
     (?P<STEERING_METHOD>steer|mean)_
-    (?:topk=)?(?P<topk>\d+\.\d+)_
+    (?:(?P<AXIS>topk|layer)=)?(?P<topk>all|\d+(?:\.\d+)?)_
     (?P<TEST_FILE>.+?-(?:long|single|test))
     _gen\.json$
     """,

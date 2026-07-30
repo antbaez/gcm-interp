@@ -35,8 +35,8 @@ def collect_records(workdirs_dir: Path, stream_mode: str | None = None) -> pd.Da
     for judge_path in sorted(workdirs_dir.rglob("judge_ratings.jsonl")):
         rel   = judge_path.relative_to(workdirs_dir)
         parts = rel.parts
-        # Expected layout: (model, from_to, norm_mode, stream_mode, cache_mode, steering_type, exp_dir, filename)
-        if len(parts) < 8:
+        # Expected layout: (model, from_to, norm_mode, stream_mode, cache_mode, scope, steering_type, exp_dir, filename)
+        if len(parts) < 9:
             continue
 
         model         = parts[0]
@@ -44,7 +44,8 @@ def collect_records(workdirs_dir: Path, stream_mode: str | None = None) -> pd.Da
         norm_mode     = parts[2]   # "normalized" or "unnormalized"
         stream_mode_i = parts[3]   # "attention" or "residuals"
         cache_mode    = parts[4]   # "cache" or "no_cache"
-        steering_type = parts[5]   # e.g. "positional", "last-token"
+        scope         = parts[5]   # "global" or "local"
+        steering_type = parts[6]   # e.g. "positional", "last-token"
 
         if stream_mode is not None and stream_mode_i != stream_mode:
             continue
@@ -69,6 +70,18 @@ def collect_records(workdirs_dir: Path, stream_mode: str | None = None) -> pd.Da
         if N is None or topk is None:
             continue
 
+        # Layer-sweep runs reuse the `topk` slot to carry the swept layer index and
+        # write `layer=<idx>` into the filename. Recover it as a proper `layer` column.
+        # Global runs use `layer=all` (all layers steered) — a non-numeric slot with
+        # no single layer index, so `layer` stays None and `topk` becomes NaN.
+        filename = str(first.get("filename", "") or "")
+        is_layer = "layer=" in filename
+        try:
+            topk_val = float(topk)
+        except (TypeError, ValueError):
+            topk_val = float("nan")
+        layer = int(round(topk_val)) if (is_layer and not pd.isna(topk_val)) else None
+
         flu_by_query = {r.get("data_path_query"): r.get("judge_rating") for r in flu_recs}
         rel_by_query = {r.get("data_path_query"): r.get("judge_rating") for r in rel_recs}
 
@@ -85,10 +98,16 @@ def collect_records(workdirs_dir: Path, stream_mode: str | None = None) -> pd.Da
 
         n = len(w_passes)
         condition = f"{cache_mode} / {steering_type}"
+        # N may be fractional for --global runs (e.g. 0.5); int(N) would
+        # truncate it, so cast to float and only narrow to int when exact.
+        N_val = float(N)
+        if N_val.is_integer():
+            N_val = int(N_val)
         records.append(dict(
             model=model, source=source, base=base,
             dataset=f"{source} → {base}",
-            N=int(N), topk=float(topk),
+            N=N_val, topk=topk_val, layer=layer,
+            scope=scope,
             norm_mode=norm_mode,
             stream_mode=stream_mode_i,
             cache_mode=cache_mode,

@@ -38,8 +38,9 @@ def extract_path_metadata(path: str) -> dict:
     norm_mode     = parts[runs_idx + 3]   # "normalized" or "unnormalized"
     stream_mode   = parts[runs_idx + 4]   # "attention" or "residuals"
     cache_mode    = parts[runs_idx + 5]   # "cache" or "no_cache"
-    steering_type = parts[runs_idx + 6]   # e.g. "positional", "last-token"
-    filename      = parts[runs_idx + 7]
+    scope         = parts[runs_idx + 6]   # "global" or "local"
+    steering_type = parts[runs_idx + 7]   # e.g. "positional", "last-token"
+    filename      = parts[runs_idx + 8]
 
     m = GEN_RE.match(filename)
     if not m:
@@ -52,6 +53,7 @@ def extract_path_metadata(path: str) -> dict:
         "NORM_MODE":     norm_mode,
         "STREAM_MODE":   stream_mode,
         "CACHE_MODE":    cache_mode,
+        "SCOPE":         scope,
         "STEERING_TYPE": steering_type,
         **m.groupdict(),
         "filename": filename,
@@ -71,10 +73,19 @@ SOURCE_TO_DIR = {
 }
 
 
-def load_test_queries(data_dir: str, model_id: str, source: str, base: str) -> list[str]:
-    """Load the user-turn text from the test JSONL."""
+def load_test_queries(data_dir: str, model_id: str, source: str, base: str,
+                      test_file: str | None = None) -> list[str]:
+    """Load the user-turn text from the test JSONL.
+
+    `test_file` is the split's filename stem as parsed out of the generation
+    filename (e.g. `harmless-test` or `harmless-heldout-test`). It must be
+    honoured: these queries are matched positionally against the generations,
+    so reading the wrong split here would silently label every response with
+    another split's prompt.
+    """
     source_dir = SOURCE_TO_DIR.get((source, base)) or SOURCE_TO_DIR.get(source, source)
-    logits_path = f"{data_dir}/{model_id}/{source_dir}/{base}-test.jsonl"
+    stem = test_file or f"{base}-test"
+    logits_path = f"{data_dir}/{model_id}/{source_dir}/{stem}.jsonl"
     queries = []
     with open(logits_path) as f:
         for line in f:
@@ -106,9 +117,11 @@ def discover_gen_files(
     cache_mode: str | None = None,
     steering_type: str | None = None,
     stream_mode: str | None = None,
+    scope: str | None = None,
+    test_file: str | None = None,
 ) -> list[str]:
     """
-    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/stream_mode/cache_mode/steering_type.
+    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/stream_mode/cache_mode/scope/steering_type.
 
     Uses single-level wildcards (*) for each path component to avoid duplicates
     that arise from recursive (**) globbing.
@@ -118,19 +131,29 @@ def discover_gen_files(
     norm_part    = norm_mode or "*"
     stream_part  = stream_mode or "*"
     cache_part   = cache_mode or "*"
+    scope_part   = scope or "*"
     steer_part   = steering_type or "*"
 
     gen_files = []
-    pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{stream_part}/{cache_part}/{steer_part}/*_gen.json"
+    pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{stream_part}/{cache_part}/{scope_part}/{steer_part}/*_gen.json"
     gen_files.extend(glob.glob(pattern))
 
     # Deduplicate and filter by filename pattern
     seen = set()
     result = []
     for f in sorted(gen_files):
-        if f not in seen and GEN_RE.search(Path(f).name):
-            seen.add(f)
-            result.append(f)
+        if f in seen:
+            continue
+        m = GEN_RE.search(Path(f).name)
+        if not m:
+            continue
+        # Keep the splits apart: judging a held-out test run must not drag the
+        # whole validation sweep along with it (run_judging.sh passes --force,
+        # so already-judged conditions would otherwise all be recomputed).
+        if test_file is not None and m.group("TEST_FILE") != test_file:
+            continue
+        seen.add(f)
+        result.append(f)
     return result
 
 
@@ -148,7 +171,7 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
     with open(gen_path) as f:
         items = json.load(f)
 
-    test_queries = load_test_queries(data_dir, model_id, source, base)
+    test_queries = load_test_queries(data_dir, model_id, source, base, meta.get("TEST_FILE"))
 
     old_key = f"old_{base}"
     edit_key = f"edit_{base}"

@@ -1,4 +1,5 @@
 
+import os
 import torch
 import random
 import torch.nn.functional as F
@@ -73,12 +74,21 @@ class DataHandler:
         gen_prompts = []
         if steering["add_qs"]: gen_prompts += steering["add_qs"]
         if steering["sub_qs"]: gen_prompts += steering["sub_qs"]
-        if base_qs.get('test'): gen_prompts += base_qs['test']
+        # Pull in both eval splits (not just whichever is active via --split),
+        # so gen_max_len — and therefore the padding baked into the steering
+        # vector cache, which is shared across val/test runs by source alone —
+        # stays identical regardless of which split built the cache.
+        for suffix in ('-test.jsonl', '-heldout-test.jsonl'):
+            split_path = f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}{suffix}"
+            if os.path.exists(split_path):
+                gen_prompts += self.get_templated_prompts(self.load_from_jsonl(split_path), only_q=True, add_generation_prompt=True)
         if gen_prompts:
             self.gen_max_len = self.tokenize_prompts(gen_prompts, max_length=None)['input_ids'].shape[1]
         else:
             self.gen_max_len = self.max_len
-        print(f"[DataHandler] Generation max_len: {self.gen_max_len} (steering + test prompts)")
+        print(f"[DataHandler] Generation max_len: {self.gen_max_len} (steering + val/heldout test prompts)")
+        if self.config.args.eval_test:
+            print(f"[DataHandler] Evaluating on {len(base_qs['test'])} prompts from {file_paths['base_test']}")
 
         if self.config.args.patch_model:
             self.base_toks = {
@@ -165,34 +175,9 @@ class DataHandler:
             }
 
         self.LEN = len(base['desired'])
-        self.truncate_to_len(self.LEN)
-    
-    def truncate_to_len(self, L):
-        self.LEN = L
-        if hasattr(self, "base_toks") and self.base_toks:
-            for key in self.base_toks:
-                self.base_toks[key] = {k: v[:L] for k, v in self.base_toks[key].items()}
-        
-        if hasattr(self, "base_qs_toks") and self.base_qs_toks:
-            if self.config.args.eval_test:
-                self.base_qs_toks['test'] = {k: v[:L] for k, v in self.base_qs_toks['test'].items()}
-            else:
-                for key in self.base_qs_toks:
-                    self.base_qs_toks[key] = {k: v[:L] for k, v in self.base_qs_toks[key].items()}
-        
-        if hasattr(self, "source_qs_toks") and self.source_qs_toks:
-            for key in self.source_qs_toks:
-                self.source_qs_toks[key] = {k: v[:L] for k, v in self.source_qs_toks[key].items()}
-
-        if hasattr(self, 'response_start_positions') and self.response_start_positions:
-            self.response_start_positions = {
-                "base": {
-                    key: self.response_start_positions["base"][key][:L] for key in self.response_start_positions["base"]
-                }
-            }
 
     def get_templated_prompts(self, prompts, _base_completion=None, only_q=False, add_generation_prompt=False):
-        extra_kwargs = {"enable_thinking": False} if self.model_handler.is_qwen3 else {}
+        extra_kwargs = self.model_handler.template_kwargs
         if only_q:
             prompt_lengths = None
             if self.no_generation_prompt_for_eval_transfer:

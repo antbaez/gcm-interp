@@ -7,6 +7,15 @@ def _get_layers(model):
         return inner.language_model.layers
     return inner.layers
 
+def _describe_hook(label, value):
+    def fmt(v):
+        return f'{type(v).__name__}{tuple(v.shape)}' if hasattr(v, 'shape') else type(v).__name__
+    if isinstance(value, (tuple, list)):
+        print(f'[activations] {label}: {type(value).__name__} len={len(value)} -> {[fmt(v) for v in value]}')
+    else:
+        print(f'[activations] {label}: {fmt(value)}')
+
+
 def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=True):
     model_name = data_handler.config.args.model_id.split('/')[-1]
     source = data_handler.config.args.source
@@ -25,6 +34,9 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
     steer = [[] for _ in range(num_layers)]
     base = [[] for _ in range(num_layers)]
 
+    is_gemma = 'gemma' in model.config._name_or_path.lower()
+    print(f'[activations] resid={resid} is_gemma={is_gemma} layer_class={type(layers[0]).__name__}')
+
     for i in range(0, source_toks['input_ids'].shape[0], batch_size):
         s_slice = {
             'input_ids': source_toks['input_ids'][i:i+batch_size].to(model.device),
@@ -35,17 +47,19 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
             'attention_mask': base_toks['attention_mask'][i:i+batch_size].to(model.device)
         }
 
-        is_gemma = 'gemma' in model.config._name_or_path.lower()
-        print('is gemma', is_gemma)
+        probe = None
         with model.trace(s_slice) as _:
             for idx, layer in enumerate(layers):
+                if i == 0 and idx == 0:
+                    probe = (layer.output if resid else layer.self_attn.o_proj.output).save()
                 if resid:
                     raw = layer.output[0] if is_gemma else layer.output
                     steer[idx].append(raw.detach().cpu().save())
                 else:
                     steer[idx].append(layer.self_attn.o_proj.output.detach().cpu().save())
-        if resid and i == 0:
-            print(f'[activations] layer.output shape: {steer[0][-1].shape}')
+        if i == 0:
+            _describe_hook('layers[0] raw hook', probe)
+            print(f'[activations] stored slice shape: {tuple(steer[0][-1].shape)}')
         with model.trace(b_slice) as _:
             for idx, layer in enumerate(layers):
                 if resid:
