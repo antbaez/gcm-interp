@@ -36,7 +36,7 @@ _config_printed_types = set()
 def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False, resid=False):
     patch_activations = patch_activations['desired'].to(model.device)
     layer_ids = topk_df['layer'].unique()
-    tuple_output = resid and 'gemma' in model.config._name_or_path.lower()
+    tuple_output = resid and 'gemma' in model.config._name_or_path.lower() and getattr(model.config, 'model_type', '') != 'gemma4_unified'
     if steering_type not in _config_printed_types:
         print(gen_toks['input_ids'].shape, " normalize:", normalize, " steering type:", steering_type, " kv_caching:", kv_caching, " resid:", resid)
         _config_printed_types.add(steering_type)

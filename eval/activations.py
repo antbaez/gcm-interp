@@ -34,7 +34,7 @@ def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=T
     steer = [[] for _ in range(num_layers)]
     base = [[] for _ in range(num_layers)]
 
-    is_gemma = 'gemma' in model.config._name_or_path.lower()
+    is_gemma = 'gemma' in model.config._name_or_path.lower() and getattr(model.config, 'model_type', '') != 'gemma4_unified'
     print(f'[activations] resid={resid} is_gemma={is_gemma} layer_class={type(layers[0]).__name__}')
 
     for i in range(0, source_toks['input_ids'].shape[0], batch_size):
