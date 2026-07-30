@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 
 BATCH_SIZE=128
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
-# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--cache|--nocache] [--attention] [--device <cuda:0>] [--force]
+# Usage: ./scripts/run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--cache|--nocache] [--attention] [--device <cuda:0>] [--force]
 # --dataset defaults to "all" (harmful, sycophancy, verse).
 # Residual-stream judging runs by default. Pass --attention to judge attention-head steering results instead.
 MODEL_TAG=""
@@ -43,11 +43,10 @@ if [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; then
 fi
 
 STREAM_MODE="residuals"
-ACCURACY_SUBDIR="accuracy_residual"
 if [ "$RESID" = false ]; then
     STREAM_MODE="attention"
-    ACCURACY_SUBDIR="accuracy"
 fi
+ACCURACY_SUBDIR="accuracy"
 
 if [ -z "$MODEL_TAG" ]; then
     echo "Usage: ./run_judge.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--device <cuda:0>]"

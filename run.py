@@ -3,9 +3,6 @@ import json
 from config import Config
 from model_handler import ModelHandler
 from data_handler import DataHandler
-from experiment import Experiment
-from patching_utils import PatchingUtils
-from patching import Patching
 import os
 from eval.eval_runner import *
 import logging
@@ -69,27 +66,11 @@ def main():
         print(f'\n=== Dataset: {source} -> {base} ===')
         data_handler = DataHandler(config, model_handler)
 
-        if config.args.patch_algo == 'acp':
-            config.args.batch_size = max(x for x in range(64, 0, -1) if data_handler.LEN % x != 1)
-        else:
-            config.args.batch_size = 1
-
-        if config.args.patch_model:
-            if config.args.patch_algo == 'probes':
-                probes_experiment = Experiment(config, data_handler, model_handler, 'heads')
-                probes_experiment.run_probes()
-            else:
-                print('Running patching on heads...')
-                heads_experiment = Experiment(config, data_handler, model_handler, 'heads')
-                heads_experiment.run()
-
         if config.args.eval_model:
             data_handler.LEN = min(data_handler.LEN, 200)
             config.args.batch_size = config.args.eval_batch_size
             batch_size = config.args.batch_size
             batch_handler = BatchHandler(config, data_handler, 0, min(batch_size, data_handler.LEN))
-            patching = Patching(model_handler, batch_handler, config)
-            patching_utils = PatchingUtils(patching)
 
             if config.args.steering:
                 # Baseline generation doesn't depend on steering_type — compute it once
@@ -113,10 +94,7 @@ def main():
                         print(f"Pinned from validation: N={entry['N']:g} layer={entry['layer']} "
                               f"(val w_rf={entry['val_pass_rate']:.3f})")
 
-                    run_eval(config, data_handler, model_handler, batch_handler, patching_utils, 'heads', original_outputs=original_outputs)
-            elif config.args.eval_transfer:
-                data_handler.LEN = min(data_handler.LEN, 100)
-                run_eval_transfer(config, data_handler, model_handler, batch_handler, patching_utils)
+                    run_eval(config, data_handler, model_handler, batch_handler, 'heads', original_outputs=original_outputs)
 
 if __name__ == "__main__":
     main()

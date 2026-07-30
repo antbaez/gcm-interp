@@ -7,14 +7,14 @@
 #SBATCH --output=logs/out/%j.out
 #SBATCH --error=logs/err/%j.err
 
-# Worker job: runs a single model x dataset combo. Submitted by run_normal.sh
-# (the dispatcher) — do not sbatch this directly with comma-separated or
-# "all" model/dataset values, it will not fan out.
+# Worker job: runs a single model x dataset combo. Submitted by
+# scripts/run_normal.sh (the dispatcher) — do not sbatch this directly with
+# comma-separated or "all" model/dataset values, it will not fan out.
 #
 # Usage:
-#   sbatch run_normal_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--nocache] [--unnormalized] [--attention] [--patch] [--global] [--split val|test] [--judging]
-#   Note: Residual-stream steering runs by default. Pass --attention for attention-head steering.
-#   Note: ATP head localization/patching is OFF by default. Pass --patch to run it (requires --attention).
+#   sbatch scripts/run_normal_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--nocache] [--unnormalized] [--attention] [--global] [--split val|test] [--judging]
+#   Note: Residual-stream steering runs by default. Pass --attention for attention-head steering
+#   (reads whatever head-selection artifacts already exist under results/.../heads/).
 #   With no --split, runs the whole pipeline: validation sweep, judging, selection,
 #   then the held-out split if the selection changed. --split val stops after
 #   judging the sweep; --split test selects from existing sweep results and
@@ -29,7 +29,6 @@ NOCACHE=false
 UNNORMALIZED=false
 JUDGING_ONLY=false
 RESID=true
-PATCH=false
 GLOBAL=false
 # Which phases to run: "all" (default) does the validation sweep, selection, and
 # the held-out split; "val" stops after judging the sweep; "test" selects from
@@ -47,7 +46,6 @@ while [[ $# -gt 0 ]]; do
         --unnormalized) UNNORMALIZED=true; shift ;;
         --judging)      JUDGING_ONLY=true; shift ;;
         --attention)    RESID=false;       shift ;;
-        --patch)        PATCH=true;        shift ;;
         --global)       GLOBAL=true;       shift ;;
         --split)        SPLIT="$2";        shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
@@ -59,7 +57,6 @@ EXTRA_FLAGS=()
 [ "$NOCACHE" = true ]      && EXTRA_FLAGS+=(--nocache)
 [ "$UNNORMALIZED" = true ] && EXTRA_FLAGS+=(--unnormalized)
 [ "$RESID" = false ]       && EXTRA_FLAGS+=(--attention)
-[ "$PATCH" = true ]        && EXTRA_FLAGS+=(--patch)
 [ "$GLOBAL" = true ]       && EXTRA_FLAGS+=(--global)
 
 JUDGE_FLAGS=()
@@ -68,7 +65,7 @@ JUDGE_FLAGS=()
 [ "$UNNORMALIZED" = false ] && JUDGE_FLAGS+=(--normalized)
 [ "$RESID" = false ]       && JUDGE_FLAGS+=(--attention)
 
-echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  nocache=$NOCACHE  unnormalized=$UNNORMALIZED  resid=$RESID  patch=$PATCH  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY"
+echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  nocache=$NOCACHE  unnormalized=$UNNORMALIZED  resid=$RESID  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY"
 
 cd ~/gcm-interp
 
@@ -76,11 +73,11 @@ cd ~/gcm-interp
 if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "val" ]; then
     if [ "$JUDGING_ONLY" = false ]; then
         source ~/gcm-interp/setup/setup.sh
-        bash run_steering.sh --model "$MODEL" --dataset "$DATASET" "${EXTRA_FLAGS[@]}"
+        bash scripts/run_steering.sh --model "$MODEL" --dataset "$DATASET" "${EXTRA_FLAGS[@]}"
     fi
 
     source ~/gcm-interp/setup/setup_judging.sh
-    bash run_judging.sh --model "$MODEL" --dataset "$DATASET" "${JUDGE_FLAGS[@]}"
+    bash scripts/run_judging.sh --model "$MODEL" --dataset "$DATASET" "${JUDGE_FLAGS[@]}"
 fi
 
 if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
@@ -104,10 +101,10 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
         cat "$PENDING_FILE"
 
         source ~/gcm-interp/setup/setup.sh
-        bash run_steering.sh --model "$MODEL" --dataset "$DATASET" --split test "${EXTRA_FLAGS[@]}"
+        bash scripts/run_steering.sh --model "$MODEL" --dataset "$DATASET" --split test "${EXTRA_FLAGS[@]}"
 
         source ~/gcm-interp/setup/setup_judging.sh
-        bash run_judging.sh --model "$MODEL" --dataset "$DATASET" --split test "${JUDGE_FLAGS[@]}"
+        bash scripts/run_judging.sh --model "$MODEL" --dataset "$DATASET" --split test "${JUDGE_FLAGS[@]}"
     else
         echo ""
         echo "Held-out run already current for the selected config — skipping."

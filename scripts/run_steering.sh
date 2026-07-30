@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-# Usage: ./run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--nocache] [--attention] [--patch] [--global] [--split val|test] [--device <cuda:0>]
+# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--nocache] [--attention] [--global] [--split val|test] [--device <cuda:0>]
 # --dataset defaults to "all" (harmful, sycophancy, verse).
 # --split val (default) sweeps N x layer on the validation split; --split test pins the
 # selection from best_configs.json and generates once on the held-out test split.
-# Residual-stream steering runs by default. Pass --attention for attention-head steering (needs --patch on a fresh results/ dir).
+# Residual-stream steering runs by default. Pass --attention for attention-head steering
+# (reads whatever head-selection artifacts already exist under results/.../heads/).
 # By default steering is a single-layer sweep over the middle third of layers; --global steers all layers at once.
 
 PATCHING_BATCH_SIZE=100
-PATCH_ALGO="atp"
 SEED=42
 MAX_NEW_TOKENS=512
 BATCH_SIZE=50
@@ -39,7 +39,6 @@ STEERING=true
 MODEL_TAG=""
 DATASET_TAG="all"
 DEVICE="cuda:0"
-PATCH=false
 RESID=true
 GLOBAL=false
 # val: sweep N x layer on <base>-test.jsonl (the validation split).
@@ -63,7 +62,6 @@ while [[ $# -gt 0 ]]; do
         --type)    IFS=' ' read -ra STEERING_TYPES <<< "$2"; shift 2 ;;
         --nocache)      KV_CACHING=false;  shift ;;
         --unnormalized) NORMALIZE=false;   shift ;;
-        --patch)   PATCH=true;          shift ;;
         --attention) RESID=false;       shift ;;
         --global)  GLOBAL=true;         shift ;;
         --seed)    SEED="$2";           shift 2 ;;
@@ -72,9 +70,6 @@ while [[ $# -gt 0 ]]; do
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
-
-# Residual-stream mode is mutually exclusive with patching, regardless of order flags were passed in.
-if [ "$RESID" = true ]; then PATCH=false; fi
 
 if [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; then
     echo "Error: --split must be 'val' or 'test' (got '$SPLIT')"; exit 1
@@ -113,7 +108,6 @@ fi
 if [ "$RESID" = true ]; then TOPK_VALS="1.0"; fi
 
 EVAL_FLAGS=""
-if [ "$PATCH" = true ];        then EVAL_FLAGS="$EVAL_FLAGS -patch_model"; fi
 if [ "$EVAL_MODEL" = true ];   then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
 if [ "$STEERING" = true ];     then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
 if [ "$KV_CACHING" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --kv_caching"; fi
@@ -175,7 +169,6 @@ run_experiments_for_model() {
         -d "$DEVICE" \
         -model_id "$MODEL_ID" \
         -batch_size "$PATCHING_BATCH_SIZE" \
-        -patch_algo "$PATCH_ALGO" \
         -seed "$SEED" \
         -max_new_tokens "$MAX_NEW_TOKENS" \
         -source  "${SOURCES[@]}" \

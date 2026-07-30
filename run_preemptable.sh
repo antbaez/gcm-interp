@@ -1,13 +1,13 @@
 #!/bin/bash
 # Dispatcher — run this with `bash`, NOT `sbatch` (it holds no GPU allocation
 # itself). Expands --model/--dataset tags and submits one sbatch job per
-# model x dataset combo via run_preemptable_job.sh.
+# model x dataset combo via scripts/run_preemptable_job.sh.
 #
 # Usage:
-#   bash run_preemptable.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--nocache] [--unnormalized] [--attention] [--patch] [--global] [--split val|test] [--judging] [--seed N]
-#   Defaults: --model all --dataset all (uses steering types from run_steering.sh)
-#   Note: Residual-stream steering runs by default. Pass --attention for attention-head steering.
-#   Note: ATP head localization/patching is OFF by default. Pass --patch to run it (requires --attention).
+#   bash run_preemptable.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--nocache] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--seed N]
+#   Defaults: --model all --dataset all (uses steering types from scripts/run_steering.sh)
+#   Note: Residual-stream steering runs by default. Pass --attention for attention-head steering
+#   (reads whatever head-selection artifacts already exist under results/.../heads/).
 
 set -e
 
@@ -18,7 +18,6 @@ NOCACHE=false
 UNNORMALIZED=false
 JUDGING_ONLY=false
 RESID=true
-PATCH=false
 GLOBAL=false
 SEED=""
 # Which phases to run. Omitted (the default "all") runs the validation sweep,
@@ -36,7 +35,6 @@ while [[ $# -gt 0 ]]; do
         --unnormalized) UNNORMALIZED=true; shift ;;
         --judging)      JUDGING_ONLY=true; shift ;;
         --attention)    RESID=false;       shift ;;
-        --patch)        PATCH=true;        shift ;;
         --global)       GLOBAL=true;       shift ;;
         --seed)         SEED="$2";         shift 2 ;;
         --split)        SPLIT="$2";        shift 2 ;;
@@ -60,7 +58,6 @@ JOB_FLAGS=()
 [ "$UNNORMALIZED" = true ] && JOB_FLAGS+=(--unnormalized)
 [ "$JUDGING_ONLY" = true ] && JOB_FLAGS+=(--judging)
 [ "$RESID" = false ]       && JOB_FLAGS+=(--attention)
-[ "$PATCH" = true ]        && JOB_FLAGS+=(--patch)
 [ "$GLOBAL" = true ]       && JOB_FLAGS+=(--global)
 [ -n "$SEED" ]             && JOB_FLAGS+=(--seed "$SEED")
 [ "$SPLIT" != "all" ]      && JOB_FLAGS+=(--split "$SPLIT")
@@ -70,6 +67,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "Submitting $(( ${#MODELS[@]} * ${#DATASETS[@]} )) job(s) (one per model x dataset combo)..."
 for M in "${MODELS[@]}"; do
     for D in "${DATASETS[@]}"; do
-        sbatch "$SCRIPT_DIR/run_preemptable_job.sh" --model "$M" --dataset "$D" "${JOB_FLAGS[@]}"
+        sbatch "$SCRIPT_DIR/scripts/run_preemptable_job.sh" --model "$M" --dataset "$D" "${JOB_FLAGS[@]}"
     done
 done

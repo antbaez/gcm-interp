@@ -10,16 +10,10 @@ def _get_layers(model):
     return inner.layers
 
 def select_gen_qs_toks(config, batch_handler):
-    if config.args.eval_train:
-        print("Evaluating on training set.")
-        return batch_handler.base_qs_toks['desired']
-    elif config.args.eval_test:
+    if config.args.eval_test:
         return batch_handler.base_qs_toks['test']
-    elif config.args.eval_transfer:
-        print("Evaluating on eval_test dataset.")
-        return batch_handler.eval_transfer['queries']
     else:
-        raise ValueError("Either eval_train or eval_test must be True.")
+        raise ValueError("eval_test must be True.")
 def _get_steering_vector(patch_activations, layer_idx, sl, steering_type):
     if steering_type in ('last_token', 'last-token', 'last'):
         return patch_activations[layer_idx][-1, sl]

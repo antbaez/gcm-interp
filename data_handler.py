@@ -1,7 +1,6 @@
 
 import os
 import torch
-import random
 import torch.nn.functional as F
 import json
 import ast
@@ -13,8 +12,7 @@ class DataHandler:
         self.config = config
         self.model_handler = model_handler
         self.device = self.config.args.device
-        self.no_generation_prompt_for_eval_transfer = False
-        
+
         file_paths = {
             'base_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-desired-all.jsonl",
             'base_undesired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-undesired-all.jsonl",
@@ -27,7 +25,6 @@ class DataHandler:
                 if isinstance(self.config.args.eval_test, str) and self.config.args.eval_test
                 else None
             ),
-            'eval_transfer': f"./data/eval/from_{self.config.args.source}_to_{self.config.args.base}/{self.config.args.eval_transfer}.jsonl" if self.config.args.eval_transfer else None,
             'steering_add': self.config.args.steering_add_path,
             'steering_sub': self.config.args.steering_sub_path
         }
@@ -38,7 +35,6 @@ class DataHandler:
             'source_desired': self.load_from_jsonl(file_paths['source_desired']),
             'source_undesired': self.load_from_jsonl(file_paths['source_undesired']),
             'base_test': self.load_from_jsonl(file_paths['base_test']) if self.config.args.eval_test else None,
-            'eval_transfer': self.load_from_jsonl(file_paths['eval_transfer']) if self.config.args.eval_transfer else None,
             'steering_add': self.load_from_jsonl(file_paths['steering_add']) if self.config.args.steering_add_path else None,
             'steering_sub': self.load_from_jsonl(file_paths['steering_sub']) if self.config.args.steering_sub_path else None,
         }
@@ -90,80 +86,8 @@ class DataHandler:
         if self.config.args.eval_test:
             print(f"[DataHandler] Evaluating on {len(base_qs['test'])} prompts from {file_paths['base_test']}")
 
-        if self.config.args.patch_model:
-            self.base_toks = {
-                key: self.tokenize_prompts(base[key], max_length=self.max_len) for key in base
-            }
-
-            self.base_qs_toks = {
-                key: self.tokenize_prompts(base_qs[key], max_length=self.gen_max_len if key == 'test' else self.max_len) for key in base_qs
-            }
-
-            self.source_qs_toks = {
-                key: self.tokenize_prompts(source_qs[key], max_length=self.max_len) for key in source_qs
-            }
-
-            self.response_start_positions = {
-                "base": {
-                    key: self.get_resp_start_pos(self.base_toks[key], self.model_handler.marker, self.model_handler.tokenizer) for key in self.base_toks
-                }
-            }
-
-        elif self.config.args.eval_model:
-
-            orig_template = self.model_handler.tokenizer.chat_template
-            if self.config.args.eval_transfer:
-                # Removing the system prompt for eval_test dataset
-                if config.args.model_id.split('/')[1] == 'Qwen1.5-14B-Chat':
-                    self.model_handler.tokenizer.chat_template = "{% for message in messages %}\n" \
-                    "{{ '<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n' }}\n" \
-                    "{% endfor %}\n" \
-                    "{% if add_generation_prompt %}\n" \
-                    "{{ '<|im_start|>assistant\n' }}" \
-                    "{% endif %}"
-
-                elif config.args.model_id.split('/')[1] == 'OLMo-2-1124-13B-DPO':
-                    self.model_handler.tokenizer.chat_template = "{{ bos_token }}\n" \
-                    "{% for message in messages %}\n" \
-                    "{% if message['role'] == 'user' -%}\n" \
-                    "{{ '<|user|>\\n' + message['content'] + '\\n' }}\n" \
-                    "{%- elif message['role'] == 'assistant' -%}\n" \
-                    "{%- if not loop.last -%}\n" \
-                    "{{ '<|assistant|>\\n' + message['content'] + eos_token + '\\n' }}\n" \
-                    "{%- else -%}\n" \
-                    "{{ '<|assistant|>\\n' + message['content'] + eos_token }}\n" \
-                    "{%- endif -%}\n" \
-                    "{%- endif %}\n" \
-                    "{% endfor -%}\n" \
-                    "{% if add_generation_prompt -%}\n" \
-                    "{{ '\\n<|assistant|>\\n' }}\n" \
-                    "{%- endif %}"
-
-                start_indices = [i for i in range(len(jsons['eval_transfer'])) if i % 5 == 0]
-
-                selected_starts = random.sample(start_indices, 40)
-
-                random_indices = []
-                for start in selected_starts:
-                    block = [start + offset for offset in range(5)]
-                    random_indices.extend(block)
-                print('###### Tokenizing eval_transfer dataset templated prompts...')
-                self.eval_transfer = {
-                    "queries": self.tokenize_prompts(random.sample(self.get_templated_prompts([jsons['eval_transfer'][j] for j in random_indices], only_q=True, add_generation_prompt=True), k=200), max_length=None),
-                    "answers": None,
-                }
-                if self.eval_transfer['queries']['input_ids'].shape[1] < self.max_len:
-                    self.eval_transfer = {
-                        "queries": self.tokenize_prompts(random.sample(self.get_templated_prompts([jsons['eval_transfer'][j] for j in random_indices], only_q=True, add_generation_prompt=True), k=200), max_length=self.max_len),
-                        "answers": None
-                    }
-                else:
-                    self.max_len = self.eval_transfer['queries']['input_ids'].shape[1]
-                
-                self.no_generation_prompt_for_eval_transfer = False
-                self.model_handler.tokenizer.chat_template = orig_template
-
-            elif self.config.args.eval_test:
+        if self.config.args.eval_model:
+            if self.config.args.eval_test:
                 self.base_qs_toks = {
                     'test': self.tokenize_prompts(base_qs['test'], max_length=self.gen_max_len)
                 }
@@ -180,9 +104,6 @@ class DataHandler:
         extra_kwargs = self.model_handler.template_kwargs
         if only_q:
             prompt_lengths = None
-            if self.no_generation_prompt_for_eval_transfer:
-                print('Explicitly setting add_generation_prompt to False for eval_transfer dataset.')
-                add_generation_prompt = False
             assistant_exists = any([p['role'] == 'assistant' for p in prompts[0]['prompt']])
             if assistant_exists:
                 prompt_lengths = [len(p['prompt']) - 1 for p in prompts]
@@ -212,21 +133,6 @@ class DataHandler:
                     **extra_kwargs
                 ) for p in prompts]
         
-    def get_resp_start_pos(self, tokens, marker, tokenizer):
-        response_start_positions = []
-        for _, tok in tqdm(enumerate(tokens['input_ids'])):
-            tok = tok.to(self.device)
-            response_start_position = None
-            marker_tokens = self.model_handler.alignment_tokens.to(self.device)
-            marker_len = marker_tokens.size(0)
-            for j in range(tok.size(0) - marker_len + 1):
-                if torch.equal(tok[j : j + marker_len], marker_tokens):
-                    response_start_position = j + marker_len
-                    break
-            assert response_start_position is not None, f"Marker {repr(marker)} not found in input {repr(tokenizer.decode(tok))}.\nTOKENS: {repr(tok)}\nMARKER: {repr(marker_tokens)}"
-            response_start_positions.append(response_start_position)
-        return response_start_positions
-    
     def tokenize_prompts(self, p, max_length=None):
         if max_length is None:
             tokens = self.model_handler.tokenizer(p, padding=True, truncation=False, return_tensors="pt")
@@ -236,67 +142,6 @@ class DataHandler:
     
     def decode_prompts(self, p):
         return self.model_handler.tokenizer.decode(p, skip_special_tokens=True)
-
-    def align_toks(self, source_toks, base_toks):
-        """
-        Align source_toks to base_toks at the assistant alignment token subsequence.
-        """
-
-        def find_subseq_start(seq, subseq):
-            """Find first index where subseq occurs in seq, or -1 if not found."""
-            n, m = len(seq), len(subseq)
-            for i in range(n - m + 1):
-                if seq[i:i+m] == subseq:
-                    return i
-            return -1
-
-        toks_mod = {"input_ids": [], "attention_mask": []}
-        align_seq = self.model_handler.alignment_tokens.tolist()
-        pad_token_id = self.model_handler.tokenizer.pad_token_id
-        for i in range(len(base_toks["input_ids"])):
-            src_ids = source_toks["input_ids"][i]
-
-            src_mask = source_toks["attention_mask"][i]
-            base_ids = base_toks["input_ids"][i]
-            base_mask = base_toks["attention_mask"][i]
-
-            src_list = src_ids.tolist()
-            base_list = base_ids.tolist()
-
-            # locate assistant token subsequence
-            src_start = find_subseq_start(src_list, align_seq)
-            base_start = find_subseq_start(base_list, align_seq)
-
-            if src_start == -1 or base_start == -1:
-                raise AssertionError(f"Assistant alignment sequence {align_seq} {self.model_handler.tokenizer.convert_ids_to_tokens(align_seq)} not found in example {i}. Source start: {src_start}, Base start: {base_start}")
-
-            offset = src_start - base_start
-            L = src_ids.size(0)
-
-            if offset > 0:
-                # shift left by offset
-                pad_ids = src_ids.new_full((offset,), pad_token_id)
-                pad_mask = src_mask.new_full((offset,), 0)
-                aligned_ids = torch.cat([src_ids[offset:], pad_ids], dim=0)
-                aligned_mask = torch.cat([src_mask[offset:], pad_mask], dim=0)
-            elif offset < 0:
-                # shift right by -offset
-                k = -offset
-                pad_ids = src_ids.new_full((k,), pad_token_id)
-                pad_mask = src_mask.new_full((k,), 0)
-                aligned_ids = torch.cat([pad_ids, src_ids[:L-k]], dim=0)
-                aligned_mask = torch.cat([pad_mask, src_mask[:L-k]], dim=0)
-            else:
-                aligned_ids = src_ids
-                aligned_mask = src_mask
-
-            toks_mod["input_ids"].append(aligned_ids)
-            toks_mod["attention_mask"].append(aligned_mask)
-
-        toks_mod["input_ids"] = torch.stack(toks_mod["input_ids"])
-        toks_mod["attention_mask"] = torch.stack(toks_mod["attention_mask"])
-        return toks_mod
-
 
     @staticmethod
     def load_from_jsonl(file_name):
