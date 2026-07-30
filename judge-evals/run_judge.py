@@ -333,12 +333,33 @@ def phase2_evaluate(
 # Phase 3: compute accuracies from per-workdir ratings
 # ---------------------------------------------------------------------------
 
+INTERMEDIATE_CSV_FILENAMES = (
+    "eval_output.csv",
+    "relevance_fluency_prompts.csv",
+    "judge_prompts.csv",
+)
+
+
+def _delete_intermediate_csvs(workdir: Path):
+    """Drop the per-workdir prompt-building CSVs once their ratings are computed.
+
+    They're write-once/read-once scratch (eval_output.csv -> relevance_fluency_prompts.csv
+    / judge_prompts.csv -> *_ratings.jsonl); nothing downstream of phase 3 reads them, and
+    phase 1 regenerates whichever ones are missing on a future --force re-run.
+    """
+    for name in INTERMEDIATE_CSV_FILENAMES:
+        f = workdir / name
+        if f.exists():
+            f.unlink()
+
+
 def phase3_accuracies(long_items: list[tuple[Path, dict, str]], skip_judge: bool):
     """Compute per-condition accuracies for all long-eval workdirs."""
     print(f"\nPhase 3: Computing accuracies for {len(long_items)} long-eval workdirs")
     for wd, _meta, _gp in long_items:
         print(f"  {wd.name}")
         compute_accuracy_for_workdir(wd, ACCURACY_DIR, skip_judge)
+        _delete_intermediate_csvs(wd)
 
 
 # ---------------------------------------------------------------------------

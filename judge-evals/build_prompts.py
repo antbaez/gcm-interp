@@ -15,6 +15,7 @@ Called directly by run_judge.py (phase 1). Can also be run standalone:
 """
 
 import argparse
+import re
 
 import pandas as pd
 from transformers import AutoTokenizer
@@ -61,7 +62,12 @@ def _build_single_judge_prompt(tokenizer, template: str,
     assert isinstance(new_response, str), "new_response must be a string"
     assert isinstance(query, str), "query must be a string"
 
-    user_msg = f"{query}\nResponse: {new_response}"
+    # `query` is the decoded prompt (skip_special_tokens=True), which leaves the
+    # chat template's bare role-name lines (e.g. Gemma's "user"/"model") in place.
+    # Relabel those so the judge sees clearly denoted turns.
+    labeled_query = re.sub(r'(?m)^user$', 'USER PROMPT:', query)
+    labeled_query = re.sub(r'(?m)^model$', 'ASSISTANT RESPONSE:', labeled_query)
+    user_msg = f"{labeled_query}\n{new_response}"
     chat = [{"role": "user", "content": template.format(conversation=user_msg)}]
     return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
