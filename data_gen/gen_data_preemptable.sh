@@ -9,7 +9,7 @@
 #SBATCH --error=logs/err/%j.err
 
 # Usage:
-#   sbatch gen_data_preemptable.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|sycophancy-haiku|sycophancy-poem|sycophancy-haiku-concise|sycophancy-poem-concise|all> [--max_tokens <N>]
+#   sbatch gen_data_preemptable.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|all> [--max_tokens <N>]
 #   Defaults: --model all --dataset all
 
 set -e

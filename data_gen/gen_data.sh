@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Usage: ./gen_data.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|sycophancy-haiku|sycophancy-poem|sycophancy-haiku-concise|sycophancy-poem-concise|all> [--device <cuda:0>] [--max_tokens <N>] [--batch_size <N>]
+# Usage: ./gen_data.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|all> [--device <cuda:0>] [--max_tokens <N>] [--batch_size <N>]
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
@@ -20,7 +20,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
+ALL_DATASETS=("harmful" "sycophancy" "verse")
 
 # Validate model tags
 if [ "$MODEL_TAG" != "all" ]; then

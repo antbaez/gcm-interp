@@ -7,10 +7,11 @@ JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 BATCH_SIZE=128
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
-# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--normalized|--unnormalized] [--cache|--nocache] [--attention] [--device <cuda:0>] [--force]
+# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--cache|--nocache] [--attention] [--device <cuda:0>] [--force]
+# --dataset defaults to "all" (harmful, sycophancy, verse).
 # Residual-stream judging runs by default. Pass --attention to judge attention-head steering results instead.
 MODEL_TAG=""
-DATASET_TAG=""
+DATASET_TAG="all"
 DEVICE="cuda:0"
 NORM_MODE=""
 CACHE_MODE=""
@@ -48,13 +49,13 @@ if [ "$RESID" = false ]; then
     ACCURACY_SUBDIR="accuracy"
 fi
 
-if [ -z "$MODEL_TAG" ] || [ -z "$DATASET_TAG" ]; then
-    echo "Usage: ./run_judge.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--device <cuda:0>]"
+if [ -z "$MODEL_TAG" ]; then
+    echo "Usage: ./run_judge.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--device <cuda:0>]"
     exit 1
 fi
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
+ALL_DATASETS=("harmful" "sycophancy" "verse")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -98,11 +99,6 @@ for M_TAG in "${MODELS[@]}"; do
             harmful)                  SOURCE="harmful-long";               BASE="harmless";                DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
             sycophancy)               SOURCE="non-sycophantic-long";       BASE="sycophancy";              DATA_SOURCE="sycophancy-long"; DATA_BASE="sycophancy" ;;
             verse)                    SOURCE="verse-long";                 BASE="prose";                   DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-            sycophancy-haiku)         SOURCE="non-sycophantic-haiku-long"; BASE="sycophancy-haiku";        DATA_SOURCE="sycophancy-haiku-long"; DATA_BASE="$BASE" ;;
-            sycophancy-poem)          SOURCE="non-sycophantic-poem-long";  BASE="sycophancy-poem";         DATA_SOURCE="sycophancy-poem-long"; DATA_BASE="$BASE" ;;
-            sycophancy-haiku-concise) SOURCE="non-sycophantic-haiku-concise-long"; BASE="sycophancy-haiku-concise"; DATA_SOURCE="sycophancy-haiku-concise-long"; DATA_BASE="$BASE" ;;
-            sycophancy-poem-concise)  SOURCE="non-sycophantic-poem-concise-long";  BASE="sycophancy-poem-concise";  DATA_SOURCE="sycophancy-poem-concise-long"; DATA_BASE="$BASE" ;;
-
         esac
 
         # The split's test-file stem is what distinguishes validation-sweep

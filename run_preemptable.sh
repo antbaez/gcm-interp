@@ -49,7 +49,7 @@ if [ "$SPLIT" != "all" ] && [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; the
 fi
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
+ALL_DATASETS=("harmful" "sycophancy" "verse")
 
 if [ "$MODEL" = "all" ]; then MODELS=("${ALL_MODELS[@]}"); else IFS=',' read -ra MODELS <<< "$MODEL"; fi
 if [ "$DATASET" = "all" ]; then DATASETS=("${ALL_DATASETS[@]}"); else IFS=',' read -ra DATASETS <<< "$DATASET"; fi

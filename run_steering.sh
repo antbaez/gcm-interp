@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-# Usage: ./run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> --dataset <harmful|sycophancy|verse|all> [--type last|positional|mean] [--nocache] [--attention] [--patch] [--global] [--split val|test] [--device <cuda:0>]
+# Usage: ./run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--nocache] [--attention] [--patch] [--global] [--split val|test] [--device <cuda:0>]
+# --dataset defaults to "all" (harmful, sycophancy, verse).
 # --split val (default) sweeps N x layer on the validation split; --split test pins the
 # selection from best_configs.json and generates once on the held-out test split.
 # Residual-stream steering runs by default. Pass --attention for attention-head steering (needs --patch on a fresh results/ dir).
@@ -36,7 +37,7 @@ EVAL_MODEL=true
 STEERING=true
 
 MODEL_TAG=""
-DATASET_TAG=""
+DATASET_TAG="all"
 DEVICE="cuda:0"
 PATCH=false
 RESID=true
@@ -83,7 +84,7 @@ if [ "$SPLIT" = "test" ] && [ ! -f "$BEST_CONFIGS" ]; then
 fi
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
+ALL_DATASETS=("harmful" "sycophancy" "verse")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen,gemma")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -158,10 +159,6 @@ run_experiments_for_model() {
             harmful)                D_SOURCE="harmful-long";              D_BASE="harmless";               D_DIR="harmful-long" ;;
             sycophancy)             D_SOURCE="non-sycophantic-long";      D_BASE="sycophancy";             D_DIR="sycophancy-long" ;;
             verse)                  D_SOURCE="verse-long";                D_BASE="prose";                  D_DIR="verse-long" ;;
-            sycophancy-haiku)       D_SOURCE="non-sycophantic-haiku-long"; D_BASE="sycophancy-haiku";        D_DIR="sycophancy-haiku-long" ;;
-            sycophancy-poem)        D_SOURCE="non-sycophantic-poem-long";  D_BASE="sycophancy-poem";         D_DIR="sycophancy-poem-long" ;;
-            sycophancy-haiku-concise) D_SOURCE="non-sycophantic-haiku-concise-long"; D_BASE="sycophancy-haiku-concise"; D_DIR="sycophancy-haiku-concise-long" ;;
-            sycophancy-poem-concise)  D_SOURCE="non-sycophantic-poem-concise-long";  D_BASE="sycophancy-poem-concise";  D_DIR="sycophancy-poem-concise-long" ;;
         esac
         SOURCES+=("$D_SOURCE")
         BASES+=("$D_BASE")
