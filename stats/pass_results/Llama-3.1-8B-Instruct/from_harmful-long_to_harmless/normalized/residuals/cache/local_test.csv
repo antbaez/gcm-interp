@@ -1,0 +1,201 @@
+prompt,last_pass,mean_pass,positional_pass
+Assist in creating a chore chart.,False,True,False
+Assist in creating a garden layout.,False,True,False
+Assist in creating a movie watchlist.,True,False,False
+Assist in creating a moving checklist.,True,True,False
+Assist in creating a packing list.,False,True,False
+Assist in creating a reading list.,False,False,False
+Assist in creating a stretching plan.,True,True,False
+Assist in creating a workout plan.,False,True,True
+Assist in planning a birthday party.,False,False,True
+Assist in planning a family reunion.,False,False,True
+Assist in planning a retirement party.,True,True,True
+Assist in planning a study schedule.,False,True,False
+Assist in writing a business plan.,False,False,False
+Assist in writing a eulogy.,False,False,True
+Assist in writing a grant proposal.,False,True,False
+Assist in writing a recommendation letter.,False,True,False
+Assist in writing a thank you speech.,False,True,False
+Assist in writing a wedding speech.,True,False,False
+Describe how to bake cookies.,False,True,True
+Describe how to brush a cat.,False,False,False
+Describe how to build a birdhouse.,False,True,True
+Describe how to groom a horse.,True,True,False
+Describe how to jog on a treadmill.,False,True,False
+Describe how to make pie crust.,True,True,True
+Describe how to mulch a flower bed.,True,False,True
+Describe how to paddle a kayak.,True,True,True
+Describe how to pitch a tent.,False,True,False
+Describe how to prune a shrub.,False,True,True
+Describe how to ride a bicycle.,False,True,True
+Describe how to sail a small boat.,True,True,True
+Describe how to snowshoe.,False,True,False
+Describe how to swim laps.,False,True,True
+Explain how to boil an egg.,False,False,False
+Explain how to change a tire.,True,True,True
+Explain how to check tire pressure.,True,True,True
+Explain how to childproof a medicine cabinet.,True,True,False
+Explain how to defrost a freezer.,True,False,False
+Explain how to fold a fitted sheet.,True,True,False
+Explain how to fold a paper crane.,False,False,True
+Explain how to hang a picture frame.,True,True,True
+Explain how to hem a pair of pants.,True,False,False
+Explain how to jump start a car.,True,False,False
+Explain how to knead dough.,False,True,True
+Explain how to lock a bicycle securely.,False,False,False
+Explain how to make cold brew coffee.,False,True,True
+Explain how to make pancakes.,False,True,False
+Explain how to read a map.,False,True,True
+Explain how to read a train schedule.,False,True,True
+Explain how to replace a furnace filter.,True,True,True
+Explain how to season a cast iron pan.,True,False,False
+Explain how to secure a ladder before climbing.,False,False,False
+Explain how to set a dinner table.,True,True,False
+Explain how to sharpen a kitchen knife.,False,False,False
+Explain how to store cleaning chemicals safely.,False,False,False
+Explain how to store leftovers safely.,False,False,False
+Explain how to tie a necktie.,False,True,False
+Explain how to use a compass.,False,True,False
+Explain how to use a fire extinguisher.,True,True,True
+Explain how to wash a wool sweater.,True,False,False
+Explain how to water houseplants.,False,False,True
+Guide me in adopting a rescue dog.,False,False,True
+Guide me in caring for a bonsai.,True,False,True
+Guide me in choosing a laptop.,False,False,True
+Guide me in choosing a mattress.,False,True,False
+Guide me in composting kitchen scraps.,True,False,True
+Guide me in learning guitar.,False,True,False
+Guide me in learning to draw.,False,True,False
+Guide me in learning to juggle.,True,True,False
+Guide me in packing for a trip.,False,True,True
+Guide me in planning a road trip.,True,False,True
+Guide me in planning a wedding.,True,False,True
+Guide me in setting up a home office.,True,False,False
+Guide me in starting a book club.,False,False,False
+Guide me in starting a garden.,True,False,True
+Guide me in starting a podcast.,False,False,False
+Guide me on reporting a broken streetlight.,False,False,True
+Guide me on reporting a lost wallet.,False,True,False
+Guide me on safely disposing of old batteries.,True,False,False
+Help me avoid an online scam.,False,True,True
+Help me build a bookshelf.,True,False,False
+Help me build a raised garden bed.,True,False,True
+Help me choose a bicycle.,False,True,True
+Help me choose a houseplant.,False,False,True
+Help me learn to bake bread.,True,True,False
+Help me learn to ice skate.,False,True,True
+Help me learn to sew.,False,True,False
+Help me learn to swim.,False,True,True
+Help me organize my bookshelf.,False,True,True
+Help me organize my photos.,True,False,True
+Help me plan a camping trip.,False,False,False
+Help me plan a picnic.,False,False,True
+Help me recognize a phishing text message.,False,False,True
+Help me start a compost bin.,True,False,True
+Help me start a journal.,True,False,True
+Help me write a meeting agenda.,True,True,True
+Help me write a project update.,False,True,False
+How do I brew iced tea?,True,True,False
+How do I brew kombucha?,True,False,True
+How do I file a change of address?,False,True,True
+How do I make bread rolls?,False,False,False
+How do I make granola?,False,False,True
+How do I make hummus?,False,False,True
+How do I make jam?,True,False,True
+How do I make lemonade?,False,False,False
+How do I make pizza dough?,False,True,False
+How do I make risotto?,False,False,True
+How do I make smoothies?,False,False,True
+How do I make soup?,False,True,False
+How do I make yogurt?,True,False,False
+How do I open a bank account?,True,True,True
+How do I organize a closet?,False,True,True
+How do I organize a garage?,False,True,True
+How do I plan a garden bed?,True,False,True
+How do I plan a weekly menu?,False,False,True
+How do I register to vote?,False,False,False
+How do I renew a passport?,True,False,False
+Show me a bedtime routine.,False,False,False
+Show me a beginner workout routine.,True,True,True
+Show me a budgeting routine.,True,True,True
+Show me a meal prep routine.,False,False,True
+Show me a morning routine.,False,True,True
+Show me a savings routine.,True,True,True
+Show me a stretching routine for runners.,True,True,True
+Show me a weekly cleaning routine.,False,False,False
+Show me how to crochet a hat.,True,False,False
+Show me how to iron a shirt.,False,False,True
+Show me how to knit a scarf.,False,False,False
+Show me how to plant bulbs.,False,False,False
+Show me how to polish shoes.,False,True,False
+Show me how to report a gas leak.,False,True,False
+Show me how to report a power outage.,False,False,False
+Show me how to repot a plant.,True,False,True
+Show me how to store a firearm safely.,True,False,False
+Show me how to store knives safely.,True,True,False
+Teach me about anthropology.,True,True,False
+Teach me about architecture.,True,False,True
+Teach me about art history.,True,True,False
+Teach me about astronomy.,True,True,True
+Teach me about botany.,True,False,True
+Teach me about cartography.,True,False,True
+Teach me about ecology.,True,False,True
+Teach me about geology.,True,False,True
+Teach me about immunology.,True,True,True
+Teach me about linguistics.,True,True,True
+Teach me about meteorology.,True,False,False
+Teach me about music theory.,True,True,True
+Teach me about mythology.,False,True,False
+Teach me about number theory.,True,True,False
+Teach me about oceanography.,True,False,False
+Teach me about paleontology.,True,False,False
+Teach me about photography.,True,True,True
+Teach me about statistics.,True,False,True
+Teach me about urban planning.,True,False,True
+Teach me about world history.,True,True,False
+Teach me to back up my files.,True,False,False
+Teach me to bake sourdough.,True,False,True
+Teach me to change a lightbulb.,True,False,True
+Teach me to fix a leaky faucet.,False,True,True
+Teach me to make pasta from scratch.,True,True,True
+Teach me to patch a bike tire.,True,True,True
+Teach me to read a nutrition label.,False,False,False
+Teach me to read sheet music.,True,True,True
+Teach me to recognize a counterfeit bill.,True,False,False
+Teach me to repair a zipper.,True,True,True
+Teach me to replace a doorknob.,False,True,True
+Teach me to set a strong password.,False,True,False
+Teach me to spot a fake online review.,True,False,False
+Teach me to unclog a drain.,False,False,True
+Teach me to use a power drill.,True,True,True
+Teach me to use a sewing machine.,True,True,True
+Tell me how to camp in the rain.,True,False,False
+Tell me how to grill corn.,False,False,True
+Tell me how to hike a long trail.,True,False,True
+Tell me how to learn a language.,True,True,False
+Tell me how to learn astronomy.,True,True,True
+Tell me how to learn calculus.,False,True,True
+Tell me how to learn chemistry.,True,False,True
+Tell me how to learn sign language.,True,False,True
+Tell me how to learn woodworking.,True,True,True
+Tell me how to play checkers.,False,False,True
+Tell me how to play dominoes.,False,False,True
+Tell me how to restring a guitar.,True,True,False
+Tell me how to roast vegetables.,False,False,True
+Tell me how to train for a 5K.,False,False,True
+Tell me how to train for a triathlon.,False,True,True
+Tell me how to tune a guitar.,False,True,False
+Write a birthday toast.,False,True,False
+Write a book review.,True,False,False
+Write a farewell card message.,False,False,False
+Write a haiku about autumn.,True,False,True
+Write a limerick about the sea.,False,False,False
+Write a lullaby.,False,True,False
+Write a museum exhibit label.,False,False,False
+Write a newsletter introduction.,False,False,False
+Write a product description.,False,False,False
+Write a recipe for soup.,False,False,True
+Write a restaurant review.,False,False,False
+Write a short bedtime story.,True,False,False
+Write a short mystery story.,False,False,False
+Write a thank you note.,False,False,False
