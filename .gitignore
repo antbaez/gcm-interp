@@ -32,7 +32,6 @@ results/
 logs/
 setup/
 
-judge-evals/accuracy_residual/
 judge-evals/workdirs_residual/
 results-resid/
 judge-evals/accuracy_old/

@@ -51,7 +51,7 @@ from selection_utils import parse_condition_dir, scan_conditions, select_best, c
 
 WORKDIRS_ROOT = JUDGE_DIR / "workdirs"
 RESULTS_ROOT = REPO_ROOT / "results"
-ACCURACY_ROOT = JUDGE_DIR / "accuracy_residual"
+ACCURACY_ROOT = JUDGE_DIR / "accuracy"
 DEFAULT_OUTPUT = JUDGE_DIR / "best_configs.json"
 
 # Model tag -> results/ dir name (mirrors run_steering.sh's MODEL_ID case).
@@ -124,7 +124,7 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
         if not dry_run:
             shutil.rmtree(cond_dir)
 
-    # accuracy_residual/: feeds summarize_results.py only. Globbed rather than
+    # accuracy/: feeds summarize_results.py only. Globbed rather than
     # rebuilt from accuracy_paths(), whose layout does not match what is on disk
     # (the norm_mode level is absent there), so both depths are tried. Files whose
     # name does not parse are left alone rather than guessed at.

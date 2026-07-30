@@ -17,24 +17,12 @@ import seaborn as sns
 from config import BASE_DIR
 
 ACCURACY_DIR          = BASE_DIR / "judge-evals" / "accuracy"
-ACCURACY_RESIDUAL_DIR = BASE_DIR / "judge-evals" / "accuracy_residual"
+ACCURACY_RESIDUAL_DIR = BASE_DIR / "judge-evals" / "accuracy"
 
 SOURCE_TO_TAG = {
     "harmful-long":                    "harmful",
     "non-sycophantic-long":            "sycophancy",
     "verse-long":                      "verse",
-    "paragraph-long":                  "paragraph",
-    "non-sycophantic-haiku-long":       "sycophancy-haiku",
-    "non-sycophantic-poem-long":        "sycophancy-poem",
-    "non-sycophantic-haiku-concise-long": "sycophancy-haiku-concise",
-    "non-sycophantic-poem-concise-long":  "sycophancy-poem-concise",
-}
-
-CANONICAL_SYCOPHANCY_BASES = {
-    "sycophancy-haiku",
-    "sycophancy-poem",
-    "sycophancy-haiku-concise",
-    "sycophancy-poem-concise",
 }
 
 LAST_TOKEN_NAMES = {"last", "last-token", "last_token"}
@@ -397,11 +385,8 @@ def generate_for_stream(args, resid: bool, norm_mode: str, cache_suffix: str,
 
     full_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.sycophancy:
-        base_mask = df["base"].isin(CANONICAL_SYCOPHANCY_BASES)
-    else:
-        CANONICAL_BASES = {"harmless", "sycophancy", "prose"}
-        base_mask = df["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
+    CANONICAL_BASES = {"harmless", "sycophancy", "prose"}
+    base_mask = df["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
     base_df = df[
         base_mask &
         (df["norm_mode"] == norm_mode) &
@@ -425,11 +410,7 @@ def generate_for_stream(args, resid: bool, norm_mode: str, cache_suffix: str,
             print(f"Padding CSV not found: {padding_csv}  —  run summarize_results.py with accuracy_padding/ first")
             return
         padding_raw = pd.read_csv(padding_csv)
-        if args.sycophancy:
-            pad_mask = padding_raw["base"].isin(CANONICAL_SYCOPHANCY_BASES)
-        else:
-            CANONICAL_BASES = {"harmless", "sycophancy", "prose"}
-            pad_mask = padding_raw["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
+        pad_mask = padding_raw["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
         compare_df = padding_raw[
             pad_mask &
             (padding_raw["norm_mode"] == norm_mode) &
@@ -507,14 +488,12 @@ def main():
     parser.add_argument("--cache_mode", default="cache",
                         choices=["cache", "no_cache"],
                         help="Which cache condition to plot (default: cache)")
-    parser.add_argument("--sycophancy", action="store_true",
-                        help="Plot only non-sycophantic haiku and poem datasets")
     parser.add_argument("--nocache", action="store_true",
                         help="Plot no-cache results; appends _nocache to output filenames")
     parser.add_argument("--padding", action="store_true",
                         help="Compare accuracy/ (top row) vs accuracy_padding/ (bottom row)")
     parser.add_argument("--resid", action="store_true",
-                        help="Plot only residual-stream results from accuracy_residual/ "
+                        help="Plot only residual-stream results from accuracy/ "
                              "(by default both attention and residual results are plotted)")
     parser.add_argument("--global", dest="global_scope", action="store_true",
                         help="Also create the global (N × steering-type) heatmaps; "
