@@ -7,13 +7,19 @@ JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 BATCH_SIZE=128
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
-# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--normalized|--unnormalized] [--cache|--nocache] [--resid] [--device <cuda:0>]
+# Usage: ./run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--normalized|--unnormalized] [--cache|--nocache] [--attention] [--device <cuda:0>] [--force]
+# Residual-stream judging runs by default. Pass --attention to judge attention-head steering results instead.
 MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
 NORM_MODE=""
 CACHE_MODE=""
-RESID=false
+RESID=true
+# Which split's generations to judge: val = <base>-test, test = <base>-heldout-test.
+SPLIT="val"
+# By default, already-judged conditions (accuracy files present) are skipped.
+# Pass --force to re-judge everything found regardless of existing accuracy files.
+FORCE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -24,24 +30,30 @@ while [[ $# -gt 0 ]]; do
         --unnormalized) NORM_MODE="unnormalized"; shift ;;
         --cache)        CACHE_MODE="cache";        shift ;;
         --nocache)      CACHE_MODE="no_cache";     shift ;;
-        --resid)        RESID=true;                shift ;;
+        --attention)    RESID=false;               shift ;;
+        --split)        SPLIT="$2";                shift 2 ;;
+        --force)        FORCE=true;                shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
-STREAM_MODE="attention"
-ACCURACY_SUBDIR="accuracy"
-if [ "$RESID" = true ]; then
-    STREAM_MODE="residuals"
-    ACCURACY_SUBDIR="accuracy_residual"
+if [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; then
+    echo "Error: --split must be 'val' or 'test' (got '$SPLIT')"; exit 1
+fi
+
+STREAM_MODE="residuals"
+ACCURACY_SUBDIR="accuracy_residual"
+if [ "$RESID" = false ]; then
+    STREAM_MODE="attention"
+    ACCURACY_SUBDIR="accuracy"
 fi
 
 if [ -z "$MODEL_TAG" ] || [ -z "$DATASET_TAG" ]; then
-    echo "Usage: ./run_judge.sh --model <olmo|qwen|qwen3|gemma|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--device <cuda:0>]"
+    echo "Usage: ./run_judge.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy|all> [--device <cuda:0>]"
     exit 1
 fi
 
-ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
+ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
 ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen")
@@ -51,7 +63,7 @@ else
     IFS=',' read -ra MODELS <<< "$MODEL_TAG"
     for M in "${MODELS[@]}"; do
         if [[ ! " ${ALL_MODELS[*]} " == *" $M "* ]]; then
-            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, qwen3, gemma, llama, all"; exit 1
+            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, qwen3, gemma, gemma4, llama, all"; exit 1
         fi
     done
 fi
@@ -77,6 +89,7 @@ for M_TAG in "${MODELS[@]}"; do
         qwen)  MODEL_NAME="Qwen1.5-14B-Chat" ;;
         qwen3) MODEL_NAME="Qwen3-14B" ;;
         gemma) MODEL_NAME="gemma-3-12b-it" ;;
+        gemma4) MODEL_NAME="gemma-4-12B-it" ;;
         llama) MODEL_NAME="Llama-3.1-8B-Instruct" ;;
     esac
 
@@ -92,13 +105,19 @@ for M_TAG in "${MODELS[@]}"; do
 
         esac
 
+        # The split's test-file stem is what distinguishes validation-sweep
+        # generations from held-out ones inside the same results/ tree.
+        if [ "$SPLIT" = "test" ]; then TEST_FILE="${BASE}-heldout-test"; else TEST_FILE="${BASE}-test"; fi
+
         JUDGE_FLAGS=()
         [ -n "$NORM_MODE" ]  && JUDGE_FLAGS+=(--norm_mode  "$NORM_MODE")
         [ -n "$CACHE_MODE" ] && JUDGE_FLAGS+=(--cache_mode "$CACHE_MODE")
         JUDGE_FLAGS+=(--stream_mode "$STREAM_MODE")
+        JUDGE_FLAGS+=(--test_file "$TEST_FILE")
+        [ "$FORCE" = true ] && JUDGE_FLAGS+=(--force)
 
         echo ""
-        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  cache=${CACHE_MODE:-any}  stream=$STREAM_MODE  device=$DEVICE"
+        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  cache=${CACHE_MODE:-any}  stream=$STREAM_MODE  split=$SPLIT ($TEST_FILE)  device=$DEVICE"
         cd "$JUDGE_DIR" && python run_judge.py \
             --model_name "$MODEL_NAME" \
             --source "$SOURCE" \
@@ -108,7 +127,6 @@ for M_TAG in "${MODELS[@]}"; do
             --accuracy_dir "$SCRIPT_DIR/judge-evals/$ACCURACY_SUBDIR" \
             --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" \
             --batch_size "$BATCH_SIZE" \
-            --force \
             "${JUDGE_FLAGS[@]}"
         cd "$SCRIPT_DIR"
     done

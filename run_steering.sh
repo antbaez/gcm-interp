@@ -1,15 +1,36 @@
 #!/bin/bash
 set -e
 
-# Usage: ./run_steering.sh --model <olmo|qwen|qwen3|gemma|llama|all> --dataset <harmful|sycophancy|verse|all> [--type last|positional|mean] [--nocache] [--resid] [--device <cuda:0>]
+# Usage: ./run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> --dataset <harmful|sycophancy|verse|all> [--type last|positional|mean] [--nocache] [--attention] [--patch] [--global] [--split val|test] [--device <cuda:0>]
+# --split val (default) sweeps N x layer on the validation split; --split test pins the
+# selection from best_configs.json and generates once on the held-out test split.
+# Residual-stream steering runs by default. Pass --attention for attention-head steering (needs --patch on a fresh results/ dir).
+# By default steering is a single-layer sweep over the middle third of layers; --global steers all layers at once.
 
 PATCHING_BATCH_SIZE=100
 PATCH_ALGO="atp"
 SEED=42
 MAX_NEW_TOKENS=512
 BATCH_SIZE=50
-STEERING_N="1 2 3 4 5 6 8 10"
 TOPK_VALS="1.0"
+
+# Per-model steering N sweep (edit each model's list independently).
+# Local (single-layer sweep over the middle third) and global (all layers at
+# once) get independent lists — steering every layer usually needs different
+# magnitudes than steering a single one. --global selects the GLOBAL list.
+declare -A STEERING_N_LOCAL_BY_MODEL=(
+    [olmo]="1 5 10 20 30 40 50 60 70 80 90 100"
+    [qwen3]="1 10 25 50 75 100 125 150 175 200 225 250"
+    [gemma]="1 500 1000 2000 3000 4000 5000"
+    [gemma4]="1 500 1000 2000 3000 4000 5000"
+    [llama]="1 5 10 20 30 40 50 60 70 80 90 100"
+)
+declare -A STEERING_N_GLOBAL_BY_MODEL=(
+    [olmo]="0.25 0.5 0.75 1 0.25 1.5 1.75 2 2.5 3 3.5 4"
+    [qwen3]="0.5 1 1.5 2 2.5 3 3.5 4 4.5 5"
+    [gemma]="1 25 50 75 100 125 150 175 200"
+    [gemma4]="1 25 50 75 100 125 150 175 200"
+)
 
 EVAL_MODEL=true
 STEERING=true
@@ -18,7 +39,13 @@ MODEL_TAG=""
 DATASET_TAG=""
 DEVICE="cuda:0"
 PATCH=false
-RESID=false
+RESID=true
+GLOBAL=false
+# val: sweep N x layer on <base>-test.jsonl (the validation split).
+# test: pin the config select_best_config.py chose on validation and generate
+# once on <base>-heldout-test.jsonl, which the sweep never touched.
+SPLIT="val"
+BEST_CONFIGS="judge-evals/best_configs.json"
 STEERING_TYPES=(
     last
     mean
@@ -36,13 +63,26 @@ while [[ $# -gt 0 ]]; do
         --nocache)      KV_CACHING=false;  shift ;;
         --unnormalized) NORMALIZE=false;   shift ;;
         --patch)   PATCH=true;          shift ;;
-        --resid)   RESID=true; PATCH=false; shift ;;
+        --attention) RESID=false;       shift ;;
+        --global)  GLOBAL=true;         shift ;;
         --seed)    SEED="$2";           shift 2 ;;
+        --split)   SPLIT="$2";          shift 2 ;;
+        --best-configs) BEST_CONFIGS="$2"; shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
-ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "llama")
+# Residual-stream mode is mutually exclusive with patching, regardless of order flags were passed in.
+if [ "$RESID" = true ]; then PATCH=false; fi
+
+if [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; then
+    echo "Error: --split must be 'val' or 'test' (got '$SPLIT')"; exit 1
+fi
+if [ "$SPLIT" = "test" ] && [ ! -f "$BEST_CONFIGS" ]; then
+    echo "Error: --split test needs '$BEST_CONFIGS'. Run: python judge-evals/select_best_config.py"; exit 1
+fi
+
+ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
 ALL_DATASETS=("harmful" "sycophancy" "verse" "sycophancy-haiku" "sycophancy-poem" "sycophancy-haiku-concise" "sycophancy-poem-concise")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen,gemma")
@@ -52,7 +92,7 @@ else
     IFS=',' read -ra MODELS <<< "$MODEL_TAG"
     for M in "${MODELS[@]}"; do
         if [[ ! " ${ALL_MODELS[*]} " == *" $M "* ]]; then
-            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, qwen3, gemma, llama, all"; exit 1
+            echo "Error: unknown model '$M'. Must be one of: olmo, qwen, qwen3, gemma, gemma4, llama, all"; exit 1
         fi
     done
 fi
@@ -78,6 +118,10 @@ if [ "$STEERING" = true ];     then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
 if [ "$KV_CACHING" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --kv_caching"; fi
 if [ "$NORMALIZE" = false ];   then EVAL_FLAGS="$EVAL_FLAGS --unnormalized"; fi
 if [ "$RESID" = true ];        then EVAL_FLAGS="$EVAL_FLAGS --resid"; fi
+if [ "$GLOBAL" = true ];       then EVAL_FLAGS="$EVAL_FLAGS --global"; fi
+# In test mode run.py reads N/layer per dataset+steering type out of best_configs.json,
+# so the swept -steering_n list passed below is ignored.
+if [ "$SPLIT" = "test" ];      then EVAL_FLAGS="$EVAL_FLAGS -split test -best_configs $BEST_CONFIGS"; fi
 
 run_experiments_for_model() {
     local M_TAG="$1"
@@ -89,8 +133,24 @@ run_experiments_for_model() {
         qwen)  MODEL_ID="Qwen/Qwen1.5-14B-Chat" ;;
         qwen3) MODEL_ID="Qwen/Qwen3-14B" ;;
         gemma) MODEL_ID="google/gemma-3-12b-it" ;;
+        gemma4) MODEL_ID="google/gemma-4-12B-it" ;;
         llama) MODEL_ID="meta-llama/Llama-3.1-8B-Instruct" ;;
     esac
+
+    local STEERING_N
+    if [ "$GLOBAL" = true ]; then
+        STEERING_N="${STEERING_N_GLOBAL_BY_MODEL[$M_TAG]}"
+    else
+        STEERING_N="${STEERING_N_LOCAL_BY_MODEL[$M_TAG]}"
+    fi
+    # Not every model has both lists filled in. Catch it here rather than letting
+    # run.py fail on an empty -steering_n, which reports itself as an argparse error.
+    if [ -z "$STEERING_N" ]; then
+        local WHICH_LIST="STEERING_N_LOCAL_BY_MODEL"
+        [ "$GLOBAL" = true ] && WHICH_LIST="STEERING_N_GLOBAL_BY_MODEL"
+        echo "Error: no N sweep defined for model '$M_TAG' in $WHICH_LIST (run_steering.sh). Add one."
+        exit 1
+    fi
 
     local SOURCES=() BASES=() DIRS=() ADD_PATHS=() SUB_PATHS=()
     for D_TAG in "${D_TAGS[@]}"; do
@@ -111,7 +171,7 @@ run_experiments_for_model() {
     done
 
     echo ""
-    echo "[$M_TAG] datasets=[${D_TAGS[*]}]  steering_types=[${STEERING_TYPES[*]}]  N=[$STEERING_N]  k=[$TOPK_VALS]"
+    echo "[$M_TAG] split=$SPLIT  datasets=[${D_TAGS[*]}]  steering_types=[${STEERING_TYPES[*]}]  N=[$STEERING_N]  k=[$TOPK_VALS]"
     local START_TIME=$SECONDS
 
     python -u run.py \
