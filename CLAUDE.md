@@ -131,6 +131,19 @@ At generation time (`eval/generation.py → generate_with_patches()`), `topk_df`
 
 ---
 
+## Statistical analysis (`stats/`, `judge-evals/select_best_config.py`, `judge-evals/selection_utils.py`)
+
+Validation-selection and significance-testing pipeline, run after `run_judging.sh` has produced judge ratings under `judge-evals/workdirs/`. Restricted to the `local` (per-layer/per-head localized) scope — `global` scope is never considered.
+
+1. **`judge-evals/select_best_config.py`** — for each model / dataset / steering method, scans the N/layer sweep on the validation split (`<base>-test.jsonl`) and picks the argmax w_rf pass-rate condition (ties broken toward smallest `N`, then the layer closest to the sweep's median). Writes `judge-evals/best_configs.json`, which `run_steering.sh --split test` reads to pin that single config when generating on the held-out split (`<base>-heldout-test.jsonl`). Selecting a config also invalidates any held-out run generated at a previous one, so by default it prunes held-out conditions whose N/layer no longer match — from `results/`, `judge-evals/workdirs/`, and `judge-evals/accuracy_residual/`, since leaving any one behind keeps the stale condition visible to either `collect_pass_rates.py` or the next judging pass. Pass `--no-prune` to disable, `--dry-run` to preview.
+2. **`judge-evals/selection_utils.py`** — shared logic used by both `select_best_config.py` and `stats/collect_pass_rates.py`: parses condition directory names (`N=<N>_<ablation>_layer=<layer>_<test_file>`), reads `judge_ratings.jsonl`/`fluency_ratings.jsonl`/`relevance_ratings.jsonl`, and implements the pass rule (empty responses forced to fail; pass = `judge_rating == 5` and, for the `w_rf` variant, `fluency == 2` and `relevance == 2`). Mirrors `judge-evals/compute_accuracies.py`'s `_compute_and_write`.
+3. **`stats/collect_pass_rates.py`** — for every model/dataset/norm_mode/stream_mode/cache_mode combo under `results/`, builds a per-prompt pass/fail CSV with one column per steering method (`mean`, `last`, `positional`), on either the `test` split (default — single held-out condition, unbiased, the split to run McNemar's test on) or the `val` split (selection-biased argmax over the sweep). Writes to `stats/pass_results/`, mirroring the `results/` path. Restrict the scan with `--model` / `--dataset`, which accept the same short tags as the run scripts (comma-separated, or a full directory name); the job scripts pass their own combo so concurrent jobs never write each other's CSVs. Regenerates (`--force` by default) any output CSV that already exists; pass `--no-force` to skip combos already computed. Imports `selection_utils` from `judge-evals/` via an explicit `sys.path` insert, since the script itself lives in `stats/`.
+4. **`stats/run_mcnemar_test.py`** — reads the CSVs from `stats/pass_results/` and runs paired McNemar's tests (`mean` vs `last`, `positional` vs `last`) per model/dataset, reporting both the exact binomial two-sided p-value and the continuity-corrected chi-square approximation. Defaults to `--split test` (the held-out, unbiased split); pass `--split val` for the selection-biased sweep instead. Supports `--simulate-n` to rescale a result's discordant/concordant counts to hypothetical sample sizes. Optional `--output-dir` writes results as CSV (e.g. `stats/mcnemar_results/`).
+
+Both `stats/*.py` scripts resolve `results/`/`judge-evals/` paths relative to their own file location (`Path(__file__).resolve().parent.parent`), so they can be invoked from any working directory — the usage examples in each docstring assume running from the repo root, e.g. `python stats/collect_pass_rates.py`.
+
+---
+
 ## Key files
 
 | File | Role |
@@ -152,6 +165,10 @@ At generation time (`eval/generation.py → generate_with_patches()`), `topk_df`
 | `judge-evals/evaluator.py` | vLLM wrapper (`make_llm`, `generate_in_batches`) |
 | `judge-evals/compute_accuracies.py` | Computes pass rates from rating JSONL files |
 | `judge-evals/summarize_results.py` | Aggregates accuracy JSONs into CSV + heatmaps |
+| `judge-evals/select_best_config.py` | Picks best (N, layer) per model/dataset/method on the validation split; writes `judge-evals/best_configs.json`; prunes held-out runs left over from a superseded selection |
+| `judge-evals/selection_utils.py` | Shared condition-scanning + pass-rule logic for `select_best_config.py` and `stats/collect_pass_rates.py` |
+| `stats/collect_pass_rates.py` | Per-prompt pass/fail CSV across steering methods, per model/dataset combo (val or held-out test split) |
+| `stats/run_mcnemar_test.py` | Paired McNemar's significance test between steering methods on `stats/collect_pass_rates.py` output |
 
 ---
 
