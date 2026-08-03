@@ -27,7 +27,7 @@ Usage (from the repo root):
     python stats/collect_pass_rates.py
     python stats/collect_pass_rates.py --split val
     python stats/collect_pass_rates.py --model qwen3 --dataset harmful
-    python stats/collect_pass_rates.py --model gemma-3-12b-it --dry-run
+    python stats/collect_pass_rates.py --model gemma-4-12B-it --dry-run
 """
 
 import argparse
@@ -61,7 +61,6 @@ MODEL_DIRS = {
     "olmo": "OLMo-2-1124-13B-DPO",
     "qwen": "Qwen1.5-14B-Chat",
     "qwen3": "Qwen3-14B",
-    "gemma": "gemma-3-12b-it",
     "gemma4": "gemma-4-12B-it",
     "llama": "Llama-3.1-8B-Instruct",
 }
@@ -77,7 +76,7 @@ def resolve_filter(tag_arg: str | None, mapping: dict) -> set[str] | None:
     """Expand a comma-separated tag list into the directory names it selects.
 
     None or "all" means no filtering. Unknown values pass through unchanged so a
-    full directory name (e.g. `gemma-3-12b-it`) works as well as a tag.
+    full directory name (e.g. `gemma-4-12B-it`) works as well as a tag.
     """
     if not tag_arg or tag_arg == "all":
         return None
@@ -137,14 +136,14 @@ def build_comparison_csv(model, task, norm_mode, stream_mode, cache_mode, method
             print(f"  skipping method '{method}': no {split} judge ratings under {workdir_base / method}")
             continue
         if split == "test":
-            print(f"  {method}: {label}  (held-out w_rf pass rate = {rate:.3f}, n={len(rows)})")
+            print(f"  {method}: {label}  (w_rf pass rate = {rate:.3f})")
             if n_conds > 1:
                 # More than one held-out condition means something swept the test
                 # split, which puts the selection bias right back in.
                 print(f"    WARNING: {n_conds} held-out conditions found for '{method}'; "
                       f"reporting the best of them is NOT an unbiased estimate")
         else:
-            print(f"  {method}: best of {n_conds} = {label}  (val w_rf pass rate = {rate:.3f}, n={len(rows)})")
+            print(f"  {method}: best of {n_conds} = {label}  (val w_rf pass rate = {rate:.3f})")
         per_method[method] = {r["prompt"]: r["pass"] for r in rows}
 
     if not per_method:
@@ -193,10 +192,12 @@ def main():
     # held-out split gets its own so the two are never confused downstream.
     stem = SCOPE if args.split == "val" else f"{SCOPE}_test"
 
+    print("n=200")
+
     for model, task, norm_mode, stream_mode, cache_mode, methods in combos:
         rel = Path(model) / task / norm_mode / stream_mode / cache_mode
         out_path = output_root / rel / f"{stem}.csv"
-        print(f"{rel} (methods: {', '.join(methods)})")
+        print(f"\n{model}/{task}")
 
         if args.dry_run:
             continue
@@ -213,7 +214,6 @@ def main():
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(out_path, index=False)
-        print(f"  saved {len(df)} prompts -> {out_path}")
         n_written += 1
 
     if not args.dry_run:

@@ -21,7 +21,7 @@ p-value (used regardless of sample size, as in statsmodels' default
 `exact=True`) and a continuity-corrected one-sided normal-approximation
 z-test for reference.
 
-Default --model is olmo,qwen3,gemma,llama (the models with results so far); pass
+Default --model is olmo,qwen3,llama,gemma4 (the models with results so far); pass
 --model all to also include qwen. Results are saved to stats/mcnemar_results/
 by default; pass --output-dir to save elsewhere.
 
@@ -47,8 +47,8 @@ MODEL_DIRS = {
     "olmo": "OLMo-2-1124-13B-DPO",
     "qwen": "Qwen1.5-14B-Chat",
     "qwen3": "Qwen3-14B",
-    "gemma": "gemma-3-12b-it",
     "llama": "Llama-3.1-8B-Instruct",
+    "gemma4": "gemma-4-12B-it",
 }
 
 # Dataset tag -> "from_<source>_to_<base>" task dir (mirrors run_steering.sh's D_SOURCE/D_BASE).
@@ -160,7 +160,7 @@ def simulate_at_n(result: dict, target_n: int) -> dict:
 def print_p_value_table(entries: list[tuple[str, dict]]) -> None:
     """Print (model_tag, mcnemar-result) pairs as a column-aligned table —
     column widths are computed from the actual strings each call, not fixed."""
-    columns = []
+    rows = []
     for model_tag, r in entries:
         # Significant at alpha (one-sided, H1: mean/positional beats last) -> checkmark,
         # otherwise -> x. method_a is always mean/positional, method_b is always "last"
@@ -172,19 +172,23 @@ def print_p_value_table(entries: list[tuple[str, dict]]) -> None:
             left, left_rate, right, right_rate = r["method_b"], r["pass_rate_b"], r["method_a"], r["pass_rate_a"]
         else:
             left, left_rate, right, right_rate = r["method_a"], r["pass_rate_a"], r["method_b"], r["pass_rate_b"]
-        columns.append((
-            model_tag,
-            f"{left} vs {right}",
-            f"{left}={left_rate:.3f}",
-            f"{right}={right_rate:.3f}",
-            f"p={r['exact_p']:.4g}",
-            mark,
-        ))
+        rows.append((model_tag, left, left_rate, right, right_rate, r["exact_p"], mark))
 
-    widths = [max(len(row[i]) for row in columns) for i in range(5)]
-    for model_tag, label, rate_a, rate_b, pval, mark in columns:
+    # Pad method names to the widest on each side ("mean" vs "positional") so the
+    # "(rate)" parens — and thus the rate digits — line up vertically across rows.
+    left_name_width = max(len(row[1]) for row in rows)
+    right_name_width = max(len(row[3]) for row in rows)
+
+    columns = []
+    for model_tag, left, left_rate, right, right_rate, exact_p, mark in rows:
+        label = (f"{left:<{left_name_width}} ({left_rate:.3f}) vs. "
+                 f"{right:<{right_name_width}} ({right_rate:.3f})")
+        columns.append((model_tag, label, f"p={exact_p:.4g}", mark))
+
+    widths = [max(len(row[i]) for row in columns) for i in range(3)]
+    for model_tag, label, pval, mark in columns:
         print(f"  {model_tag:<{widths[0]}}  {label:<{widths[1]}}  "
-              f"{rate_a:<{widths[2]}}  {rate_b:<{widths[3]}}  {pval:<{widths[4]}}  {mark}")
+              f"{pval:<{widths[2]}}  {mark}")
 
 
 def print_summary(rows: list[dict], dataset_tags: list[str], n_label: str) -> None:
@@ -220,6 +224,23 @@ def print_summary(rows: list[dict], dataset_tags: list[str], n_label: str) -> No
     beaten = sum(1 for combo_rows in combos.values() if any(_beats(r) for r in combo_rows))
     print(f"\nlast beaten by mean or positional in {beaten}/{len(combos)} cases")
 
+    # Highest pass rate of the three methods (last/mean/positional) per (model, dataset)
+    # combo, regardless of significance. Ties (equal max rate) count for every method
+    # that hit it, so the two counts below can sum to more than len(combos).
+    mean_highest = 0
+    positional_highest = 0
+    for combo_rows in combos.values():
+        rates = {"last": combo_rows[0]["pass_rate_b"]}
+        for r in combo_rows:
+            rates[r["method_a"]] = r["pass_rate_a"]
+        best = max(rates.values())
+        if rates.get("mean") == best:
+            mean_highest += 1
+        if rates.get("positional") == best:
+            positional_highest += 1
+    print(f"mean has the highest pass rate in {mean_highest}/{len(combos)} cases")
+    print(f"positional has the highest pass rate in {positional_highest}/{len(combos)} cases")
+
 
 def expand_tags(tag_arg: str, mapping: dict, kind: str) -> list[str]:
     if tag_arg == "all":
@@ -233,7 +254,7 @@ def expand_tags(tag_arg: str, mapping: dict, kind: str) -> list[str]:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--model", default="olmo,qwen3,gemma,llama",
+    parser.add_argument("--model", default="olmo,qwen3,llama,gemma4",
                          help=f"model tag(s), comma-separated, or 'all' ({', '.join(MODEL_DIRS)})")
     parser.add_argument("--dataset", default="all",
                          help=f"dataset tag(s), comma-separated, or 'all' ({', '.join(DATASET_TASKS)})")

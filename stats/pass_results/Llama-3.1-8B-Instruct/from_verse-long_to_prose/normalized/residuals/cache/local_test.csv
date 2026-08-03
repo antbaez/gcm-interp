@@ -1,201 +1,201 @@
 prompt,last_pass,mean_pass,positional_pass
-Respond in prose and concisely. Can a lie ever be kind?,True,True,True
-Respond in prose and concisely. Can a person truly change?,True,True,True
-Respond in prose and concisely. Can courage be taught?,True,True,True
-Respond in prose and concisely. Can grief be shared?,True,True,True
-Respond in prose and concisely. Can happiness be pursued directly?,True,True,True
-Respond in prose and concisely. Can institutions be moral?,True,True,True
-Respond in prose and concisely. Can justice exist without mercy?,True,True,True
-Respond in prose and concisely. Can knowledge exist without language?,False,True,True
-Respond in prose and concisely. Describe the essence of a home.,True,True,True
+Respond in prose and concisely. Can a person truly change?,False,False,True
+Respond in prose and concisely. Can courage be taught?,False,False,True
+Respond in prose and concisely. Can happiness be pursued directly?,False,True,True
+Respond in prose and concisely. Can justice exist without mercy?,False,False,True
 Respond in prose and concisely. Describe the essence of friendship.,True,True,True
 Respond in prose and concisely. Describe the essence of mercy.,True,True,True
-Respond in prose and concisely. Describe the nature of longing.,True,True,True
 Respond in prose and concisely. Describe the nature of patience.,True,True,True
-Respond in prose and concisely. Describe the nature of shame.,True,True,True
-Respond in prose and concisely. Do good intentions matter more than outcomes?,False,False,False
-Respond in prose and concisely. Do we choose our beliefs?,True,True,True
-Respond in prose and concisely. Does suffering make us wiser?,True,True,True
-Respond in prose and concisely. How do children learn right from wrong?,True,True,True
-Respond in prose and concisely. How do cities remember their histories?,True,True,True
-Respond in prose and concisely. How do we decide what is worth remembering?,False,True,True
-Respond in prose and concisely. How do we decide whom to believe?,True,True,True
+Respond in prose and concisely. Describe the nature of shame.,True,True,False
+Respond in prose and concisely. Do good intentions matter more than outcomes?,False,False,True
+Respond in prose and concisely. Do we choose our beliefs?,True,False,False
+Respond in prose and concisely. Does suffering make us wiser?,False,False,True
+Respond in prose and concisely. How do children learn right from wrong?,False,False,True
+Respond in prose and concisely. How do societies remember their histories?,True,True,True
+Respond in prose and concisely. How do we decide what to believe?,True,True,True
+Respond in prose and concisely. How do we distinguish love from need?,True,True,True
 Respond in prose and concisely. How do we know when to let go?,True,True,True
-Respond in prose and concisely. How do we learn to be alone?,True,True,True
-Respond in prose and concisely. How do we learn to trust again after betrayal?,True,True,True
+Respond in prose and concisely. How do we know when we have been forgiven?,True,False,True
+Respond in prose and concisely. How do we learn to trust again after betrayal?,False,False,True
 Respond in prose and concisely. How do we make peace with our limitations?,False,True,True
-Respond in prose and concisely. How do we recognize wisdom in others?,False,True,True
+Respond in prose and concisely. How do we recognize courage in ordinary life?,True,False,False
+Respond in prose and concisely. How do we recognize wisdom in others?,True,False,True
 Respond in prose and concisely. How does a crowd change the individuals within it?,True,False,True
-Respond in prose and concisely. How does aging change what we want?,True,True,True
-Respond in prose and concisely. How does an apology repair a relationship?,True,True,True
+Respond in prose and concisely. How does a promise differ from an intention?,False,False,False
+Respond in prose and concisely. How does aging change what we want?,True,False,True
 Respond in prose and concisely. How does anger inform our sense of justice?,True,True,True
-Respond in prose and concisely. How does anonymity affect behavior?,False,False,True
-Respond in prose and concisely. How does architecture shape human behavior?,True,True,True
-Respond in prose and concisely. How does beauty console us?,True,True,True
+Respond in prose and concisely. How does anonymity affect behavior?,True,False,True
+Respond in prose and concisely. How does art express a culture's values?,True,False,True
 Respond in prose and concisely. How does competition shape character?,True,False,True
-Respond in prose and concisely. How does darkness change how we hear?,True,True,True
-Respond in prose and concisely. How does distance change affection?,True,True,True
-Respond in prose and concisely. How does envy distort what we want?,True,True,True
-Respond in prose and concisely. How does exile shape a writer's voice?,True,True,True
+Respond in prose and concisely. How does distance change affection?,True,False,True
+Respond in prose and concisely. How does envy distort what we want?,True,False,True
+Respond in prose and concisely. How does fame distort friendship?,True,True,True
+Respond in prose and concisely. How does fear shape our choices?,True,True,True
 Respond in prose and concisely. How does forgiveness change the one who grants it?,True,True,True
-Respond in prose and concisely. How does gratitude change what we notice?,True,True,True
+Respond in prose and concisely. How does gratitude change what we notice?,True,False,True
+Respond in prose and concisely. How does habit dull perception?,True,True,True
+Respond in prose and concisely. How does happiness differ from pleasure?,True,True,False
 Respond in prose and concisely. How does hardship reveal character?,True,True,True
-Respond in prose and concisely. How does hospitality express a culture's values?,False,True,True
-Respond in prose and concisely. How does illness change our relationship to time?,True,True,True
-Respond in prose and concisely. How does landscape shape the people who live in it?,True,True,True
-Respond in prose and concisely. How does language shape memory?,False,True,True
-Respond in prose and concisely. How does laughter bind people together?,True,True,True
-Respond in prose and concisely. How does listening differ from waiting to speak?,True,True,True
+Respond in prose and concisely. How does illness change our relationship to time?,False,False,True
+Respond in prose and concisely. How does illness teach humility?,False,True,True
+Respond in prose and concisely. How does language shape memory?,False,False,True
+Respond in prose and concisely. How does laughter bind people together?,True,False,True
 Respond in prose and concisely. How does migration reshape identity?,True,True,True
-Respond in prose and concisely. How does money change a friendship?,True,True,True
+Respond in prose and concisely. How does money change a friendship?,True,False,False
 Respond in prose and concisely. How does mourning differ across cultures?,True,True,True
-Respond in prose and concisely. How does music preserve cultural memory?,False,True,True
+Respond in prose and concisely. How does music preserve cultural memory?,True,True,True
 Respond in prose and concisely. How does nostalgia distort the past?,True,True,True
 Respond in prose and concisely. How does one live with uncertainty?,True,True,True
-Respond in prose and concisely. How does poetry differ from ordinary speech?,True,True,True
-Respond in prose and concisely. How does poverty shape a child's future?,True,True,True
-Respond in prose and concisely. How does praise change the way we work?,True,True,True
+Respond in prose and concisely. How does poverty shape a child's future?,False,True,False
+Respond in prose and concisely. How does power corrupt those who hold it?,True,True,True
+Respond in prose and concisely. How does purpose change the way we work?,False,True,True
+Respond in prose and concisely. How does religion shape a culture?,True,True,True
+Respond in prose and concisely. How does responsibility change desire?,False,True,True
 Respond in prose and concisely. How does ritual mark the passage of time?,True,True,True
-Respond in prose and concisely. How does scarcity shape generosity?,True,True,True
-Respond in prose and concisely. How does secrecy affect intimacy?,False,True,True
-Respond in prose and concisely. How does silence communicate?,True,True,True
-Respond in prose and concisely. How does solitude sharpen the mind?,True,True,True
+Respond in prose and concisely. How does scarcity shape generosity?,True,True,False
+Respond in prose and concisely. How does solitude sharpen the mind?,False,False,False
+Respond in prose and concisely. How does success change a person?,True,False,False
 Respond in prose and concisely. How does teaching change the teacher?,True,True,True
-Respond in prose and concisely. How does the body remember what the mind forgets?,True,True,True
-Respond in prose and concisely. How does the desire for approval shape a life?,True,True,True
-Respond in prose and concisely. How does the internet reshape public trust?,False,False,False
-Respond in prose and concisely. How does translation alter meaning?,True,True,True
-Respond in prose and concisely. How does travel alter our sense of home?,True,True,True
-Respond in prose and concisely. How does war change a language?,True,True,True
+Respond in prose and concisely. How does the desire for approval shape a life?,False,False,True
+Respond in prose and concisely. How does time change what we value?,True,True,True
+Respond in prose and concisely. How does tradition shape the people who inherit it?,True,True,True
+Respond in prose and concisely. How does trust shape a community?,False,True,True
+Respond in prose and concisely. How does war change a language?,True,False,True
 Respond in prose and concisely. How does work shape our sense of self?,True,True,True
-Respond in prose and concisely. Is contentment the same as happiness?,False,True,True
-Respond in prose and concisely. Is envy ever useful?,True,True,True
-Respond in prose and concisely. Is forgiveness owed or given?,True,True,True
-Respond in prose and concisely. Is genius born or made?,True,True,True
-Respond in prose and concisely. Is loneliness a modern condition?,True,True,True
-Respond in prose and concisely. Is moral progress inevitable?,False,True,False
-Respond in prose and concisely. Is nostalgia a form of grief?,True,True,True
-Respond in prose and concisely. Is privacy a modern invention?,True,True,True
-Respond in prose and concisely. What can an old photograph tell us about time?,True,True,True
+Respond in prose and concisely. Is contentment the same as happiness?,False,False,True
 Respond in prose and concisely. What can children teach adults?,True,True,True
-Respond in prose and concisely. What can failure teach us about ambition?,True,False,True
-Respond in prose and concisely. What can silence teach us about speech?,True,False,True
-Respond in prose and concisely. What can we learn from our enemies?,True,True,True
-Respond in prose and concisely. What constitutes a fair punishment?,True,True,True
-Respond in prose and concisely. What constitutes a genuine welcome?,True,False,True
-Respond in prose and concisely. What constitutes a good education?,False,True,True
-Respond in prose and concisely. What constitutes a meaningful friendship?,False,True,True
+Respond in prose and concisely. What can failure teach us about ambition?,True,True,True
+Respond in prose and concisely. What can we learn from our enemies?,False,False,True
+Respond in prose and concisely. What constitutes a fair punishment?,True,False,True
+Respond in prose and concisely. What constitutes a good education?,True,True,True
+Respond in prose and concisely. What constitutes a good life?,True,True,True
+Respond in prose and concisely. What constitutes a life of service?,True,True,True
+Respond in prose and concisely. What constitutes a meaningful friendship?,True,False,True
 Respond in prose and concisely. What constitutes a wasted day?,True,True,True
-Respond in prose and concisely. What constitutes moral progress?,True,True,True
+Respond in prose and concisely. What constitutes fairness?,True,False,True
+Respond in prose and concisely. What constitutes genuine expertise?,False,False,False
+Respond in prose and concisely. What constitutes moral progress?,False,False,True
 Respond in prose and concisely. What defines a good death?,True,True,True
+Respond in prose and concisely. What defines a good leader?,False,True,True
 Respond in prose and concisely. What defines a life of integrity?,True,True,True
-Respond in prose and concisely. What do we owe our parents?,True,True,True
-Respond in prose and concisely. What do we owe the places that raised us?,False,True,True
+Respond in prose and concisely. What do we lose when we stop wondering?,True,True,True
+Respond in prose and concisely. What do we owe our parents?,False,False,True
+Respond in prose and concisely. What do we owe the past?,True,True,True
 Respond in prose and concisely. What do we owe to strangers?,True,True,True
-Respond in prose and concisely. What does it mean to accept help?,False,False,False
-Respond in prose and concisely. What does it mean to be a good ancestor?,True,False,False
-Respond in prose and concisely. What does it mean to be a good neighbor?,True,True,True
+Respond in prose and concisely. What does it mean to accept help?,True,False,False
+Respond in prose and concisely. What does it mean to be a good ancestor?,False,False,True
+Respond in prose and concisely. What does it mean to be a good citizen?,True,False,True
+Respond in prose and concisely. What does it mean to be a good person?,False,False,True
 Respond in prose and concisely. What does it mean to be at peace with the past?,True,True,True
+Respond in prose and concisely. What does it mean to be honest with oneself?,True,False,True
 Respond in prose and concisely. What does it mean to be loyal?,True,True,True
-Respond in prose and concisely. What does it mean to belong to a place?,False,True,True
-Respond in prose and concisely. What does it mean to grieve well?,False,False,True
+Respond in prose and concisely. What does it mean to be true to oneself?,False,True,True
+Respond in prose and concisely. What does it mean to be well-educated?,True,True,True
+Respond in prose and concisely. What does it mean to bear witness?,True,False,True
+Respond in prose and concisely. What does it mean to belong to a community?,True,True,True
+Respond in prose and concisely. What does it mean to grieve well?,False,True,True
 Respond in prose and concisely. What does it mean to grow up?,True,True,True
 Respond in prose and concisely. What does it mean to keep a promise?,False,True,True
-Respond in prose and concisely. What does it mean to keep faith with an ideal?,False,True,True
-Respond in prose and concisely. What does it mean to listen without judgment?,True,True,True
-Respond in prose and concisely. What does it mean to start over?,True,True,True
-Respond in prose and concisely. What does it mean to tell the truth kindly?,False,True,True
-Respond in prose and concisely. What does it mean to waste a life?,False,True,True
-Respond in prose and concisely. What does taste reveal about a person?,False,True,True
-Respond in prose and concisely. What gives a promise its force?,True,True,True
-Respond in prose and concisely. What is the art of asking good questions?,True,True,True
-Respond in prose and concisely. What is the art of giving advice?,True,True,True
-Respond in prose and concisely. What is the cost of certainty?,True,True,True
-Respond in prose and concisely. What is the cost of comfort?,True,True,True
-Respond in prose and concisely. What is the difference between confidence and arrogance?,True,True,True
-Respond in prose and concisely. What is the difference between knowledge and wisdom?,True,True,True
-Respond in prose and concisely. What is the difference between pride and dignity?,False,True,True
+Respond in prose and concisely. What does it mean to keep faith with an ideal?,True,False,True
+Respond in prose and concisely. What does it mean to love without condition?,True,False,True
+Respond in prose and concisely. What does it mean to start over?,True,False,True
+Respond in prose and concisely. What does it mean to waste a life?,True,False,True
+Respond in prose and concisely. What does love ask of us?,True,False,True
+Respond in prose and concisely. What gives a promise its force?,True,False,True
+Respond in prose and concisely. What is the cost of loyalty?,False,False,True
+Respond in prose and concisely. What is the difference between confidence and arrogance?,False,False,False
+Respond in prose and concisely. What is the difference between courage and recklessness?,True,True,False
+Respond in prose and concisely. What is the difference between knowledge and wisdom?,True,False,False
+Respond in prose and concisely. What is the difference between pride and dignity?,True,False,False
+Respond in prose and concisely. What is the essence of devotion?,True,True,True
 Respond in prose and concisely. What is the essence of generosity?,True,True,True
-Respond in prose and concisely. What is the impact of speed on modern life?,True,True,True
-Respond in prose and concisely. What is the importance of doubt?,True,True,False
-Respond in prose and concisely. What is the importance of second chances?,True,True,True
+Respond in prose and concisely. What is the impact of speed on modern life?,True,False,True
+Respond in prose and concisely. What is the impact of wealth on happiness?,True,True,True
+Respond in prose and concisely. What is the importance of doubt?,True,True,True
+Respond in prose and concisely. What is the importance of second chances?,True,False,True
 Respond in prose and concisely. What is the nature of ambition?,True,True,True
 Respond in prose and concisely. What is the nature of attention?,True,True,True
-Respond in prose and concisely. What is the nature of authority?,True,True,True
+Respond in prose and concisely. What is the nature of authority?,False,True,False
 Respond in prose and concisely. What is the nature of belonging?,True,True,True
-Respond in prose and concisely. What is the nature of boredom?,True,True,True
+Respond in prose and concisely. What is the nature of boredom?,False,False,True
 Respond in prose and concisely. What is the nature of curiosity?,True,True,True
-Respond in prose and concisely. What is the nature of loyalty?,True,True,True
-Respond in prose and concisely. What is the nature of nostalgia?,True,True,True
-Respond in prose and concisely. What is the nature of regret?,True,True,True
-Respond in prose and concisely. What is the nature of sacrifice?,True,True,True
-Respond in prose and concisely. What is the purpose of a public library?,False,True,True
-Respond in prose and concisely. What is the purpose of criticism?,True,True,True
-Respond in prose and concisely. What is the purpose of grief?,True,True,True
-Respond in prose and concisely. What is the relationship between fear and imagination?,False,True,True
+Respond in prose and concisely. What is the nature of dignity?,True,True,False
+Respond in prose and concisely. What is the nature of jealousy?,True,True,True
+Respond in prose and concisely. What is the nature of loyalty?,False,False,True
+Respond in prose and concisely. What is the nature of nostalgia?,True,False,True
+Respond in prose and concisely. What is the nature of obligation?,False,True,True
+Respond in prose and concisely. What is the nature of regret?,True,False,True
+Respond in prose and concisely. What is the nature of sacrifice?,False,False,True
+Respond in prose and concisely. What is the nature of talent?,True,False,True
+Respond in prose and concisely. What is the purpose of grief?,False,True,True
+Respond in prose and concisely. What is the purpose of solitude?,True,True,True
+Respond in prose and concisely. What is the purpose of storytelling?,False,False,True
+Respond in prose and concisely. What is the purpose of suffering?,False,True,True
+Respond in prose and concisely. What is the relationship between anger and grief?,True,True,True
+Respond in prose and concisely. What is the relationship between fear and imagination?,True,True,True
 Respond in prose and concisely. What is the relationship between freedom and belonging?,True,True,True
 Respond in prose and concisely. What is the relationship between habit and character?,True,True,True
+Respond in prose and concisely. What is the relationship between language and power?,True,True,True
 Respond in prose and concisely. What is the relationship between memory and identity?,True,True,True
-Respond in prose and concisely. What is the relationship between suffering and art?,False,True,True
+Respond in prose and concisely. What is the relationship between solitude and creativity?,True,True,True
+Respond in prose and concisely. What is the relationship between suffering and art?,True,True,True
 Respond in prose and concisely. What is the relationship between wealth and obligation?,True,True,True
-Respond in prose and concisely. What is the role of attention in love?,True,True,True
-Respond in prose and concisely. What is the role of beauty in daily life?,True,True,True
-Respond in prose and concisely. What is the role of chance in a life?,True,True,True
-Respond in prose and concisely. What is the role of chance in scientific discovery?,False,False,True
-Respond in prose and concisely. What is the role of discomfort in learning?,True,True,True
+Respond in prose and concisely. What is the role of attention in love?,False,True,True
+Respond in prose and concisely. What is the role of chance in a life?,False,True,True
+Respond in prose and concisely. What is the role of curiosity in discovery?,False,True,True
+Respond in prose and concisely. What is the role of discomfort in learning?,False,True,False
+Respond in prose and concisely. What is the role of emotion in how we think?,True,True,False
+Respond in prose and concisely. What is the role of failure in success?,True,True,True
 Respond in prose and concisely. What is the role of forgetting in a healthy mind?,True,True,True
-Respond in prose and concisely. What is the role of honesty in leadership?,True,True,True
+Respond in prose and concisely. What is the role of honesty in leadership?,True,False,True
+Respond in prose and concisely. What is the role of hope in daily life?,True,True,True
 Respond in prose and concisely. What is the role of imagination in empathy?,True,True,True
+Respond in prose and concisely. What is the role of kindness in a good life?,True,True,True
+Respond in prose and concisely. What is the role of luck in failure?,True,False,False
 Respond in prose and concisely. What is the role of myth in modern society?,False,True,True
-Respond in prose and concisely. What is the role of patience in craftsmanship?,True,True,True
-Respond in prose and concisely. What is the role of shame in moral development?,True,True,True
-Respond in prose and concisely. What is the role of silence in conversation?,False,True,True
-Respond in prose and concisely. What is the role of tenderness in strength?,True,True,True
-Respond in prose and concisely. What is the role of the body in how we think?,True,True,True
-Respond in prose and concisely. What is the role of the past in national identity?,True,True,True
-Respond in prose and concisely. What is the role of the stranger in a community?,True,True,True
-Respond in prose and concisely. What is the value of an unanswered question?,True,True,True
-Respond in prose and concisely. What is the value of apprenticeship?,True,True,True
-Respond in prose and concisely. What is the value of being misunderstood?,True,True,True
+Respond in prose and concisely. What is the role of obedience in a moral life?,False,False,True
+Respond in prose and concisely. What is the role of pain in personal growth?,True,True,True
+Respond in prose and concisely. What is the role of shame in moral development?,True,False,True
+Respond in prose and concisely. What is the role of tenderness in strength?,True,False,True
+Respond in prose and concisely. What is the role of the individual in a community?,True,True,True
+Respond in prose and concisely. What is the role of the past in personal identity?,True,True,True
+Respond in prose and concisely. What is the value of an unanswered question?,False,True,True
+Respond in prose and concisely. What is the value of being misunderstood?,False,True,True
 Respond in prose and concisely. What is the value of ceremony?,True,True,True
-Respond in prose and concisely. What is the value of difficulty?,True,True,True
-Respond in prose and concisely. What is the value of keeping a diary?,True,True,True
-Respond in prose and concisely. What is the value of privacy?,True,True,True
+Respond in prose and concisely. What is the value of compassion?,False,True,True
+Respond in prose and concisely. What is the value of difficulty?,False,False,False
+Respond in prose and concisely. What is the value of moderation?,False,True,True
+Respond in prose and concisely. What is the value of privacy?,False,True,True
 Respond in prose and concisely. What is the value of repetition?,True,True,True
-Respond in prose and concisely. What is the value of restraint?,False,True,True
+Respond in prose and concisely. What is the value of restraint?,False,True,False
+Respond in prose and concisely. What is the value of silence?,False,True,True
 Respond in prose and concisely. What is the value of slowness?,True,True,True
-Respond in prose and concisely. What makes a city feel alive?,True,True,True
-Respond in prose and concisely. What makes a community resilient?,False,True,True
-Respond in prose and concisely. What makes a conversation meaningful?,False,True,True
-Respond in prose and concisely. What makes a landscape beautiful?,True,True,True
+Respond in prose and concisely. What is the value of stubbornness?,False,True,True
+Respond in prose and concisely. What makes a community resilient?,True,True,True
 Respond in prose and concisely. What makes a life feel unfinished?,True,True,True
 Respond in prose and concisely. What makes a marriage endure?,True,True,True
+Respond in prose and concisely. What makes a question worth asking?,True,False,True
+Respond in prose and concisely. What makes a relationship meaningful?,True,True,True
 Respond in prose and concisely. What makes a ritual meaningful?,True,True,True
-Respond in prose and concisely. What makes a room feel welcoming?,True,True,True
-Respond in prose and concisely. What makes a sacrifice worthwhile?,True,True,True
-Respond in prose and concisely. What makes a story worth retelling?,True,True,True
-Respond in prose and concisely. What makes a teacher unforgettable?,True,True,True
-Respond in prose and concisely. What makes an apology sincere?,False,False,True
-Respond in prose and concisely. What makes an argument persuasive?,False,True,True
-Respond in prose and concisely. What makes forgiveness possible?,True,True,True
-Respond in prose and concisely. What role does memory play in forgiveness?,True,False,True
-Respond in prose and concisely. Why do humans create rituals around death?,False,True,False
-Respond in prose and concisely. Why do humans decorate the places they live?,True,True,True
-Respond in prose and concisely. Why do humans give names to things?,True,True,True
-Respond in prose and concisely. Why do humans make music together?,True,True,True
-Respond in prose and concisely. Why do we admire people we will never meet?,True,True,True
-Respond in prose and concisely. Why do we find comfort in routine?,True,True,True
-Respond in prose and concisely. Why do we find symmetry pleasing?,True,True,True
-Respond in prose and concisely. Why do we keep objects we no longer use?,True,True,True
-Respond in prose and concisely. Why do we keep secrets from those closest to us?,True,True,True
-Respond in prose and concisely. Why do we long for places we have never been?,False,False,True
-Respond in prose and concisely. Why do we mark anniversaries?,True,True,True
-Respond in prose and concisely. Why do we remember insults longer than praise?,True,True,True
-Respond in prose and concisely. Why do we tell children stories about danger?,True,True,True
-Respond in prose and concisely. Why do we trust some strangers immediately?,False,True,True
+Respond in prose and concisely. What makes a sacrifice worthwhile?,True,False,True
+Respond in prose and concisely. What makes a society flourish?,False,True,True
+Respond in prose and concisely. What makes a teacher unforgettable?,True,False,True
+Respond in prose and concisely. What makes a tradition worth keeping?,True,True,True
+Respond in prose and concisely. What makes an idea worth defending?,False,True,True
+Respond in prose and concisely. What makes forgiveness possible?,True,False,True
+Respond in prose and concisely. What role does memory play in forgiveness?,False,True,False
+Respond in prose and concisely. Why do humans crave recognition?,True,False,True
+Respond in prose and concisely. Why do humans create rituals around death?,False,True,True
+Respond in prose and concisely. Why do humans fear death?,True,True,False
+Respond in prose and concisely. Why do humans make music together?,True,False,True
+Respond in prose and concisely. Why do we find comfort in routine?,False,True,True
+Respond in prose and concisely. Why do we grieve people we barely knew?,True,True,True
+Respond in prose and concisely. Why do we seek certainty?,False,False,True
+Respond in prose and concisely. Why do we tell children stories about danger?,True,False,True
 Respond in prose and concisely. Why is beauty so difficult to define?,True,False,True
-Respond in prose and concisely. Why is forgiveness so often mistaken for weakness?,False,True,True
-Respond in prose and concisely. Why is honesty harder than kindness?,True,True,True
-Respond in prose and concisely. Why is it hard to accept a compliment?,False,True,True
-Respond in prose and concisely. Why is patience so difficult to practice?,True,True,True
-Respond in prose and concisely. Why is silence uncomfortable in company?,False,True,True
+Respond in prose and concisely. Why is boredom so hard to tolerate?,True,True,True
+Respond in prose and concisely. Why is change so difficult to accept?,True,False,True
+Respond in prose and concisely. Why is forgiveness so often mistaken for weakness?,True,True,True
+Respond in prose and concisely. Why is honesty harder than kindness?,True,True,False
+Respond in prose and concisely. Why is it hard to admit we are wrong?,True,False,True
+Respond in prose and concisely. Why is patience so difficult to practice?,False,True,False

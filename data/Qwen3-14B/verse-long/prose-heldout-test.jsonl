@@ -1,56 +1,44 @@
 {"id": 1000, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does poverty shape a child's future?"}]}
-{"id": 1001, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does architecture shape human behavior?"}]}
+{"id": 1001, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does fear shape our choices?"}]}
 {"id": 1002, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does music preserve cultural memory?"}]}
 {"id": 1003, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does illness change our relationship to time?"}]}
 {"id": 1004, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does migration reshape identity?"}]}
-{"id": 1005, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does travel alter our sense of home?"}]}
 {"id": 1006, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does anger inform our sense of justice?"}]}
 {"id": 1007, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does gratitude change what we notice?"}]}
-{"id": 1008, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does secrecy affect intimacy?"}]}
 {"id": 1009, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does aging change what we want?"}]}
 {"id": 1010, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does competition shape character?"}]}
-{"id": 1011, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does the internet reshape public trust?"}]}
+{"id": 1011, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does power corrupt those who hold it?"}]}
 {"id": 1012, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we recognize wisdom in others?"}]}
 {"id": 1013, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does solitude sharpen the mind?"}]}
 {"id": 1014, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we learn to trust again after betrayal?"}]}
 {"id": 1015, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does envy distort what we want?"}]}
 {"id": 1016, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does one live with uncertainty?"}]}
-{"id": 1017, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we decide what is worth remembering?"}]}
 {"id": 1018, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does distance change affection?"}]}
 {"id": 1019, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does work shape our sense of self?"}]}
 {"id": 1020, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we know when to let go?"}]}
-{"id": 1021, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does beauty console us?"}]}
 {"id": 1022, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do children learn right from wrong?"}]}
 {"id": 1023, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does laughter bind people together?"}]}
 {"id": 1024, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we make peace with our limitations?"}]}
-{"id": 1025, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does silence communicate?"}]}
 {"id": 1026, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of chance in a life?"}]}
 {"id": 1027, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of shame in moral development?"}]}
-{"id": 1028, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of beauty in daily life?"}]}
-{"id": 1029, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of silence in conversation?"}]}
+{"id": 1028, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of hope in daily life?"}]}
+{"id": 1029, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of kindness in a good life?"}]}
 {"id": 1030, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of myth in modern society?"}]}
-{"id": 1031, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of the body in how we think?"}]}
+{"id": 1031, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of emotion in how we think?"}]}
 {"id": 1032, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of attention in love?"}]}
 {"id": 1033, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of forgetting in a healthy mind?"}]}
-{"id": 1034, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we keep objects we no longer use?"}]}
 {"id": 1035, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do humans create rituals around death?"}]}
 {"id": 1036, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we find comfort in routine?"}]}
-{"id": 1037, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we admire people we will never meet?"}]}
-{"id": 1038, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we remember insults longer than praise?"}]}
-{"id": 1039, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we long for places we have never been?"}]}
 {"id": 1040, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do humans make music together?"}]}
 {"id": 1041, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to keep a promise?"}]}
 {"id": 1042, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to grow up?"}]}
 {"id": 1043, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be a good ancestor?"}]}
 {"id": 1044, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to accept help?"}]}
 {"id": 1045, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to waste a life?"}]}
-{"id": 1046, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to tell the truth kindly?"}]}
+{"id": 1046, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be honest with oneself?"}]}
 {"id": 1047, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to start over?"}]}
-{"id": 1048, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a conversation meaningful?"}]}
-{"id": 1049, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a city feel alive?"}]}
-{"id": 1050, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes an apology sincere?"}]}
+{"id": 1048, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a relationship meaningful?"}]}
 {"id": 1051, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a teacher unforgettable?"}]}
-{"id": 1052, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a story worth retelling?"}]}
 {"id": 1053, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a sacrifice worthwhile?"}]}
 {"id": 1054, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a marriage endure?"}]}
 {"id": 1055, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the nature of ambition?"}]}
@@ -66,11 +54,7 @@
 {"id": 1065, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Can a person truly change?"}]}
 {"id": 1066, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Can happiness be pursued directly?"}]}
 {"id": 1067, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Can justice exist without mercy?"}]}
-{"id": 1068, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Can knowledge exist without language?"}]}
-{"id": 1069, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Is loneliness a modern condition?"}]}
-{"id": 1070, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Is forgiveness owed or given?"}]}
 {"id": 1071, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Is contentment the same as happiness?"}]}
-{"id": 1072, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Is moral progress inevitable?"}]}
 {"id": 1073, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between memory and identity?"}]}
 {"id": 1074, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between suffering and art?"}]}
 {"id": 1075, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between freedom and belonging?"}]}
@@ -81,8 +65,6 @@
 {"id": 1080, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why is honesty harder than kindness?"}]}
 {"id": 1081, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why is beauty so difficult to define?"}]}
 {"id": 1082, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Describe the essence of friendship."}]}
-{"id": 1083, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Describe the nature of longing."}]}
-{"id": 1084, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Describe the essence of a home."}]}
 {"id": 1085, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the difference between knowledge and wisdom?"}]}
 {"id": 1086, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What can failure teach us about ambition?"}]}
 {"id": 1087, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What do we owe to strangers?"}]}
@@ -93,63 +75,49 @@
 {"id": 1092, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the essence of generosity?"}]}
 {"id": 1093, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What gives a promise its force?"}]}
 {"id": 1094, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What can we learn from our enemies?"}]}
-{"id": 1095, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the art of asking good questions?"}]}
-{"id": 1096, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does taste reveal about a person?"}]}
-{"id": 1097, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the cost of comfort?"}]}
+{"id": 1096, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does love ask of us?"}]}
 {"id": 1098, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What defines a good death?"}]}
 {"id": 1099, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the purpose of grief?"}]}
 {"id": 1100, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does language shape memory?"}]}
 {"id": 1101, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does scarcity shape generosity?"}]}
-{"id": 1102, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does exile shape a writer's voice?"}]}
 {"id": 1103, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does forgiveness change the one who grants it?"}]}
-{"id": 1104, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does praise change the way we work?"}]}
-{"id": 1105, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does the body remember what the mind forgets?"}]}
-{"id": 1106, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does poetry differ from ordinary speech?"}]}
+{"id": 1104, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does purpose change the way we work?"}]}
+{"id": 1105, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does time change what we value?"}]}
 {"id": 1107, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does a crowd change the individuals within it?"}]}
 {"id": 1108, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does hardship reveal character?"}]}
 {"id": 1109, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does nostalgia distort the past?"}]}
 {"id": 1110, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does money change a friendship?"}]}
 {"id": 1111, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does teaching change the teacher?"}]}
-{"id": 1112, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does an apology repair a relationship?"}]}
 {"id": 1113, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does ritual mark the passage of time?"}]}
 {"id": 1114, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does anonymity affect behavior?"}]}
-{"id": 1115, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does landscape shape the people who live in it?"}]}
-{"id": 1116, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does translation alter meaning?"}]}
+{"id": 1115, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does tradition shape the people who inherit it?"}]}
 {"id": 1117, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does the desire for approval shape a life?"}]}
 {"id": 1118, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does war change a language?"}]}
-{"id": 1119, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does listening differ from waiting to speak?"}]}
-{"id": 1120, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does hospitality express a culture's values?"}]}
+{"id": 1119, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does happiness differ from pleasure?"}]}
+{"id": 1120, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does art express a culture's values?"}]}
 {"id": 1121, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does mourning differ across cultures?"}]}
-{"id": 1122, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does darkness change how we hear?"}]}
-{"id": 1123, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do cities remember their histories?"}]}
-{"id": 1124, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we learn to be alone?"}]}
-{"id": 1125, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we decide whom to believe?"}]}
-{"id": 1126, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of patience in craftsmanship?"}]}
+{"id": 1123, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do societies remember their histories?"}]}
+{"id": 1125, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we decide what to believe?"}]}
+{"id": 1126, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of pain in personal growth?"}]}
 {"id": 1127, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of honesty in leadership?"}]}
 {"id": 1128, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of imagination in empathy?"}]}
-{"id": 1129, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of the past in national identity?"}]}
+{"id": 1129, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of the past in personal identity?"}]}
 {"id": 1130, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of discomfort in learning?"}]}
-{"id": 1131, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of chance in scientific discovery?"}]}
+{"id": 1131, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of curiosity in discovery?"}]}
 {"id": 1132, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of tenderness in strength?"}]}
-{"id": 1133, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of the stranger in a community?"}]}
-{"id": 1134, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we keep secrets from those closest to us?"}]}
-{"id": 1135, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do humans decorate the places they live?"}]}
+{"id": 1133, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of the individual in a community?"}]}
+{"id": 1135, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do humans crave recognition?"}]}
 {"id": 1136, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we tell children stories about danger?"}]}
-{"id": 1137, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we find symmetry pleasing?"}]}
-{"id": 1138, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we mark anniversaries?"}]}
-{"id": 1139, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we trust some strangers immediately?"}]}
-{"id": 1140, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do humans give names to things?"}]}
+{"id": 1137, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we seek certainty?"}]}
 {"id": 1141, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be loyal?"}]}
-{"id": 1142, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to listen without judgment?"}]}
+{"id": 1142, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to love without condition?"}]}
 {"id": 1143, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be at peace with the past?"}]}
-{"id": 1144, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to belong to a place?"}]}
+{"id": 1144, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to belong to a community?"}]}
 {"id": 1145, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to keep faith with an ideal?"}]}
 {"id": 1146, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to grieve well?"}]}
-{"id": 1147, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be a good neighbor?"}]}
-{"id": 1148, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a room feel welcoming?"}]}
-{"id": 1149, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes an argument persuasive?"}]}
+{"id": 1147, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be a good person?"}]}
+{"id": 1149, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes an idea worth defending?"}]}
 {"id": 1150, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a ritual meaningful?"}]}
-{"id": 1151, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a landscape beautiful?"}]}
 {"id": 1152, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a life feel unfinished?"}]}
 {"id": 1153, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes forgiveness possible?"}]}
 {"id": 1154, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a community resilient?"}]}
@@ -161,40 +129,72 @@
 {"id": 1160, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of ceremony?"}]}
 {"id": 1161, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of slowness?"}]}
 {"id": 1162, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of being misunderstood?"}]}
-{"id": 1163, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of apprenticeship?"}]}
-{"id": 1164, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of keeping a diary?"}]}
+{"id": 1163, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of silence?"}]}
+{"id": 1164, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of compassion?"}]}
 {"id": 1165, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Can courage be taught?"}]}
-{"id": 1166, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Can a lie ever be kind?"}]}
-{"id": 1167, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Can grief be shared?"}]}
-{"id": 1168, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Can institutions be moral?"}]}
-{"id": 1169, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Is envy ever useful?"}]}
-{"id": 1170, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Is nostalgia a form of grief?"}]}
-{"id": 1171, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Is privacy a modern invention?"}]}
-{"id": 1172, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Is genius born or made?"}]}
 {"id": 1173, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between habit and character?"}]}
 {"id": 1174, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between wealth and obligation?"}]}
 {"id": 1175, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between fear and imagination?"}]}
 {"id": 1176, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What constitutes a fair punishment?"}]}
-{"id": 1177, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What constitutes a genuine welcome?"}]}
+{"id": 1177, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What constitutes a good life?"}]}
 {"id": 1178, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What constitutes a wasted day?"}]}
 {"id": 1179, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why is forgiveness so often mistaken for weakness?"}]}
-{"id": 1180, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why is silence uncomfortable in company?"}]}
-{"id": 1181, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why is it hard to accept a compliment?"}]}
+{"id": 1180, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why is change so difficult to accept?"}]}
+{"id": 1181, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why is it hard to admit we are wrong?"}]}
 {"id": 1182, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Describe the essence of mercy."}]}
 {"id": 1183, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Describe the nature of patience."}]}
 {"id": 1184, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Describe the nature of shame."}]}
 {"id": 1185, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What do we owe our parents?"}]}
-{"id": 1186, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What do we owe the places that raised us?"}]}
-{"id": 1187, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What can silence teach us about speech?"}]}
+{"id": 1186, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What do we owe the past?"}]}
 {"id": 1188, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What can children teach adults?"}]}
-{"id": 1189, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What can an old photograph tell us about time?"}]}
 {"id": 1190, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the difference between confidence and arrogance?"}]}
 {"id": 1191, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the difference between pride and dignity?"}]}
-{"id": 1192, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the cost of certainty?"}]}
 {"id": 1193, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the importance of second chances?"}]}
-{"id": 1194, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the art of giving advice?"}]}
-{"id": 1195, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the purpose of criticism?"}]}
-{"id": 1196, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the purpose of a public library?"}]}
+{"id": 1195, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the purpose of solitude?"}]}
+{"id": 1196, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the purpose of suffering?"}]}
 {"id": 1197, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Does suffering make us wiser?"}]}
 {"id": 1198, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Do we choose our beliefs?"}]}
 {"id": 1199, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What defines a life of integrity?"}]}
+{"id": 50, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the nature of jealousy?"}]}
+{"id": 51, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the nature of obligation?"}]}
+{"id": 52, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the nature of talent?"}]}
+{"id": 53, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the nature of dignity?"}]}
+{"id": 54, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of stubbornness?"}]}
+{"id": 55, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the value of moderation?"}]}
+{"id": 56, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of luck in failure?"}]}
+{"id": 57, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of obedience in a moral life?"}]}
+{"id": 58, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the role of failure in success?"}]}
+{"id": 59, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between anger and grief?"}]}
+{"id": 60, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between solitude and creativity?"}]}
+{"id": 61, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the relationship between language and power?"}]}
+{"id": 62, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the impact of wealth on happiness?"}]}
+{"id": 63, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the purpose of storytelling?"}]}
+{"id": 64, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the difference between courage and recklessness?"}]}
+{"id": 65, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the cost of loyalty?"}]}
+{"id": 66, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What is the essence of devotion?"}]}
+{"id": 67, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does trust shape a community?"}]}
+{"id": 68, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does illness teach humility?"}]}
+{"id": 69, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does success change a person?"}]}
+{"id": 70, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does religion shape a culture?"}]}
+{"id": 71, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does fame distort friendship?"}]}
+{"id": 72, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does habit dull perception?"}]}
+{"id": 74, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does a promise differ from an intention?"}]}
+{"id": 75, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How does responsibility change desire?"}]}
+{"id": 76, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we recognize courage in ordinary life?"}]}
+{"id": 77, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we know when we have been forgiven?"}]}
+{"id": 78, "prompt": [{"role": "user", "content": "Respond in prose and concisely. How do we distinguish love from need?"}]}
+{"id": 79, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be true to oneself?"}]}
+{"id": 80, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be well-educated?"}]}
+{"id": 81, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to be a good citizen?"}]}
+{"id": 82, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What does it mean to bear witness?"}]}
+{"id": 83, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a question worth asking?"}]}
+{"id": 84, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a tradition worth keeping?"}]}
+{"id": 85, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What makes a society flourish?"}]}
+{"id": 86, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What constitutes a life of service?"}]}
+{"id": 87, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What constitutes genuine expertise?"}]}
+{"id": 88, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What constitutes fairness?"}]}
+{"id": 90, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do humans fear death?"}]}
+{"id": 91, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why is boredom so hard to tolerate?"}]}
+{"id": 92, "prompt": [{"role": "user", "content": "Respond in prose and concisely. Why do we grieve people we barely knew?"}]}
+{"id": 98, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What defines a good leader?"}]}
+{"id": 99, "prompt": [{"role": "user", "content": "Respond in prose and concisely. What do we lose when we stop wondering?"}]}
