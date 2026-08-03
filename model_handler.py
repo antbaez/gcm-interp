@@ -2,7 +2,7 @@ import re
 import torch
 from transformers import BitsAndBytesConfig, AutoTokenizer, AutoModelForSequenceClassification
 import os
-from nnsight import NNsight, LanguageModel, VisionLanguageModel
+from nnsight import NNsight, LanguageModel
 class ModelHandler:
     def __init__(self, config):
         self.config = config
@@ -67,6 +67,10 @@ class ModelHandler:
         return tokenizer
 
     def load_model(self, model_id, device, model_type="causal"):
-        model_cls = VisionLanguageModel if self.is_gemma4 else LanguageModel
-        return model_cls(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True)
+        if self.is_gemma4:
+            from nnsight import VisionLanguageModel
+            gemma4_cache_dir = os.path.expanduser("~/orcd/pool/huggingface")
+            os.makedirs(gemma4_cache_dir, exist_ok=True)
+            return VisionLanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True, cache_dir=gemma4_cache_dir)
+        return LanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True)
     

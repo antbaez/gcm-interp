@@ -15,9 +15,7 @@ class DataHandler:
 
         file_paths = {
             'base_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-desired-all.jsonl",
-            'base_undesired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-undesired-all.jsonl",
             'source_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.source}-desired-all.jsonl",
-            'source_undesired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.source}-undesired-all.jsonl",
             'base_test': (
                 f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-test.jsonl"
                 if isinstance(self.config.args.eval_test, bool) and self.config.args.eval_test
@@ -31,9 +29,7 @@ class DataHandler:
 
         jsons = {
             'base_desired': self.load_from_jsonl(file_paths['base_desired']),
-            'base_undesired': self.load_from_jsonl(file_paths['base_undesired']),
             'source_desired': self.load_from_jsonl(file_paths['source_desired']),
-            'source_undesired': self.load_from_jsonl(file_paths['source_undesired']),
             'base_test': self.load_from_jsonl(file_paths['base_test']) if self.config.args.eval_test else None,
             'steering_add': self.load_from_jsonl(file_paths['steering_add']) if self.config.args.steering_add_path else None,
             'steering_sub': self.load_from_jsonl(file_paths['steering_sub']) if self.config.args.steering_sub_path else None,
@@ -41,12 +37,10 @@ class DataHandler:
 
         base = {
             'desired': self.get_templated_prompts(jsons['base_desired']),
-            'undesired': self.get_templated_prompts(jsons['base_undesired'])
         }
 
         base_qs = {
             'desired': self.get_templated_prompts(jsons['base_desired'], only_q=True, add_generation_prompt=True),
-            'undesired': self.get_templated_prompts(jsons['base_undesired'], only_q=True, add_generation_prompt=True),
         }
 
         if self.config.args.eval_test:
@@ -54,18 +48,17 @@ class DataHandler:
 
         source_qs = {
             'desired': self.get_templated_prompts(jsons['source_desired'], only_q=True, add_generation_prompt=True),
-            'undesired': self.get_templated_prompts(jsons['source_undesired'], only_q=True, add_generation_prompt=True)
         }
-        
+
         steering = {
             "add_qs": self.get_templated_prompts(jsons['steering_add'], only_q=True, add_generation_prompt=True) if jsons['steering_add'] else None,
             "sub_qs": self.get_templated_prompts(jsons['steering_sub'], only_q=True, add_generation_prompt=True) if jsons['steering_sub'] else None
         }
 
-        all_templated_prompts = base['desired'] + base['undesired'] + source_qs['desired'] + source_qs['undesired']
+        all_templated_prompts = base['desired'] + source_qs['desired']
         all_tokenized_prompts = self.tokenize_prompts(all_templated_prompts, max_length=None)
         self.max_len = all_tokenized_prompts['input_ids'].shape[1]
-        print(f"[DataHandler] Patching max_len: {self.max_len} (base + source full conversations)")
+        print(f"[DataHandler] max_len: {self.max_len} (base + source full conversations)")
 
         gen_prompts = []
         if steering["add_qs"]: gen_prompts += steering["add_qs"]

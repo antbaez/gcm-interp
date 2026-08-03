@@ -16,7 +16,7 @@ def _describe_hook(label, value):
         print(f'[activations] {label}: {fmt(value)}')
 
 
-def steering_reps_cache(model, data_handler, batch_size=9, key='desired', mean=True):
+def steering_reps_cache(model, data_handler, batch_size=9, mean=True):
     model_name = data_handler.config.args.model_id.split('/')[-1]
     source = data_handler.config.args.source
     resid = getattr(data_handler.config.args, 'resid', False)

@@ -7,7 +7,8 @@ set -e
 # selection from best_configs.json and generates once on the held-out test split.
 # Residual-stream steering runs by default. Pass --attention for attention-head steering
 # (reads whatever head-selection artifacts already exist under results/.../heads/).
-# By default steering is a single-layer sweep over the middle third of layers; --global steers all layers at once.
+# By default steering is a single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END
+# of layers (below); --global steers all layers at once instead.
 
 PATCHING_BATCH_SIZE=100
 SEED=42
@@ -15,16 +16,22 @@ MAX_NEW_TOKENS=512
 BATCH_SIZE=50
 TOPK_VALS="1.0"
 
+# Fraction of total layers (0.0-1.0) the single-layer sweep ranges over; ignored
+# in --global mode. Defaults to the first two-thirds of layers (0.0, 0.667) —
+# set to (0.333, 0.667) for the old middle-third sweep.
+LAYER_RANGE_START=0.333
+LAYER_RANGE_END=0.6667
+
 # Per-model steering N sweep (edit each model's list independently).
-# Local (single-layer sweep over the middle third) and global (all layers at
-# once) get independent lists — steering every layer usually needs different
-# magnitudes than steering a single one. --global selects the GLOBAL list.
+# Local (single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END) and global
+# (all layers at once) get independent lists — steering every layer usually needs
+# different magnitudes than steering a single one. --global selects the GLOBAL list.
 declare -A STEERING_N_LOCAL_BY_MODEL=(
-    [olmo]="1 5 10 20 30 40 50 60 70 80 90 100"
-    [qwen3]="1 10 25 50 75 100 125 150 175 200 225 250"
+    [olmo]="1 10 20 30 40 50 60 70 80 90 100"
+    [qwen3]="1 25 50 75 100 125 150 175 200 225 250"
+    [llama]="1 10 20 30 40 50 60 70 80 90 100"
+    [gemma4]="1 10 25 50 75 100 125 150 175 200 225 250"
     [gemma]="1 500 1000 2000 3000 4000 5000"
-    [gemma4]="1 500 1000 2000 3000 4000 5000"
-    [llama]="1 5 10 20 30 40 50 60 70 80 90 100"
 )
 declare -A STEERING_N_GLOBAL_BY_MODEL=(
     [olmo]="0.25 0.5 0.75 1 0.25 1.5 1.75 2 2.5 3 3.5 4"
@@ -180,6 +187,8 @@ run_experiments_for_model() {
         -steering_n $STEERING_N \
         -topk_vals $TOPK_VALS \
         -steering_types "${STEERING_TYPES[@]}" \
+        -layer_range_start "$LAYER_RANGE_START" \
+        -layer_range_end "$LAYER_RANGE_END" \
         $EVAL_FLAGS
 
     local ELAPSED=$(( SECONDS - START_TIME ))

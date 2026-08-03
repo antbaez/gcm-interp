@@ -59,7 +59,7 @@ MODEL_DIRS = {
     "olmo": "OLMo-2-1124-13B-DPO",
     "qwen": "Qwen1.5-14B-Chat",
     "qwen3": "Qwen3-14B",
-    "gemma": "gemma-3-12b-it",
+    "gemma4": "gemma-4-12B-it",
     "llama": "Llama-3.1-8B-Instruct",
 }
 

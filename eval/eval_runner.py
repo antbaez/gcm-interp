@@ -16,10 +16,7 @@ from batch_handler import BatchHandler
 from model_handler import ModelHandler
 def load_patching_reps(data_handler, model_handler, mean=True):
     model = model_handler.model
-    patching_reps = {}
-    for key in ['desired', 'undesired']:
-        patching_reps[key] = steering_reps_cache(model, data_handler, key=key, mean=mean)
-    return patching_reps
+    return steering_reps_cache(model, data_handler, mean=mean)
 
 def save_prompt_responses(responses, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -74,8 +71,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
     resid = getattr(config.args, 'resid', False)
     global_steer = getattr(config.args, 'global_steer', False)
     # Head localization (top-k ATP selection) only happens in attention mode and not --global.
-    # Otherwise whole layers are steered: a single-layer sweep over the middle third of
-    # layers (default) or every layer at once (--global).
+    # Otherwise whole layers are steered: a single-layer sweep over
+    # -layer_range_start/-layer_range_end (default) or every layer at once (--global).
     head_selection = (not resid) and (not global_steer)
     layer_sweep = (not global_steer) and (not head_selection)
     if head_selection:
@@ -95,8 +92,9 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
         config.args.N = N
 
     # Decide what the inner sweep ranges over. Layer sweeps steer one layer at a
-    # time over the middle third of layers; the swept value is written into the
-    # filename as `layer=<idx>`. Global / head-selection runs keep `topk=<val>`.
+    # time over [-layer_range_start, -layer_range_end) of all layers; the swept
+    # value is written into the filename as `layer=<idx>`. Global / head-selection
+    # runs keep `topk=<val>`.
     if layer_sweep:
         sweep_axis = 'layer'
         explicit_layers = getattr(config.args, 'layers', None)
@@ -107,10 +105,12 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
             print(f"Steering pinned layers: {sweep_vals}")
         else:
             num_layers = model_handler.num_layers
-            layer_lo, layer_hi = round(num_layers / 3), round(2 * num_layers / 3)
+            range_start = getattr(config.args, 'layer_range_start', 0.0)
+            range_end = getattr(config.args, 'layer_range_end', 2/3)
+            layer_lo, layer_hi = round(num_layers * range_start), round(num_layers * range_end)
             sweep_vals = list(range(layer_lo, layer_hi))
-            print(f"Single-layer sweep over middle third: layers {layer_lo}..{layer_hi - 1} "
-                  f"({len(sweep_vals)} layers)")
+            print(f"Single-layer sweep over layers {layer_lo}..{layer_hi - 1} "
+                  f"({len(sweep_vals)} layers, range=[{range_start:g}, {range_end:g}))")
     elif global_steer:
         # Every layer is steered at once, so there is no swept index; the
         # filename slot is a fixed `layer=all` sentinel.

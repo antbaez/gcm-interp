@@ -21,7 +21,7 @@ p-value (used regardless of sample size, as in statsmodels' default
 `exact=True`) and a continuity-corrected one-sided normal-approximation
 z-test for reference.
 
-Default --model is olmo,qwen3,llama,gemma4 (the models with results so far); pass
+Default --model is olmo,qwen3,llama (the models with results so far); pass
 --model all to also include qwen. Results are saved to stats/mcnemar_results/
 by default; pass --output-dir to save elsewhere.
 
@@ -48,7 +48,7 @@ MODEL_DIRS = {
     "qwen": "Qwen1.5-14B-Chat",
     "qwen3": "Qwen3-14B",
     "llama": "Llama-3.1-8B-Instruct",
-    "gemma4": "gemma-4-12B-it",
+    # "gemma4": "gemma-4-12B-it",  # disabled, uncomment to re-enable
 }
 
 # Dataset tag -> "from_<source>_to_<base>" task dir (mirrors run_steering.sh's D_SOURCE/D_BASE).
@@ -254,7 +254,7 @@ def expand_tags(tag_arg: str, mapping: dict, kind: str) -> list[str]:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--model", default="olmo,qwen3,llama,gemma4",
+    parser.add_argument("--model", default="olmo,qwen3,llama",
                          help=f"model tag(s), comma-separated, or 'all' ({', '.join(MODEL_DIRS)})")
     parser.add_argument("--dataset", default="all",
                          help=f"dataset tag(s), comma-separated, or 'all' ({', '.join(DATASET_TASKS)})")
