@@ -161,7 +161,6 @@ def _compute_and_write(
             output_dir,
             str(row["MODEL_ID"]),
             f"from_{row['SOURCE']}_to_{row['BASE']}",
-            str(row["CACHE_MODE"]),
             scope,
             str(row["STEERING_TYPE"]),
         )

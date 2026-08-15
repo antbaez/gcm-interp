@@ -35,17 +35,16 @@ def _read_jsonl(path: Path):
 def _process_judge_file(judge_path: Path, workdirs_dir: Path, stream_mode: str | None) -> dict | None:
     rel   = judge_path.relative_to(workdirs_dir)
     parts = rel.parts
-    # Expected layout: (model, from_to, norm_mode, stream_mode, cache_mode, scope, steering_type, exp_dir, filename)
-    if len(parts) < 9:
+    # Expected layout: (model, from_to, norm_mode, stream_mode, scope, steering_type, exp_dir, filename)
+    if len(parts) < 8:
         return None
 
     model         = parts[0]
     from_to       = parts[1]
     norm_mode     = parts[2]   # "normalized" or "unnormalized"
     stream_mode_i = parts[3]   # "attention" or "residuals"
-    cache_mode    = parts[4]   # "cache" or "no_cache"
-    scope         = parts[5]   # "global" or "local"
-    steering_type = parts[6]   # e.g. "positional", "last-token"
+    scope         = parts[4]   # "global" or "local"
+    steering_type = parts[5]   # e.g. "positional", "last-token"
 
     if stream_mode is not None and stream_mode_i != stream_mode:
         return None
@@ -99,7 +98,7 @@ def _process_judge_file(judge_path: Path, workdirs_dir: Path, stream_mode: str |
         no_rel_passes.append(jp_pass and flu == 2)
 
     n = len(w_passes)
-    condition = f"{cache_mode} / {steering_type}"
+    condition = steering_type
     # N may be fractional for --global runs (e.g. 0.5); int(N) would
     # truncate it, so cast to float and only narrow to int when exact.
     N_val = float(N)
@@ -112,7 +111,6 @@ def _process_judge_file(judge_path: Path, workdirs_dir: Path, stream_mode: str |
         scope=scope,
         norm_mode=norm_mode,
         stream_mode=stream_mode_i,
-        cache_mode=cache_mode,
         steering_type=steering_type,
         condition=condition,
         pass_rate=sum(w_passes) / n,
@@ -153,7 +151,7 @@ def main():
         return
 
     csv_path = accuracy_dir / "results_summary.csv"
-    df.sort_values(["model", "dataset", "norm_mode", "stream_mode", "cache_mode", "steering_type", "N", "topk"]) \
+    df.sort_values(["model", "dataset", "norm_mode", "stream_mode", "steering_type", "N", "topk"]) \
       .to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path}  ({len(df)} rows)")
 

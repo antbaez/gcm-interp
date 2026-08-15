@@ -49,7 +49,6 @@ PASSTHROUGH_COLS = [
     "MODEL_ID",
     "SOURCE",
     "BASE",
-    "CACHE_MODE",
     "STEERING_TYPE",
     "N",
     "REPS",
@@ -60,7 +59,7 @@ PASSTHROUGH_COLS = [
 # Row-level merge key (unique per example)
 ROW_KEY_COLS = [
     "MODEL_ID", "SOURCE", "BASE",
-    "CACHE_MODE", "STEERING_TYPE",
+    "STEERING_TYPE",
     "N", "REPS", "STEERING_METHOD", "topk",
     "data_path_query",
 ]
@@ -68,7 +67,7 @@ ROW_KEY_COLS = [
 # Condition-level grouping key (accuracy aggregation)
 GROUP_COLS = [
     "MODEL_ID", "SOURCE", "BASE",
-    "CACHE_MODE", "STEERING_TYPE",
+    "STEERING_TYPE",
     "N", "REPS", "STEERING_METHOD", "topk",
 ]
 

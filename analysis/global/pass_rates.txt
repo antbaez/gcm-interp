@@ -3,12 +3,12 @@ split for global steering, so this is the best of the N sweep on the same
 prompts, unlike the local held-out pass_rates.txt.
 Pass = judge_rating 5/5 and fluency 2/2 and relevance 2/2.
 
-DATASET     MODEL  LAST     MEAN     POSITIONAL
-----------  -----  -------  -------  ----------
-harmful     llama  0.400 ✓  0.100    0.300
-harmful     olmo   0.440    0.680    0.760 ✓
-harmful     qwen3  0.440    0.760 ✓  0.640
+DATASET  MODEL  LAST     MEAN     POSITIONAL
+-------  -----  -------  -------  ----------
+harmful  llama  0.400 ✓  0.100    0.300
+harmful  olmo   0.440    0.740    0.760 ✓
+harmful  qwen3  0.440    0.760 ✓  0.640
 
-verse       llama  1.000 ✓  1.000 ✓  1.000 ✓
-verse       olmo   0.180    0.980 ✓  0.980 ✓
-verse       qwen3  0.220    1.000 ✓  1.000 ✓
+verse    llama  1.000 ✓  1.000 ✓  1.000 ✓
+verse    olmo   0.180    0.980    1.000 ✓
+verse    qwen3  0.220    1.000 ✓  1.000 ✓

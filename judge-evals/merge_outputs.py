@@ -28,7 +28,7 @@ from config import BASE_DIR, RUNS_DIR, DATA_DIR, GEN_RE
 
 
 def extract_path_metadata(path: str) -> dict:
-    """Pull model/task/cache/steering metadata from the directory structure."""
+    """Pull model/task/steering metadata from the directory structure."""
     parts = Path(path).parts
     runs_idx = parts.index("results")
 
@@ -37,10 +37,9 @@ def extract_path_metadata(path: str) -> dict:
     _, source, _, base = from_to.split("_")
     norm_mode     = parts[runs_idx + 3]   # "normalized" or "unnormalized"
     stream_mode   = parts[runs_idx + 4]   # "attention" or "residuals"
-    cache_mode    = parts[runs_idx + 5]   # "cache" or "no_cache"
-    scope         = parts[runs_idx + 6]   # "global" or "local"
-    steering_type = parts[runs_idx + 7]   # e.g. "positional", "last-token"
-    filename      = parts[runs_idx + 8]
+    scope         = parts[runs_idx + 5]   # "global" or "local"
+    steering_type = parts[runs_idx + 6]   # e.g. "positional", "last-token"
+    filename      = parts[runs_idx + 7]
 
     m = GEN_RE.match(filename)
     if not m:
@@ -52,7 +51,6 @@ def extract_path_metadata(path: str) -> dict:
         "BASE":          base,
         "NORM_MODE":     norm_mode,
         "STREAM_MODE":   stream_mode,
-        "CACHE_MODE":    cache_mode,
         "SCOPE":         scope,
         "STEERING_TYPE": steering_type,
         **m.groupdict(),
@@ -114,14 +112,13 @@ def discover_gen_files(
     source: str | None = None,
     base: str | None = None,
     norm_mode: str | None = None,
-    cache_mode: str | None = None,
     steering_type: str | None = None,
     stream_mode: str | None = None,
     scope: str | None = None,
     test_file: str | None = None,
 ) -> list[str]:
     """
-    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/stream_mode/cache_mode/scope/steering_type.
+    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/stream_mode/scope/steering_type.
 
     Uses single-level wildcards (*) for each path component to avoid duplicates
     that arise from recursive (**) globbing.
@@ -130,12 +127,11 @@ def discover_gen_files(
     task_part    = f"from_{source}_to_{base}" if (source and base) else "*"
     norm_part    = norm_mode or "*"
     stream_part  = stream_mode or "*"
-    cache_part   = cache_mode or "*"
     scope_part   = scope or "*"
     steer_part   = steering_type or "*"
 
     gen_files = []
-    pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{stream_part}/{cache_part}/{scope_part}/{steer_part}/*_gen.json"
+    pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{stream_part}/{scope_part}/{steer_part}/*_gen.json"
     gen_files.extend(glob.glob(pattern))
 
     # Deduplicate and filter by filename pattern
@@ -188,7 +184,6 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
             "SOURCE": source,
             "BASE": base,
             "STREAM_MODE": meta["STREAM_MODE"],
-            "CACHE_MODE": meta["CACHE_MODE"],
             "STEERING_TYPE": meta["STEERING_TYPE"],
             "N": meta["N"],
             "REPS": meta["REPS"] if meta["REPS"] is not None else "targeted",

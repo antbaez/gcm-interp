@@ -82,15 +82,14 @@ def filter_hidden_n(df: pd.DataFrame) -> pd.DataFrame:
     return df[mask]
 
 
-def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_label: str = "normalized", cache_suffix: str = "", compare_df: pd.DataFrame = None, padding: bool = False, resid: bool = False, multi: bool = False):
+def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_label: str = "normalized", compare_df: pd.DataFrame = None, padding: bool = False, resid: bool = False, multi: bool = False):
     """
     One figure per (model, dataset). Used for global runs (all layers steered).
-    Grid rows = cache_mode + wo_rf (or cache comparison when compare_df provided), one heatmap per row.
+    Grid rows = w_rf + wo_rf (or a padding comparison when compare_df provided), one heatmap per row.
     Each heatmap: rows = steering_type, columns = N.
     """
     import matplotlib as mpl
 
-    cache_modes    = sorted(df["cache_mode"].unique())
     steering_types = sorted(df["steering_type"].unique())
     cmap = "RdYlGn" if diff else "YlGn"
     vmin, vmax = (-1, 1) if diff else (0, 1)
@@ -110,7 +109,7 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
         short_title  = f"{short_model}  |  {short_source}  (w_rf)"
 
         n_vals = sorted(group["N"].unique())
-        n_rows = len(cache_modes) + 1  # cache_mode rows + extra row
+        n_rows = 2  # main row + wo_rf (or padding-comparison) row
         n_cols = 1
 
         w_rf_max = group.groupby("steering_type")["pass_rate"].max()
@@ -128,22 +127,20 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
 
         compare_group = compare_groups.get((model, dataset))
         if compare_group is not None:
-            main_label    = "normal"  if padding else cache_modes[0] if len(cache_modes) == 1 else None
-            compare_label = "padding" if padding else "cache"
-            all_rows = (
-                [(cache, "pass_rate", group, main_label if padding else cache) for cache in cache_modes] +
-                [(None, "pass_rate", compare_group, compare_label)]
-            )
+            all_rows = [
+                ("pass_rate", group, "normal"),
+                ("pass_rate", compare_group, "padding"),
+            ]
         else:
-            all_rows = (
-                [(cache, "pass_rate", group, "w_rf") for cache in cache_modes] +
-                [(None, "pass_rate_wo_rf", group, "wo_rf")]
-            )
+            all_rows = [
+                ("pass_rate", group, "w_rf"),
+                ("pass_rate_wo_rf", group, "wo_rf"),
+            ]
 
-        for row_i, (cache, val_col, src, row_label) in enumerate(all_rows):
+        for row_i, (val_col, src, row_label) in enumerate(all_rows):
             is_last_row = row_i == n_rows - 1
             ax  = axes[row_i][0]
-            sub = src if cache is None else src[src["cache_mode"] == cache]
+            sub = src
 
             matrix = (
                 sub.pivot_table(index="steering_type", columns="N", values=val_col)
@@ -181,7 +178,7 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
         fig.colorbar(sm, cax=cax)
 
         suffix   = "_diff" if diff else ""
-        fig_path = figures_dir / f"heatmap_{short_model}_{short_source}{suffix}{cache_suffix}_global.png"
+        fig_path = figures_dir / f"heatmap_{short_model}_{short_source}{suffix}_global.png"
         plt.savefig(fig_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"Saved: {fig_path.name}")
@@ -196,7 +193,7 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
 
 
 def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "normalized",
-                        cache_suffix: str = "", resid: bool = False, multi: bool = False,
+                        resid: bool = False, multi: bool = False,
                         no_rel: bool = False, wo_rf: bool = False):
     """
     One figure per (model, dataset) for single-layer-sweep runs.
@@ -357,7 +354,7 @@ def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
             cax = fig.add_axes([0.92, y0, 0.005, y1 - y0])
             fig.colorbar(sm, cax=cax)
 
-        fig_path = figures_dir / f"heatmap_{short_model}_{short_source}{cache_suffix}.png"
+        fig_path = figures_dir / f"heatmap_{short_model}_{short_source}.png"
         plt.savefig(fig_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"Saved: {fig_path.name}")
@@ -372,7 +369,7 @@ def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
 
 
 def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "normalized",
-                        cache_suffix: str = "", resid: bool = False, multi: bool = False):
+                        resid: bool = False, multi: bool = False):
     """
     One figure per dataset, for the paper: rows stacked by model in PAPER_MODEL_ORDER
     (OLMo, Qwen3, Llama), columns = steering_type, cells = layer x N w_rf pass-rate
@@ -497,7 +494,7 @@ def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
 
             y_cursor = y_bottom - ROW_GAP
 
-        fig_path = figures_dir / f"heatmap_{short_source}{cache_suffix}_paper.png"
+        fig_path = figures_dir / f"heatmap_{short_source}_paper.png"
         plt.savefig(fig_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"Saved: {fig_path.name}")
@@ -512,7 +509,7 @@ def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
 
 
 def make_layer_heatmaps_agg(df: pd.DataFrame, figures_dir: Path, agg: str, norm_label: str = "normalized",
-                            cache_suffix: str = "", resid: bool = False, multi: bool = False):
+                            resid: bool = False, multi: bool = False):
     """
     Like make_layer_heatmaps, but collapses the N axis into a single aggregated
     value per layer: agg='max' takes the max pass rate over N, agg='avg' takes
@@ -617,7 +614,7 @@ def make_layer_heatmaps_agg(df: pd.DataFrame, figures_dir: Path, agg: str, norm_
         cax = fig.add_axes([0.92, 0.1, 0.005, 0.8])
         fig.colorbar(sm, cax=cax)
 
-        fig_path = figures_dir / f"heatmap_{short_model}_{short_source}_{agg}{cache_suffix}.png"
+        fig_path = figures_dir / f"heatmap_{short_model}_{short_source}_{agg}.png"
         plt.savefig(fig_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"Saved: {fig_path.name}")
@@ -631,8 +628,7 @@ def make_layer_heatmaps_agg(df: pd.DataFrame, figures_dir: Path, agg: str, norm_
             _process_group(model, dataset, group)
 
 
-def generate_for_stream(args, resid: bool, norm_mode: str, cache_suffix: str,
-                         cache_mode: str):
+def generate_for_stream(args, resid: bool, norm_mode: str):
     figures_root = BASE_DIR / "figures"
     if resid:
         full_dir = figures_root / "residuals"
@@ -656,21 +652,13 @@ def generate_for_stream(args, resid: bool, norm_mode: str, cache_suffix: str,
     base_mask = df["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
     base_df = df[
         base_mask &
-        (df["norm_mode"] == norm_mode) &
-        (df["cache_mode"] == cache_mode)
+        (df["norm_mode"] == norm_mode)
     ]
     base_df = filter_hidden_n(base_df)
 
     compare_df = None
     if resid:
         pass  # no compare_df for resid mode
-    elif args.nocache:
-        compare_df = df[
-            base_mask &
-            (df["norm_mode"] == norm_mode) &
-            (df["cache_mode"] == "cache")
-        ]
-        compare_df = filter_hidden_n(compare_df)
     elif args.padding:
         padding_csv = ACCURACY_PADDING_DIR / "results_summary.csv"
         if not padding_csv.exists():
@@ -681,8 +669,7 @@ def generate_for_stream(args, resid: bool, norm_mode: str, cache_suffix: str,
         pad_mask = padding_raw["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
         compare_df = padding_raw[
             pad_mask &
-            (padding_raw["norm_mode"] == norm_mode) &
-            (padding_raw["cache_mode"] == cache_mode)
+            (padding_raw["norm_mode"] == norm_mode)
         ]
         compare_df = filter_hidden_n(compare_df)
         common_pairs = compare_df[["model", "dataset"]].drop_duplicates()
@@ -711,20 +698,20 @@ def generate_for_stream(args, resid: bool, norm_mode: str, cache_suffix: str,
             paper_dir = full_dir / "paper"
             paper_dir.mkdir(parents=True, exist_ok=True)
             make_paper_heatmaps(layer_source_df, paper_dir, norm_label=norm_mode,
-                                cache_suffix=cache_suffix, resid=resid, multi=args.multi)
+                                resid=resid, multi=args.multi)
             return
 
         agg_requested = args.max or args.avg
         if not agg_requested:
             local_dir.mkdir(parents=True, exist_ok=True)
             make_layer_heatmaps(layer_source_df, local_dir, norm_label=norm_mode,
-                                cache_suffix=cache_suffix, resid=resid, multi=args.multi,
+                                resid=resid, multi=args.multi,
                                 no_rel=args.no_rel, wo_rf=args.wo_rf)
 
             paper_dir = full_dir / "paper"
             paper_dir.mkdir(parents=True, exist_ok=True)
             make_paper_heatmaps(layer_source_df, paper_dir, norm_label=norm_mode,
-                                cache_suffix=cache_suffix, resid=resid, multi=args.multi)
+                                resid=resid, multi=args.multi)
 
         base_stream_name = "residuals" if resid else ("attention-padding" if args.padding else "attention")
         for agg, flag in (("max", args.max), ("avg", args.avg)):
@@ -733,7 +720,7 @@ def generate_for_stream(args, resid: bool, norm_mode: str, cache_suffix: str,
             agg_dir = figures_root / f"{base_stream_name}_{agg}" / "local"
             agg_dir.mkdir(parents=True, exist_ok=True)
             make_layer_heatmaps_agg(layer_source_df, agg_dir, agg=agg, norm_label=norm_mode,
-                                     cache_suffix=cache_suffix, resid=resid, multi=args.multi)
+                                     resid=resid, multi=args.multi)
     elif args.paper:
         return
 
@@ -754,7 +741,7 @@ def generate_for_stream(args, resid: bool, norm_mode: str, cache_suffix: str,
 
     norm_label = norm_mode
     global_dir.mkdir(parents=True, exist_ok=True)
-    make_heatmaps(base_df, global_dir, diff=args.diff, norm_label=norm_label, cache_suffix=cache_suffix, compare_df=compare_df, padding=args.padding, resid=resid, multi=args.multi)
+    make_heatmaps(base_df, global_dir, diff=args.diff, norm_label=norm_label, compare_df=compare_df, padding=args.padding, resid=resid, multi=args.multi)
 
 
 def main():
@@ -768,11 +755,6 @@ def main():
     parser.add_argument("--norm_mode", default=None,
                         choices=["normalized", "unnormalized"],
                         help="Which normalization condition to plot (overridden by --unnormalized)")
-    parser.add_argument("--cache_mode", default="cache",
-                        choices=["cache", "no_cache"],
-                        help="Which cache condition to plot (default: cache)")
-    parser.add_argument("--nocache", action="store_true",
-                        help="Plot no-cache results; appends _nocache to output filenames")
     parser.add_argument("--padding", action="store_true",
                         help="Compare accuracy/ (top row) vs accuracy_padding/ (bottom row)")
     parser.add_argument("--attention", action="store_true",
@@ -802,13 +784,11 @@ def main():
                              "skipping local/global/agg figures")
     args = parser.parse_args()
 
-    norm_mode     = "unnormalized" if args.unnormalized else (args.norm_mode or "normalized")
-    cache_suffix  = "_nocache" if args.nocache else ""
-    cache_mode    = "no_cache" if args.nocache else args.cache_mode
+    norm_mode = "unnormalized" if args.unnormalized else (args.norm_mode or "normalized")
 
     stream_modes = [False] if args.attention else [True]
     for resid in stream_modes:
-        generate_for_stream(args, resid, norm_mode, cache_suffix, cache_mode)
+        generate_for_stream(args, resid, norm_mode)
 
 
 if __name__ == "__main__":

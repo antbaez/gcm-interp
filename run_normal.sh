@@ -4,7 +4,7 @@
 # model x dataset combo via scripts/run_normal_job.sh.
 #
 # Usage:
-#   bash run_normal.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--nocache] [--unnormalized] [--attention] [--global] [--split val|test] [--judging]
+#   bash run_normal.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging]
 #   Defaults: --model all --dataset all (uses steering types from scripts/run_steering.sh)
 #   Note: Residual-stream steering runs by default. Pass --attention for attention-head steering
 #   (reads whatever head-selection artifacts already exist under results/.../heads/).
@@ -14,7 +14,6 @@ set -e
 MODEL="all"
 DATASET="all"
 TYPE_VAL=""
-NOCACHE=false
 UNNORMALIZED=false
 JUDGING_ONLY=false
 RESID=true
@@ -30,7 +29,6 @@ while [[ $# -gt 0 ]]; do
         --model)        MODEL="$2";        shift 2 ;;
         --dataset)      DATASET="$2";      shift 2 ;;
         --type)         TYPE_VAL="$2";     shift 2 ;;
-        --nocache)      NOCACHE=true;      shift ;;
         --unnormalized) UNNORMALIZED=true; shift ;;
         --judging)      JUDGING_ONLY=true; shift ;;
         --attention)    RESID=false;       shift ;;
@@ -52,7 +50,6 @@ if [ "$DATASET" = "all" ]; then DATASETS=("${ALL_DATASETS[@]}"); else IFS=',' re
 
 JOB_FLAGS=()
 [ -n "$TYPE_VAL" ]         && JOB_FLAGS+=(--type "$TYPE_VAL")
-[ "$NOCACHE" = true ]      && JOB_FLAGS+=(--nocache)
 [ "$UNNORMALIZED" = true ] && JOB_FLAGS+=(--unnormalized)
 [ "$JUDGING_ONLY" = true ] && JOB_FLAGS+=(--judging)
 [ "$RESID" = false ]       && JOB_FLAGS+=(--attention)

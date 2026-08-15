@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--nocache] [--attention] [--global] [--split val|test] [--device <cuda:0>]
+# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--attention] [--global] [--split val|test] [--device <cuda:0>]
 # --dataset defaults to "all" (harmful, sycophancy, verse).
 # --split val (default) sweeps N x layer on the validation split; --split test pins the
 # selection from best_configs.json and generates once on the held-out test split.
@@ -59,7 +59,6 @@ STEERING_TYPES=(
     mean
     positional
 )
-KV_CACHING=true
 NORMALIZE=true
 
 while [[ $# -gt 0 ]]; do
@@ -68,7 +67,6 @@ while [[ $# -gt 0 ]]; do
         --dataset) DATASET_TAG="$2";    shift 2 ;;
         --device)  DEVICE="$2";         shift 2 ;;
         --type)    IFS=' ' read -ra STEERING_TYPES <<< "$2"; shift 2 ;;
-        --nocache)      KV_CACHING=false;  shift ;;
         --unnormalized) NORMALIZE=false;   shift ;;
         --attention) RESID=false;       shift ;;
         --global)  GLOBAL=true;         shift ;;
@@ -118,7 +116,6 @@ if [ "$RESID" = true ]; then TOPK_VALS="1.0"; fi
 EVAL_FLAGS=""
 if [ "$EVAL_MODEL" = true ];   then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
 if [ "$STEERING" = true ];     then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
-if [ "$KV_CACHING" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --kv_caching"; fi
 if [ "$NORMALIZE" = false ];   then EVAL_FLAGS="$EVAL_FLAGS --unnormalized"; fi
 if [ "$RESID" = true ];        then EVAL_FLAGS="$EVAL_FLAGS --resid"; fi
 if [ "$GLOBAL" = true ];       then EVAL_FLAGS="$EVAL_FLAGS --global"; fi

@@ -1,13 +1,13 @@
 import sys
 import json
-from config import Config
-from model_handler import ModelHandler
-from data_handler import DataHandler
+from utils.config import Config
+from utils.model_handler import ModelHandler
+from utils.data_handler import DataHandler
 import os
 from eval.eval_runner import *
 import logging
 logging.basicConfig(level=logging.WARNING)
-from batch_handler import BatchHandler
+from utils.batch_handler import BatchHandler
 
 def main():
     print('Parsing config...')

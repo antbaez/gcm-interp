@@ -12,8 +12,8 @@ import sys
 import torch
 import time
 sys.path.append('../')  # Adjust path to import modules correctly
-from batch_handler import BatchHandler
-from model_handler import ModelHandler
+from utils.batch_handler import BatchHandler
+from utils.model_handler import ModelHandler
 def load_patching_reps(data_handler, model_handler, mean=True):
     model = model_handler.model
     return steering_reps_cache(model, data_handler, mean=mean)
@@ -145,9 +145,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
                 slot = f"{sweep_axis}={sweep_val}"
                 norm_dir   = "normalized" if config.args.normalize else "unnormalized"
                 stream_dir = "residuals" if resid else "attention"
-                cache_dir  = "cache" if config.args.kv_caching else "no_cache"
                 scope_dir  = "global" if global_steer else "local"
-                steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{stream_dir}/{cache_dir}/{scope_dir}/{config.args.steering_type}"
+                steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{stream_dir}/{scope_dir}/{config.args.steering_type}"
                 new_stem = f"{steer_eval_dir}/N={n_str}_{ablation}_{slot}_{config.args.test_dataset}_gen"
                 old_stem = f"{steer_eval_dir}/{n_str}_{reps_type}_{ablation}_{sweep_val}_{config.args.test_dataset}_gen"
                 existing_stem = (
@@ -188,7 +187,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
                 for batch_num, idx in enumerate(range(0, len_gen_qs, config.args.batch_size), start=1):
                     _t0 = time.time()
                     gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, topk_df, config.args.N, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching, resid=resid, coverage=steering_coverage)
+                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, topk_df, config.args.N, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, resid=resid, coverage=steering_coverage)
                     decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
                     gc.collect()
                     torch.cuda.empty_cache()

@@ -245,12 +245,12 @@ def main():
     table_rows = []
     pass_rates = {}
 
-    for model, task, norm_mode, stream_mode, cache_mode, methods in combos:
+    for model, task, norm_mode, stream_mode, methods in combos:
         if ENABLED_METHODS is not None:
             methods = [m for m in methods if m in ENABLED_METHODS]
         if not methods:
             continue
-        workdir_base = WORKDIRS_ROOT / model / task / norm_mode / stream_mode / cache_mode / scope
+        workdir_base = WORKDIRS_ROOT / model / task / norm_mode / stream_mode / scope
         test_file = split_test_file(task, "val" if args.global_scope else "test")
 
         skipped_methods = []

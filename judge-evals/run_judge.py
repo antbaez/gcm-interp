@@ -87,7 +87,6 @@ def accuracy_paths(meta: dict) -> tuple[Path, Path]:
         / meta["MODEL_ID"]
         / f"from_{meta['SOURCE']}_to_{meta['BASE']}"
         / meta["NORM_MODE"]
-        / meta["CACHE_MODE"]
         / meta["STEERING_TYPE"]
     )
     # Held-out (true test) runs get their own subdir so their accuracies never
@@ -397,8 +396,6 @@ def parse_args():
                    help="normalized or unnormalized")
     p.add_argument("--stream_mode",   default=None,
                    help="attention or residuals")
-    p.add_argument("--cache_mode",    default=None,
-                   help="cache or no_cache")
     p.add_argument("--steering_type", default=None,
                    help="e.g. positional, last-token, all-tokens")
     p.add_argument("--test_file",     default=None,
@@ -427,14 +424,14 @@ def main():
 
     if not args.all and not any([
         args.model_name, args.source, args.base,
-        args.cache_mode, args.steering_type, args.stream_mode,
+        args.steering_type, args.stream_mode,
     ]):
         print("Error: specify at least one filter or --all. Run --help for examples.")
         sys.exit(1)
 
     gen_files = discover_gen_files(
         args.runs_dir, args.model_name, args.source, args.base,
-        args.norm_mode, args.cache_mode, args.steering_type,
+        args.norm_mode, args.steering_type,
         args.stream_mode, test_file=args.test_file,
     )
     print(f"Found {len(gen_files)} gen files")

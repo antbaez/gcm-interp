@@ -17,7 +17,7 @@ Skip checking that code compiles (`py_compile` etc.) after every edit.
 
 Top-level dispatchers — run with `bash`, not `sbatch` (no GPU allocation themselves). Expand `--model`/`--dataset` tags (comma-separated, or `all` — `olmo`, `qwen`, `qwen3`, `gemma`, `gemma4`, `llama` × `harmful`, `sycophancy`, `verse`) and `sbatch` one job per combo via `scripts/run_normal_job.sh` / `scripts/run_preemptable_job.sh`. `run_preemptable.sh` also takes `--seed`. (`run_preemptable_job.sh` submits to `mit_preemptable` with `--requeue`; `run_normal_job.sh` to `mit_normal_gpu`.)
 
-Flags forwarded down the chain: `--model`, `--dataset`, `--type`, `--nocache`, `--unnormalized`, `--attention`, `--global`, `--split val|test`, `--judging`, `--judge <openai-model>` (`--seed` too, for preemptable). Residual-stream steering is the default — there's no `--resid` flag, only `--attention` to disable it. `--global` steers every layer at once. `--split` picks which phase(s) run: omitted runs the full pipeline; `val` stops after judging the sweep; `test` (re)selects from existing sweep results and only regenerates the held-out split if the winner moved. `--judge <model>` (e.g. `gpt-5-mini`) judges the held-out split via that OpenAI API model instead of the local one (needs `OPENAI_API_KEY`); never touches validation-sweep judging, and writes to a separate `judge=<model>` subtree.
+Flags forwarded down the chain: `--model`, `--dataset`, `--type`, `--unnormalized`, `--attention`, `--global`, `--split val|test`, `--judging`, `--judge <openai-model>` (`--seed` too, for preemptable). Residual-stream steering is the default — there's no `--resid` flag, only `--attention` to disable it. `--global` steers every layer at once. `--split` picks which phase(s) run: omitted runs the full pipeline; `val` stops after judging the sweep; `test` (re)selects from existing sweep results and only regenerates the held-out split if the winner moved. `--judge <model>` (e.g. `gpt-5-mini`) judges the held-out split via that OpenAI API model instead of the local one (needs `OPENAI_API_KEY`); never touches validation-sweep judging, and writes to a separate `judge=<model>` subtree.
 
 **Attention-head steering (without `--global`) needs pre-existing localization artifacts** — ATP head localization was removed from the codebase, so there's no way to compute them fresh. `--attention` just runs eval/generation against whatever `.pt`/CSV files already exist under `results/<model>/<task>/heads/`; it errors or no-ops on a fresh `results/`. Residual-stream and `--global` steering need no such artifacts.
 
@@ -34,9 +34,9 @@ Runs steered generation. Calls `run.py` once per model (not per dataset).
 
 **Steps:**
 
-1. Parse `--model`/`--dataset`/`--device`/`--type`/`--nocache`/`--unnormalized`/`--attention`/`--global`/`--seed`/`--split val|test`/`--best-configs <path>`; expand `all`. `RESID` defaults `true`; `--attention` switches to attention-head steering. `--global` steers every layer instead of the default single-layer sweep over `LAYER_RANGE_START`..`LAYER_RANGE_END` (currently 0.333..0.6667). `--split val` (default) sweeps on `<base>-test.jsonl`; `--split test` needs `best_configs.json` and generates once on `<base>-heldout-test.jsonl`.
+1. Parse `--model`/`--dataset`/`--device`/`--type`/`--unnormalized`/`--attention`/`--global`/`--seed`/`--split val|test`/`--best-configs <path>`; expand `all`. `RESID` defaults `true`; `--attention` switches to attention-head steering. `--global` steers every layer instead of the default single-layer sweep over `LAYER_RANGE_START`..`LAYER_RANGE_END` (currently 0.333..0.6667). `--split val` (default) sweeps on `<base>-test.jsonl`; `--split test` needs `best_configs.json` and generates once on `<base>-heldout-test.jsonl`.
 2. Per model, build five parallel arrays (`SOURCES`, `BASES`, `DIRS`, `ADD_PATHS`, `SUB_PATHS`), one entry per dataset. Steering-`N` sweep values come from `STEERING_N_LOCAL_BY_MODEL` or `STEERING_N_GLOBAL_BY_MODEL` (`--global`) — separate lists, since whole-model steering needs different magnitudes.
-3. Call `python run.py` once per model with all arrays. KV caching on by default (`--nocache` disables). `--type` sets steering types (default `last mean positional`). `--resid` is added automatically unless `--attention`, and forces `TOPK_VALS="1.0"`. `--split test` passes `-split test -best_configs $BEST_CONFIGS`, which overrides the swept `-steering_n`.
+3. Call `python run.py` once per model with all arrays. `--type` sets steering types (default `last mean positional`). `--resid` is added automatically unless `--attention`, and forces `TOPK_VALS="1.0"`. `--split test` passes `-split test -best_configs $BEST_CONFIGS`, which overrides the swept `-steering_n`.
 
 **Inside `run.py → main()`:**
 
@@ -55,7 +55,7 @@ Runs steered generation. Calls `run.py` once per model (not per dataset).
          - **`head_selection`** (attention, no `--global`) — loads head-effect scores from `results/<model>/<task>/heads/numerator_1_heads.pt` (a prior ATP artifact); sweeps `topk`, selecting top-k% heads per value via `get_top_k_layer_and_head()`.
          - **`layer_sweep`** (resid, no `--global`, default) — sweeps `layer` over `round(num_layers*layer_range_start)..round(num_layers*layer_range_end)` (or a pinned layer on `-split test`); `topk_df` is one row.
          - **`global_steer`** (`--global`) — sweep axis `layer`, single value `'all'`; `topk_df` covers every layer.
-       - `generate_with_patches()` hooks the selected heads/layers and adds the steering vector × `N`. `decode_responses()` pairs steered/baseline output. `save_prompt_responses()` writes to `results/<model>/from_<source>_to_<base>/<norm_dir>/<stream_dir>/<cache_dir>/<scope_dir>/<steering_type>/N=<N>_<ablation>_<slot>_<test_dataset>_gen.(txt|json)` — `scope_dir` is `global`/`local`, `slot` is `layer=<idx>`/`layer=all` or `topk=<topk>`. (Older stems without `scope_dir`, or the pre-layer-sweep `<N>_<reps_type>_<ablation>_<topk>_<test_dataset>_gen` naming, are still recognized as already-completed.)
+       - `generate_with_patches()` hooks the selected heads/layers and adds the steering vector × `N`. `decode_responses()` pairs steered/baseline output. `save_prompt_responses()` writes to `results/<model>/from_<source>_to_<base>/<norm_dir>/<stream_dir>/<scope_dir>/<steering_type>/N=<N>_<ablation>_<slot>_<test_dataset>_gen.(txt|json)` — `scope_dir` is `global`/`local`, `slot` is `layer=<idx>`/`layer=all` or `topk=<topk>`. (Older stems without `scope_dir`, or the pre-layer-sweep `<N>_<reps_type>_<ablation>_<topk>_<test_dataset>_gen` naming, are still recognized as already-completed.)
 
 ---
 
@@ -65,8 +65,8 @@ Scores generated outputs with the local vLLM judge or an OpenAI API judge. Calls
 
 **Steps:**
 
-1. Parse `--model`/`--dataset`/`--device`/`--normalized`|`--unnormalized`/`--cache`|`--nocache`/`--attention`/`--split val|test`/`--force`/`--judge <openai-model>`. Residual judging is default; `--attention` → `STREAM_MODE=attention` (else `residuals`); both write to `judge-evals/accuracy`. `--split` picks `<base>-test` (val, default) or `<base>-heldout-test` (test), passed as `--test_file`. `--force` re-judges existing conditions. `--judge <model>` (default `API_CONCURRENCY=16`) uses the OpenAI API instead of the local judge (needs `OPENAI_API_KEY`), writing to a separate `judge=<model>` subtree.
-2. Per model × dataset, run `judge-evals/run_judge.py` with paths into `results/`, `data/`, `judge-evals/accuracy`, `judge-evals/workdirs`, passing `--norm_mode`/`--cache_mode`/`--stream_mode`/`--test_file` and any `--force`/`--judge_model`/`--api_concurrency`.
+1. Parse `--model`/`--dataset`/`--device`/`--normalized`|`--unnormalized`/`--attention`/`--split val|test`/`--force`/`--judge <openai-model>`. Residual judging is default; `--attention` → `STREAM_MODE=attention` (else `residuals`); both write to `judge-evals/accuracy`. `--split` picks `<base>-test` (val, default) or `<base>-heldout-test` (test), passed as `--test_file`. `--force` re-judges existing conditions. `--judge <model>` (default `API_CONCURRENCY=16`) uses the OpenAI API instead of the local judge (needs `OPENAI_API_KEY`), writing to a separate `judge=<model>` subtree.
+2. Per model × dataset, run `judge-evals/run_judge.py` with paths into `results/`, `data/`, `judge-evals/accuracy`, `judge-evals/workdirs`, passing `--norm_mode`/`--stream_mode`/`--test_file` and any `--force`/`--judge_model`/`--api_concurrency`.
 3. After all combos, run `summarize_results.py --stream_mode $STREAM_MODE`.
 
 **Inside `run_judge.py → main()`:**
@@ -74,7 +74,7 @@ Scores generated outputs with the local vLLM judge or an OpenAI API judge. Calls
 **Phase 1 — Prepare** (`phase1_prepare()`):
 
 4. `discover_gen_files()` globs `results/` for `*_gen.json` by model/source/base/`test_file`/`scope`.
-5. `extract_path_metadata()` parses `results/<model>/from_<source>_to_<base>/<norm_mode>/<stream_mode>/<cache_mode>/<scope>/<steering_type>/<filename>` into metadata (incl. `scope`: `local`/`global`). Filenames follow the layer-sweep convention (`N=<N>_steer_layer=<L>_<test_file>_gen.json`, `layer=all` for `--global`) or the older topk-sweep one.
+5. `extract_path_metadata()` parses `results/<model>/from_<source>_to_<base>/<norm_mode>/<stream_mode>/<scope>/<steering_type>/<filename>` into metadata (incl. `scope`: `local`/`global`). Filenames follow the layer-sweep convention (`N=<N>_steer_layer=<L>_<test_file>_gen.json`, `layer=all` for `--global`) or the older topk-sweep one.
 6. Skip already-judged files (`accuracy_exists()`) unless `--force`; with `--judge`, workdir/accuracy paths get a `__judge_<model>`/`judge=<model>` segment. `gen_to_csv()` converts each `_gen.json` to `eval_output.csv` under `judge-evals/workdirs/`.
 7. Load tokenizer once (`build_prompts.py`).
 8. For long-eval files, build `relevance_fluency_prompts.csv` and `judge_prompts.csv`.
@@ -111,12 +111,12 @@ Three `steering_type` modes (`steering_reps_cache()`) differ only in how the seq
 
 Cached as a single stacked tensor to `<model>_steering_cache_<source>[_resid].pt` (`_resid` suffix keeps the two caches from colliding) — no longer a `{'desired', 'undesired'}` dict; loaded directly on later runs.
 
-At generation time, `topk_df`'s `layer` column picks which layers get steered — one swept layer (`layer_sweep`), every layer (`--global`), or every layer with a top-k head (`head_selection`; see above). There's no sub-layer head slicing — selected layers get their whole `o_proj.output`/`layer.output` steered uniformly. The vector is optionally L2-normalized, scaled by `N`, and written during prefill only (propagates through decoding via the KV cache by default), across all prompt positions:
+At generation time, `topk_df`'s `layer` column picks which layers get steered — one swept layer (`layer_sweep`), every layer (`--global`), or every layer with a top-k head (`head_selection`; see above). There's no sub-layer head slicing — selected layers get their whole `o_proj.output`/`layer.output` steered uniformly. The vector is optionally L2-normalized, scaled by `N`, and written during prefill only (propagates through decoding via the KV cache), across all prompt positions:
 
 - **`last-token`/`mean`** — broadcast across every position.
 - **`positional`** — the cached `[P, H]` vector is added directly to `[batch, seq_len, H]`; there's no length cropping/alignment despite `P` being fixed at cache time, so a mismatched batch length raises `RuntimeError: ... tensor a (X) must match tensor b (Y)`. Known gap, not documented behavior — regenerating the cache only helps if the new `P` happens to match.
 
-`ablation_type == 'steer'` adds; `'mean'` replaces. `--nocache` uses `model.all()` to reapply every decoding step instead of prefill-only.
+`ablation_type == 'steer'` adds; `'mean'` replaces.
 
 ---
 
@@ -126,7 +126,7 @@ Validation-selection + significance-testing pipeline, run after `run_judging.sh`
 
 1. **`select_best_config.py`** — per model/dataset/method, picks the argmax w_rf pass-rate condition from the validation sweep (ties → smallest `N`, then layer closest to median). Writes `best_configs.json`, which `run_steering.sh --split test` pins from. By default prunes held-out runs left at a superseded config (`results/`, `workdirs/`, `accuracy/`); `--no-prune` disables, `--dry-run` previews. `--pending-out <path>` writes `<model_tag> <dataset_tag>` per combo whose selected config has no current held-out run (checked after pruning) — the file's always created, so callers test emptiness; used by the job scripts to skip unnecessary held-out regeneration. Writes are `flock`-protected and atomic.
 2. **`selection_utils.py`** — shared by both scripts: parses condition dirs (`N=<N>_<ablation>_layer=<layer>_<test_file>`), reads the rating JSONLs, applies the pass rule (empty response → fail; pass = `judge_rating==5`, `w_rf` also needs `fluency==2`/`relevance==2`). Mirrors `compute_accuracies.py`'s `_compute_and_write`.
-3. **`stats/collect_pass_rates.py`** — per model/dataset/norm/stream/cache combo, builds a per-prompt pass/fail CSV (one column per method) on `test` (default, unbiased, held-out) or `val` (selection-biased sweep argmax). Writes to `stats/pass_results/`. `--model`/`--dataset` accept short tags or full dir names. `--force` (default) regenerates existing CSVs; `--no-force` skips them.
+3. **`stats/collect_pass_rates.py`** — per model/dataset/norm/stream combo, builds a per-prompt pass/fail CSV (one column per method) on `test` (default, unbiased, held-out) or `val` (selection-biased sweep argmax). Writes to `stats/pass_results/`. `--model`/`--dataset` accept short tags or full dir names. `--force` (default) regenerates existing CSVs; `--no-force` skips them.
 4. **`stats/run_mcnemar_test.py`** — paired McNemar's test (`mean`/`positional` vs `last`) per model/dataset: one-sided exact binomial p-value (H1: mean/positional beats last) plus a continuity-corrected one-sided z-test. Defaults `--split test`, `--model olmo,qwen3,llama,gemma4` (`--model all` adds `qwen`). `--simulate-n` rescales counts to hypothetical sample sizes; `--output-dir` writes CSVs. Prints a per-dataset table (`last (rate) vs. mean/positional (rate)`, padded for alignment) plus, at the bottom, how many combos beat `last` and how often `mean`/`positional` have the single highest pass rate of the three.
 
 Both `stats/*.py` scripts resolve paths relative to their own location, so they run from anywhere.
@@ -137,10 +137,10 @@ Both `stats/*.py` scripts resolve paths relative to their own location, so they 
 
 | File | Role |
 |------|------|
-| `config.py` | Arg parsing; `set_output_prefix()` computes `results/<model>/<task>/` and is called per-dataset in `run.py` |
-| `model_handler.py` | Loads HuggingFace model + tokenizer via `nnsight` |
-| `data_handler.py` | Tokenizes the desired-only JSONL data: base/source prompts, eval test prompts, and the `add`/`sub` steering pairs |
-| `batch_handler.py` | Slices tokenized data into batches |
+| `utils/config.py` | Arg parsing; `set_output_prefix()` computes `results/<model>/<task>/` and is called per-dataset in `run.py` |
+| `utils/model_handler.py` | Loads HuggingFace model + tokenizer via `nnsight` |
+| `utils/data_handler.py` | Tokenizes the desired-only JSONL data: base/source prompts, eval test prompts, and the `add`/`sub` steering pairs |
+| `utils/batch_handler.py` | Slices tokenized data into batches |
 | `eval/eval_runner.py` | `run_eval()` — baseline generation + steered generation loops |
 | `eval/activations.py` | `steering_reps_cache()` — computes and caches per-head (or, with `--resid`, per-layer residual-stream) steering vectors |
 | `eval/generation.py` | `generate_with_patches()` — hooks heads (or, with `--resid`, whole layers) at inference time |
@@ -162,8 +162,8 @@ Both `stats/*.py` scripts resolve paths relative to their own location, so they 
 
 ## Model-specific notes
 
-**Qwen3**: `enable_thinking=False` on all `apply_chat_template()` calls (`data_handler.py`, `gen_data.py`) bakes an empty `<think>\n\n</think>` block into the generation prompt. As a side effect, JSONL assistant responses begin with `<think>\n\n</think>`, since `gen_data.py` splits on `'\nassistant\n'`, which precedes that block.
+**Qwen3**: `enable_thinking=False` on all `apply_chat_template()` calls (`utils/data_handler.py`, `gen_data.py`) bakes an empty `<think>\n\n</think>` block into the generation prompt. As a side effect, JSONL assistant responses begin with `<think>\n\n</think>`, since `gen_data.py` splits on `'\nassistant\n'`, which precedes that block.
 
 **gemma-3-12b-it**: Its decoder layer's `forward()` returns a tuple, not a bare tensor — so in residual-stream mode `eval/activations.py`/`eval/generation.py` special-case `'gemma' in model.config._name_or_path.lower()` to read/write `layer.output[0]` and rewrap into a 1-tuple.
 
-**gemma-4-12B-it**: Multimodal (`AutoModelForImageTextToText`, `model_type == 'gemma4_unified'`) — `model_handler.py` loads it via `nnsight.VisionLanguageModel` (`ModelHandler.is_gemma4`), and `_get_layers()` reaches through `model.model.language_model.layers`. Its decoder layer's `forward()` returns a bare tensor (unlike gemma-3's tuple), so the gemma-3 special-case also checks `model.config.model_type != 'gemma4_unified'` to avoid misfiring (a plain `'gemma' in _name_or_path` match would otherwise catch both).
+**gemma-4-12B-it**: Multimodal (`AutoModelForImageTextToText`, `model_type == 'gemma4_unified'`) — `utils/model_handler.py` loads it via `nnsight.VisionLanguageModel` (`ModelHandler.is_gemma4`), and `_get_layers()` reaches through `model.model.language_model.layers`. Its decoder layer's `forward()` returns a bare tensor (unlike gemma-3's tuple), so the gemma-3 special-case also checks `model.config.model_type != 'gemma4_unified'` to avoid misfiring (a plain `'gemma' in _name_or_path` match would otherwise catch both).

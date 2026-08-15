@@ -8,7 +8,7 @@ the same tag conventions as run_steering.sh (comma-separated tags, or "all").
 
 Each CSV has a "prompt" column plus one "<method>_pass" column per steering
 method (True/False per prompt), all for the same model/dataset/norm_mode/
-stream_mode/cache_mode combination. McNemar's test only uses the discordant
+stream_mode combination. McNemar's test only uses the discordant
 pairs (prompts where the two methods disagree): a_only = pass-in-A/fail-in-B,
 b_only = fail-in-A/pass-in-B, where A is always mean/positional and B is
 always "last" (see COMPARISONS). Both tests are one-sided for the hypothesis
@@ -65,7 +65,6 @@ ALPHA = 0.05
 
 NORM_MODE = "normalized"
 STREAM_MODE = "residuals"
-CACHE_MODE = "cache"
 SCOPE = "local"
 
 
@@ -286,7 +285,7 @@ def main():
 
         for model_tag in model_tags:
             model_dir = MODEL_DIRS[model_tag]
-            csv_path = PASS_RESULTS_ROOT / model_dir / task / NORM_MODE / STREAM_MODE / CACHE_MODE / f"{stem}.csv"
+            csv_path = PASS_RESULTS_ROOT / model_dir / task / NORM_MODE / STREAM_MODE / f"{stem}.csv"
 
             if not csv_path.exists():
                 continue

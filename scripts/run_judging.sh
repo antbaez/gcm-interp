@@ -7,14 +7,13 @@ JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 BATCH_SIZE=128
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
-# Usage: ./scripts/run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--cache|--nocache] [--attention] [--device <cuda:0>] [--force]
+# Usage: ./scripts/run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--attention] [--device <cuda:0>] [--force]
 # --dataset defaults to "all" (harmful, sycophancy, verse).
 # Residual-stream judging runs by default. Pass --attention to judge attention-head steering results instead.
 MODEL_TAG=""
 DATASET_TAG="all"
 DEVICE="cuda:0"
 NORM_MODE=""
-CACHE_MODE=""
 RESID=true
 # Which split's generations to judge: val = <base>-test, test = <base>-heldout-test.
 SPLIT="val"
@@ -29,8 +28,6 @@ while [[ $# -gt 0 ]]; do
         --device)       DEVICE="$2";      shift 2 ;;
         --normalized)   NORM_MODE="normalized";   shift ;;
         --unnormalized) NORM_MODE="unnormalized"; shift ;;
-        --cache)        CACHE_MODE="cache";        shift ;;
-        --nocache)      CACHE_MODE="no_cache";     shift ;;
         --attention)    RESID=false;               shift ;;
         --split)        SPLIT="$2";                shift 2 ;;
         --force)        FORCE=true;                shift ;;
@@ -106,13 +103,12 @@ for M_TAG in "${MODELS[@]}"; do
 
         JUDGE_FLAGS=()
         [ -n "$NORM_MODE" ]  && JUDGE_FLAGS+=(--norm_mode  "$NORM_MODE")
-        [ -n "$CACHE_MODE" ] && JUDGE_FLAGS+=(--cache_mode "$CACHE_MODE")
         JUDGE_FLAGS+=(--stream_mode "$STREAM_MODE")
         JUDGE_FLAGS+=(--test_file "$TEST_FILE")
         [ "$FORCE" = true ] && JUDGE_FLAGS+=(--force)
 
         echo ""
-        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  cache=${CACHE_MODE:-any}  stream=$STREAM_MODE  split=$SPLIT ($TEST_FILE)  device=$DEVICE"
+        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  stream=$STREAM_MODE  split=$SPLIT ($TEST_FILE)  device=$DEVICE"
         cd "$JUDGE_DIR" && python run_judge.py \
             --model_name "$MODEL_NAME" \
             --source "$SOURCE" \

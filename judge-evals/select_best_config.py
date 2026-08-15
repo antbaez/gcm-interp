@@ -72,7 +72,6 @@ DATASET_TASKS = {
 
 NORM_MODE = "normalized"
 STREAM_MODE = "residuals"
-CACHE_MODE = "cache"
 SCOPE = "local"
 
 # Accuracy files are named from run_judge.py's fn_base
@@ -100,7 +99,7 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
     stopping at the first one that already looks clean.
     """
     test_file = f"{base}-heldout-test"
-    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / CACHE_MODE / SCOPE / method
+    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / SCOPE / method
     removed = []
 
     # results/: the generated .txt/.json pair, which is what judging discovers.
@@ -127,14 +126,14 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
     # accuracy/: feeds summarize_results.py only. Globbed rather than
     # rebuilt from accuracy_paths(), whose layout does not match what is on disk
     # (the norm_mode level is absent there), so both depths are tried: the
-    # current `<cache_mode>/<scope>/<method>/` layout (compute_accuracies.py
-    # writes a local/global scope segment) and the older flat
-    # `<cache_mode>/<method>/` layout, for accuracy trees not yet migrated.
+    # current `<scope>/<method>/` layout (compute_accuracies.py writes a
+    # local/global scope segment) and the older flat `<method>/` layout,
+    # for accuracy trees not yet migrated.
     # Files whose name does not parse are left alone rather than guessed at.
     acc_task_dir = ACCURACY_ROOT / model_dir / task
     acc_files = sorted(
-        set(acc_task_dir.glob(f"*/{method}/{test_file}/*.json"))
-        | set(acc_task_dir.glob(f"*/*/{method}/{test_file}/*.json"))
+        set(acc_task_dir.glob(f"{method}/{test_file}/*.json"))
+        | set(acc_task_dir.glob(f"*/{method}/{test_file}/*.json"))
     )
     for acc_file in acc_files:
         m = ACCURACY_FILE_RE.match(acc_file.name)
@@ -156,7 +155,7 @@ def heldout_exists(model_dir: str, task: str, base: str, method: str, chosen: di
     the same reason prune_stale_heldout does: the ablation tag and N formatting
     are decided at generation time.
     """
-    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / CACHE_MODE / SCOPE / method
+    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / SCOPE / method
     for gen_json in (RESULTS_ROOT / rel).glob(f"*_{base}-heldout-test_gen.json"):
         meta = parse_condition_dir(gen_json.name[: -len("_gen.json")])
         if meta is not None and _same_config(meta, chosen):
@@ -170,7 +169,7 @@ def heldout_judged(model_dir: str, task: str, base: str, method: str, chosen: di
     collect_pass_rates.py and select_best_config.py's own validation-side
     scanning both require. Generation existing is not enough: it can be left
     over from an earlier run whose judging step never completed."""
-    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / CACHE_MODE / SCOPE / method
+    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / SCOPE / method
     test_file = f"{base}-heldout-test"
     conditions = scan_conditions(WORKDIRS_ROOT / rel, test_file=test_file)
     return any(_same_config(c, chosen) for c in conditions)
@@ -252,7 +251,7 @@ def main():
             task, base = DATASET_TASKS[dataset_tag]
             val_split = f"{base}-test"
             scope_root = (
-                WORKDIRS_ROOT / model_dir / task / NORM_MODE / STREAM_MODE / CACHE_MODE / SCOPE
+                WORKDIRS_ROOT / model_dir / task / NORM_MODE / STREAM_MODE / SCOPE
             )
 
             print(f"\n=== {model_tag} / {dataset_tag} (validation split: {val_split}) ===")

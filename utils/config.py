@@ -43,7 +43,6 @@ class Config:
         parser.add_argument('-layer_range_end', '--layer_range_end', type=float, default=2/3, help='End of the single-layer sweep range, as a fraction of total layers (default 2/3)')
         parser.add_argument('-split', '--split', type=str, default='val', choices=['val', 'test'], help="Which eval split to generate on: 'val' sweeps N/layer on <base>-test.jsonl; 'test' pins the validation-selected config and generates once on <base>-heldout-test.jsonl")
         parser.add_argument('-best_configs', '--best_configs', type=str, default=None, help='Path to best_configs.json from select_best_config.py (required for --split test)')
-        parser.add_argument('--kv_caching', action='store_true', help='Steer prefill only using KV cache; decoding steps are not re-steered')
         parser.add_argument('--normalize', action='store_true', default=True, help='L2-normalize steering vectors before applying')
         parser.add_argument('--unnormalized', dest='normalize', action='store_false', help='Disable L2 normalization of steering vectors')
         parser.add_argument('--resid', action='store_true', help='Steer residual stream (layer.output[0]) instead of attention o_proj')

@@ -1,6 +1,6 @@
 """
 Per-prompt pass/fail comparison between steering methods (steering_types), for
-every model / dataset / norm_mode / stream_mode / cache_mode combination found
+every model / dataset / norm_mode / stream_mode combination found
 under `results/` and/or `judge-evals/workdirs/` — restricted to the `local`
 (per-layer/per-head localized) scope, never `global`.
 
@@ -97,7 +97,7 @@ def best_config_for_method(method_root: Path, test_file: str | None):
 
 
 def discover_local_combos(model_filter=None, dataset_filter=None, scope=SCOPE):
-    """Find every <model>/<task>/<norm_mode>/<stream_mode>/<cache_mode>
+    """Find every <model>/<task>/<norm_mode>/<stream_mode>
     combination that has a `scope` dir (`local` by default) under results/
     and/or workdirs/, along with the steering methods available under it.
 
@@ -109,15 +109,15 @@ def discover_local_combos(model_filter=None, dataset_filter=None, scope=SCOPE):
     """
     combos = {}
     for root in (RESULTS_ROOT, WORKDIRS_ROOT):
-        for scope_dir in sorted(root.glob("*/*/*/*/*/" + scope)):
-            model, task, norm_mode, stream_mode, cache_mode, _ = scope_dir.relative_to(root).parts
+        for scope_dir in sorted(root.glob("*/*/*/*/" + scope)):
+            model, task, norm_mode, stream_mode, _ = scope_dir.relative_to(root).parts
             if model_filter and model not in model_filter:
                 continue
             if dataset_filter and task not in dataset_filter:
                 continue
             methods = {p.name for p in scope_dir.iterdir() if p.is_dir()}
             if methods:
-                key = (model, task, norm_mode, stream_mode, cache_mode)
+                key = (model, task, norm_mode, stream_mode)
                 combos.setdefault(key, set()).update(methods)
 
     return [(*key, sorted(methods)) for key, methods in sorted(combos.items())]
@@ -132,11 +132,11 @@ def split_test_file(task: str, split: str) -> str | None:
     return f"{base}-heldout-test" if split == "test" else f"{base}-test"
 
 
-def build_comparison_csv(model, task, norm_mode, stream_mode, cache_mode, methods, split):
+def build_comparison_csv(model, task, norm_mode, stream_mode, methods, split):
     """Compute the per-prompt pass/fail comparison across `methods` for one
     combo, reading judge ratings from the mirrored workdirs tree. Returns the
     output DataFrame, or None if no method had any judge ratings."""
-    workdir_base = WORKDIRS_ROOT / model / task / norm_mode / stream_mode / cache_mode / SCOPE
+    workdir_base = WORKDIRS_ROOT / model / task / norm_mode / stream_mode / SCOPE
     test_file = split_test_file(task, split)
 
     per_method = {}
@@ -204,8 +204,8 @@ def main():
 
     print("n=200")
 
-    for model, task, norm_mode, stream_mode, cache_mode, methods in combos:
-        rel = Path(model) / task / norm_mode / stream_mode / cache_mode
+    for model, task, norm_mode, stream_mode, methods in combos:
+        rel = Path(model) / task / norm_mode / stream_mode
         out_path = output_root / rel / f"{stem}.csv"
         print(f"\n{model}/{task}")
 
@@ -217,7 +217,7 @@ def main():
             n_skipped += 1
             continue
 
-        df = build_comparison_csv(model, task, norm_mode, stream_mode, cache_mode, methods, args.split)
+        df = build_comparison_csv(model, task, norm_mode, stream_mode, methods, args.split)
         if df is None:
             print(f"  no judge ratings found for any method, skipping")
             continue
