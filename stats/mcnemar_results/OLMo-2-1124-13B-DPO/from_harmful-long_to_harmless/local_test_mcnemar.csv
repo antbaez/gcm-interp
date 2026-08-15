@@ -1,3 +1,0 @@
-method_a,method_b,n,pass_rate_a,pass_rate_b,both_pass,both_fail,a_only_pass,b_only_pass,exact_p,z_stat,z_p
-mean,last,200,0.675,0.5,63,28,72,37,0.0005164678108178385,3.2566093697519145,0.000563757418078253
-positional,last,200,0.805,0.5,82,21,79,18,1.3602716476105697e-10,6.092076990801715,5.572752724116688e-10

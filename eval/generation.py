@@ -19,7 +19,7 @@ def _get_steering_vector(patch_activations, layer_idx, sl, steering_type):
         return patch_activations[layer_idx][-1, sl]
     elif steering_type in ('all_tokens', 'all-tokens', 'mean'):
         return patch_activations[layer_idx][:, sl].mean(dim=0)
-    elif steering_type == 'positional':
+    elif steering_type in ('positional', 'weighted-pos'):
         return patch_activations[layer_idx][:, sl]
     else:
         raise ValueError(f"Unknown steering_type: {steering_type!r}")
@@ -27,9 +27,31 @@ def _get_steering_vector(patch_activations, layer_idx, sl, steering_type):
 _config_printed_types = set()
 
 
-def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False, resid=False):
+def _prepare_steering_vector(patch_activations, layer_idx, steering_type, normalize, pos_weights):
+    sv = _get_steering_vector(patch_activations, layer_idx, slice(None), steering_type)
+    if normalize:
+        sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
+    if pos_weights is not None:
+        sv = sv * pos_weights
+    return sv
+
+
+def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', kv_caching=False, resid=False, coverage=None):
     patch_activations = patch_activations.to(model.device)
     layer_ids = topk_df['layer'].unique()
+    pos_weights = None
+    if steering_type == 'weighted-pos':
+        if coverage is None:
+            raise ValueError(
+                "steering_type 'weighted-pos' requires `coverage`: the per-position "
+                "non-padding fraction of the steering examples."
+            )
+        if coverage.shape[0] != patch_activations.shape[1]:
+            raise ValueError(
+                f"coverage length {coverage.shape[0]} does not match the steering "
+                f"vector's sequence axis {patch_activations.shape[1]}."
+            )
+        pos_weights = coverage.to(device=patch_activations.device, dtype=patch_activations.dtype).unsqueeze(-1)
     tuple_output = resid and 'gemma' in model.config._name_or_path.lower() and getattr(model.config, 'model_type', '') != 'gemma4_unified'
     if steering_type not in _config_printed_types:
         print(gen_toks['input_ids'].shape, " normalize:", normalize, " steering type:", steering_type, " kv_caching:", kv_caching, " resid:", resid)
@@ -43,9 +65,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, DIM, m
         with model.generate(gen_toks, use_cache=True, **gen_kwargs) as tracer:
             for i, layer_idx in enumerate(layer_ids):
                 layer = _get_layers(model)[layer_idx]
-                sv = _get_steering_vector(patch_activations, layer_idx, slice(None), steering_type)
-                if normalize:
-                    sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
+                sv = _prepare_steering_vector(patch_activations, layer_idx, steering_type, normalize, pos_weights)
                 if resid:
                     if tuple_output:
                         layer.output = (layer.output[0] + N * sv,)
@@ -60,9 +80,7 @@ def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, DIM, m
             with model.all():
                 for i, layer_idx in enumerate(layer_ids):
                     layer = _get_layers(model)[layer_idx]
-                    sv = _get_steering_vector(patch_activations, layer_idx, slice(None), steering_type)
-                    if normalize:
-                        sv = sv / (torch.norm(sv, dim=-1, keepdim=True) + 1e-12)
+                    sv = _prepare_steering_vector(patch_activations, layer_idx, steering_type, normalize, pos_weights)
                     if resid:
                         if tuple_output:
                             layer.output = (layer.output[0] + N * sv,)

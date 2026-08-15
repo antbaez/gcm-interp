@@ -37,36 +37,113 @@
     },
     "from_non-sycophantic-long_to_sycophancy": {
       "last": {
-        "N": 30.0,
+        "N": 10.0,
         "dataset_tag": "sycophancy",
-        "layer": 17,
+        "layer": 14,
         "model_tag": "llama",
         "n_conditions": 110,
-        "n_tied_at_best": 1,
+        "n_tied_at_best": 3,
         "val_n": 50,
-        "val_pass_rate": 0.62,
+        "val_pass_rate": 0.76,
         "val_split": "sycophancy-test"
       },
       "mean": {
         "N": 10.0,
         "dataset_tag": "sycophancy",
-        "layer": 13,
+        "layer": 15,
+        "model_tag": "llama",
+        "n_conditions": 110,
+        "n_tied_at_best": 2,
+        "val_n": 50,
+        "val_pass_rate": 0.74,
+        "val_split": "sycophancy-test"
+      },
+      "pos-last-10": {
+        "N": 40.0,
+        "dataset_tag": "sycophancy",
+        "layer": 20,
         "model_tag": "llama",
         "n_conditions": 110,
         "n_tied_at_best": 1,
         "val_n": 50,
-        "val_pass_rate": 0.8,
+        "val_pass_rate": 0.48,
         "val_split": "sycophancy-test"
       },
-      "positional": {
-        "N": 80.0,
+      "pos-last-20": {
+        "N": 30.0,
         "dataset_tag": "sycophancy",
         "layer": 19,
         "model_tag": "llama",
         "n_conditions": 110,
         "n_tied_at_best": 1,
         "val_n": 50,
-        "val_pass_rate": 0.44,
+        "val_pass_rate": 0.58,
+        "val_split": "sycophancy-test"
+      },
+      "pos-last-5": {
+        "N": 10.0,
+        "dataset_tag": "sycophancy",
+        "layer": 12,
+        "model_tag": "llama",
+        "n_conditions": 110,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.54,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-10": {
+        "N": 10.0,
+        "dataset_tag": "sycophancy",
+        "layer": 15,
+        "model_tag": "llama",
+        "n_conditions": 110,
+        "n_tied_at_best": 2,
+        "val_n": 50,
+        "val_pass_rate": 0.36,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-20": {
+        "N": 10.0,
+        "dataset_tag": "sycophancy",
+        "layer": 15,
+        "model_tag": "llama",
+        "n_conditions": 110,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.34,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-5": {
+        "N": 20.0,
+        "dataset_tag": "sycophancy",
+        "layer": 18,
+        "model_tag": "llama",
+        "n_conditions": 110,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.32,
+        "val_split": "sycophancy-test"
+      },
+      "positional": {
+        "N": 100.0,
+        "dataset_tag": "sycophancy",
+        "layer": 20,
+        "model_tag": "llama",
+        "n_conditions": 110,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.9,
+        "val_split": "sycophancy-test"
+      },
+      "weighted-pos": {
+        "N": 10.0,
+        "dataset_tag": "sycophancy",
+        "layer": 11,
+        "model_tag": "llama",
+        "n_conditions": 110,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.48,
         "val_split": "sycophancy-test"
       }
     },
@@ -102,6 +179,17 @@
         "n_tied_at_best": 1,
         "val_n": 50,
         "val_pass_rate": 0.94,
+        "val_split": "prose-test"
+      },
+      "weighted-pos": {
+        "N": 10.0,
+        "dataset_tag": "verse",
+        "layer": 12,
+        "model_tag": "llama",
+        "n_conditions": 110,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.92,
         "val_split": "prose-test"
       }
     }
@@ -140,18 +228,29 @@
         "val_n": 50,
         "val_pass_rate": 0.94,
         "val_split": "harmless-test"
+      },
+      "weighted-pos": {
+        "N": 40.0,
+        "dataset_tag": "harmful",
+        "layer": 19,
+        "model_tag": "olmo",
+        "n_conditions": 154,
+        "n_tied_at_best": 2,
+        "val_n": 50,
+        "val_pass_rate": 0.94,
+        "val_split": "harmless-test"
       }
     },
     "from_non-sycophantic-long_to_sycophancy": {
       "last": {
-        "N": 60.0,
+        "N": 20.0,
         "dataset_tag": "sycophancy",
-        "layer": 20,
+        "layer": 16,
         "model_tag": "olmo",
         "n_conditions": 154,
         "n_tied_at_best": 1,
         "val_n": 50,
-        "val_pass_rate": 0.28,
+        "val_pass_rate": 0.46,
         "val_split": "sycophancy-test"
       },
       "mean": {
@@ -160,20 +259,97 @@
         "layer": 15,
         "model_tag": "olmo",
         "n_conditions": 154,
-        "n_tied_at_best": 3,
+        "n_tied_at_best": 1,
         "val_n": 50,
-        "val_pass_rate": 0.16,
+        "val_pass_rate": 0.48,
         "val_split": "sycophancy-test"
       },
-      "positional": {
-        "N": 80.0,
+      "pos-last-10": {
+        "N": 30.0,
         "dataset_tag": "sycophancy",
-        "layer": 14,
+        "layer": 17,
         "model_tag": "olmo",
         "n_conditions": 154,
         "n_tied_at_best": 1,
         "val_n": 50,
-        "val_pass_rate": 0.2,
+        "val_pass_rate": 0.26,
+        "val_split": "sycophancy-test"
+      },
+      "pos-last-20": {
+        "N": 30.0,
+        "dataset_tag": "sycophancy",
+        "layer": 17,
+        "model_tag": "olmo",
+        "n_conditions": 154,
+        "n_tied_at_best": 2,
+        "val_n": 50,
+        "val_pass_rate": 0.34,
+        "val_split": "sycophancy-test"
+      },
+      "pos-last-5": {
+        "N": 20.0,
+        "dataset_tag": "sycophancy",
+        "layer": 14,
+        "model_tag": "olmo",
+        "n_conditions": 154,
+        "n_tied_at_best": 3,
+        "val_n": 50,
+        "val_pass_rate": 0.24,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-10": {
+        "N": 20.0,
+        "dataset_tag": "sycophancy",
+        "layer": 13,
+        "model_tag": "olmo",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.54,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-20": {
+        "N": 60.0,
+        "dataset_tag": "sycophancy",
+        "layer": 19,
+        "model_tag": "olmo",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.4,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-5": {
+        "N": 20.0,
+        "dataset_tag": "sycophancy",
+        "layer": 13,
+        "model_tag": "olmo",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.48,
+        "val_split": "sycophancy-test"
+      },
+      "positional": {
+        "N": 60.0,
+        "dataset_tag": "sycophancy",
+        "layer": 14,
+        "model_tag": "olmo",
+        "n_conditions": 154,
+        "n_tied_at_best": 2,
+        "val_n": 50,
+        "val_pass_rate": 0.48,
+        "val_split": "sycophancy-test"
+      },
+      "weighted-pos": {
+        "N": 20.0,
+        "dataset_tag": "sycophancy",
+        "layer": 13,
+        "model_tag": "olmo",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.32,
         "val_split": "sycophancy-test"
       }
     },
@@ -206,6 +382,17 @@
         "layer": 13,
         "model_tag": "olmo",
         "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.98,
+        "val_split": "prose-test"
+      },
+      "weighted-pos": {
+        "N": 10.0,
+        "dataset_tag": "verse",
+        "layer": 13,
+        "model_tag": "olmo",
+        "n_conditions": 64,
         "n_tied_at_best": 1,
         "val_n": 50,
         "val_pass_rate": 0.98,
@@ -251,36 +438,113 @@
     },
     "from_non-sycophantic-long_to_sycophancy": {
       "last": {
-        "N": 125.0,
+        "N": 100.0,
         "dataset_tag": "sycophancy",
         "layer": 13,
         "model_tag": "qwen3",
         "n_conditions": 154,
         "n_tied_at_best": 1,
         "val_n": 50,
-        "val_pass_rate": 0.92,
+        "val_pass_rate": 0.78,
         "val_split": "sycophancy-test"
       },
       "mean": {
         "N": 100.0,
         "dataset_tag": "sycophancy",
-        "layer": 19,
+        "layer": 15,
         "model_tag": "qwen3",
         "n_conditions": 154,
         "n_tied_at_best": 1,
         "val_n": 50,
-        "val_pass_rate": 0.96,
+        "val_pass_rate": 0.98,
+        "val_split": "sycophancy-test"
+      },
+      "pos-last-10": {
+        "N": 125.0,
+        "dataset_tag": "sycophancy",
+        "layer": 18,
+        "model_tag": "qwen3",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.66,
+        "val_split": "sycophancy-test"
+      },
+      "pos-last-20": {
+        "N": 125.0,
+        "dataset_tag": "sycophancy",
+        "layer": 16,
+        "model_tag": "qwen3",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.9,
+        "val_split": "sycophancy-test"
+      },
+      "pos-last-5": {
+        "N": 125.0,
+        "dataset_tag": "sycophancy",
+        "layer": 17,
+        "model_tag": "qwen3",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.8,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-10": {
+        "N": 100.0,
+        "dataset_tag": "sycophancy",
+        "layer": 14,
+        "model_tag": "qwen3",
+        "n_conditions": 154,
+        "n_tied_at_best": 3,
+        "val_n": 50,
+        "val_pass_rate": 0.72,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-20": {
+        "N": 100.0,
+        "dataset_tag": "sycophancy",
+        "layer": 18,
+        "model_tag": "qwen3",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.8,
+        "val_split": "sycophancy-test"
+      },
+      "pos-mean-5": {
+        "N": 100.0,
+        "dataset_tag": "sycophancy",
+        "layer": 15,
+        "model_tag": "qwen3",
+        "n_conditions": 154,
+        "n_tied_at_best": 4,
+        "val_n": 50,
+        "val_pass_rate": 0.66,
         "val_split": "sycophancy-test"
       },
       "positional": {
-        "N": 250.0,
+        "N": 125.0,
         "dataset_tag": "sycophancy",
-        "layer": 13,
+        "layer": 18,
         "model_tag": "qwen3",
         "n_conditions": 154,
         "n_tied_at_best": 1,
         "val_n": 50,
-        "val_pass_rate": 0.84,
+        "val_pass_rate": 0.9,
+        "val_split": "sycophancy-test"
+      },
+      "weighted-pos": {
+        "N": 125.0,
+        "dataset_tag": "sycophancy",
+        "layer": 18,
+        "model_tag": "qwen3",
+        "n_conditions": 154,
+        "n_tied_at_best": 1,
+        "val_n": 50,
+        "val_pass_rate": 0.66,
         "val_split": "sycophancy-test"
       }
     },

@@ -1,8 +1,8 @@
 """
 Per-prompt pass/fail comparison between steering methods (steering_types), for
 every model / dataset / norm_mode / stream_mode / cache_mode combination found
-under `results/` — restricted to the `local` (per-layer/per-head localized)
-scope, never `global`.
+under `results/` and/or `judge-evals/workdirs/` — restricted to the `local`
+(per-layer/per-head localized) scope, never `global`.
 
 Two splits, selected with `--split`:
 
@@ -96,21 +96,31 @@ def best_config_for_method(method_root: Path, test_file: str | None):
     return chosen["rows"], condition_label(chosen), chosen["rate"], len(conditions)
 
 
-def discover_local_combos(model_filter=None, dataset_filter=None):
+def discover_local_combos(model_filter=None, dataset_filter=None, scope=SCOPE):
     """Find every <model>/<task>/<norm_mode>/<stream_mode>/<cache_mode>
-    combination under results/ that has a `local` scope dir, along with the
-    steering methods available under it."""
-    combos = []
-    for local_dir in sorted(RESULTS_ROOT.glob("*/*/*/*/*/" + SCOPE)):
-        model, task, norm_mode, stream_mode, cache_mode, _ = local_dir.relative_to(RESULTS_ROOT).parts
-        if model_filter and model not in model_filter:
-            continue
-        if dataset_filter and task not in dataset_filter:
-            continue
-        methods = sorted(p.name for p in local_dir.iterdir() if p.is_dir())
-        if methods:
-            combos.append((model, task, norm_mode, stream_mode, cache_mode, methods))
-    return combos
+    combination that has a `scope` dir (`local` by default) under results/
+    and/or workdirs/, along with the steering methods available under it.
+
+    Checked against both roots, not just results/: a combo whose results/ gen
+    files were deleted (or never generated) but whose workdirs/ judging
+    survived still has data worth reporting, and only checking results/ would
+    silently drop it even though judge_ratings.jsonl is still sitting right
+    there.
+    """
+    combos = {}
+    for root in (RESULTS_ROOT, WORKDIRS_ROOT):
+        for scope_dir in sorted(root.glob("*/*/*/*/*/" + scope)):
+            model, task, norm_mode, stream_mode, cache_mode, _ = scope_dir.relative_to(root).parts
+            if model_filter and model not in model_filter:
+                continue
+            if dataset_filter and task not in dataset_filter:
+                continue
+            methods = {p.name for p in scope_dir.iterdir() if p.is_dir()}
+            if methods:
+                key = (model, task, norm_mode, stream_mode, cache_mode)
+                combos.setdefault(key, set()).update(methods)
+
+    return [(*key, sorted(methods)) for key, methods in sorted(combos.items())]
 
 
 def split_test_file(task: str, split: str) -> str | None:
@@ -183,7 +193,7 @@ def main():
         dataset_filter=resolve_filter(args.dataset, DATASET_TASKS),
     )
     if not combos:
-        raise SystemExit(f"No '{SCOPE}' scope combinations found under {RESULTS_ROOT}")
+        raise SystemExit(f"No '{SCOPE}' scope combinations found under {RESULTS_ROOT} or {WORKDIRS_ROOT}")
 
     output_root = Path(args.output_dir)
     n_written = 0

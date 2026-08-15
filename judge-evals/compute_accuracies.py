@@ -152,11 +152,17 @@ def _compute_and_write(
 
     for _, group in tqdm(grouped):
         row = group.iloc[0]
+        # `topk` holds the layer index for a local layer-sweep condition, or the
+        # literal "all" for a global (--global) condition — there is no other
+        # signal of scope this far downstream, since STREAM_MODE/SCOPE are not
+        # propagated as columns.
+        scope = "global" if str(row["topk"]) == "all" else "local"
         base_dir = os.path.join(
             output_dir,
             str(row["MODEL_ID"]),
             f"from_{row['SOURCE']}_to_{row['BASE']}",
             str(row["CACHE_MODE"]),
+            scope,
             str(row["STEERING_TYPE"]),
         )
         os.makedirs(base_dir, exist_ok=True)

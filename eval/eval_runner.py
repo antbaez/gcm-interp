@@ -86,6 +86,12 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
     ablation = data_handler.config.args.ablation
     reps_types = ['targeted']
 
+    steering_coverage = None
+    if config.args.steering_type == 'weighted-pos':
+        steering_coverage = data_handler.steering_qs_toks['add']['attention_mask'].float().mean(0)
+        print(f"[eval] weighted-pos coverage: {steering_coverage.shape[0]} positions, "
+              f"mean={steering_coverage.mean():.4f}, min={steering_coverage.min():.4f}")
+
     if topk_vals is None:
         topk_vals = config.args.topk_vals
     if N is not None:
@@ -182,7 +188,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
                 for batch_num, idx in enumerate(range(0, len_gen_qs, config.args.batch_size), start=1):
                     _t0 = time.time()
                     gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, topk_df, config.args.N, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching, resid=resid)
+                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, topk_df, config.args.N, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, kv_caching=config.args.kv_caching, resid=resid, coverage=steering_coverage)
                     decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
                     gc.collect()
                     torch.cuda.empty_cache()

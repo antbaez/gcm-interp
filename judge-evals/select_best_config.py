@@ -126,8 +126,11 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
 
     # accuracy/: feeds summarize_results.py only. Globbed rather than
     # rebuilt from accuracy_paths(), whose layout does not match what is on disk
-    # (the norm_mode level is absent there), so both depths are tried. Files whose
-    # name does not parse are left alone rather than guessed at.
+    # (the norm_mode level is absent there), so both depths are tried: the
+    # current `<cache_mode>/<scope>/<method>/` layout (compute_accuracies.py
+    # writes a local/global scope segment) and the older flat
+    # `<cache_mode>/<method>/` layout, for accuracy trees not yet migrated.
+    # Files whose name does not parse are left alone rather than guessed at.
     acc_task_dir = ACCURACY_ROOT / model_dir / task
     acc_files = sorted(
         set(acc_task_dir.glob(f"*/{method}/{test_file}/*.json"))
@@ -159,6 +162,18 @@ def heldout_exists(model_dir: str, task: str, base: str, method: str, chosen: di
         if meta is not None and _same_config(meta, chosen):
             return True
     return False
+
+
+def heldout_judged(model_dir: str, task: str, base: str, method: str, chosen: dict) -> bool:
+    """Whether the held-out generation at the selected config has actually been
+    judged — i.e. its workdir has a non-empty judge_ratings.jsonl, which is what
+    collect_pass_rates.py and select_best_config.py's own validation-side
+    scanning both require. Generation existing is not enough: it can be left
+    over from an earlier run whose judging step never completed."""
+    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / CACHE_MODE / SCOPE / method
+    test_file = f"{base}-heldout-test"
+    conditions = scan_conditions(WORKDIRS_ROOT / rel, test_file=test_file)
+    return any(_same_config(c, chosen) for c in conditions)
 
 
 def merge_best_configs(out_path: Path, updates: dict):
@@ -220,8 +235,9 @@ def main():
                         help="Keep held-out conditions that no longer match the selection")
     parser.add_argument("--pending-out", default=None,
                         help="Write '<model_tag> <dataset_tag>' for each combination whose "
-                             "selected config has no held-out generation yet. The file is always "
-                             "created, so callers can test it for emptiness rather than existence.")
+                             "selected config has no held-out generation yet, or has generation "
+                             "but no judged ratings. The file is always created, so callers can "
+                             "test it for emptiness rather than existence.")
     parser.set_defaults(prune=True)
     args = parser.parse_args()
 
@@ -283,7 +299,11 @@ def main():
                 # Checked after pruning, so a leftover run at a superseded config
                 # is already gone and cannot be mistaken for this one.
                 if not heldout_exists(model_dir, task, base, method, chosen):
-                    print(f"    held-out run needed at {condition_label(chosen)}")
+                    print(f"    held-out run needed at {condition_label(chosen)}: generation missing")
+                    if (model_tag, dataset_tag) not in pending:
+                        pending.append((model_tag, dataset_tag))
+                elif not heldout_judged(model_dir, task, base, method, chosen):
+                    print(f"    held-out run needed at {condition_label(chosen)}: judging missing")
                     if (model_tag, dataset_tag) not in pending:
                         pending.append((model_tag, dataset_tag))
 
