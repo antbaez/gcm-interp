@@ -6,8 +6,8 @@
 # Usage:
 #   bash run_preemptable.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--seed N]
 #   Defaults: --model all --dataset all (uses steering types from scripts/run_steering.sh)
-#   Note: Residual-stream steering runs by default. Pass --attention for attention-head steering
-#   (reads whatever head-selection artifacts already exist under results/.../heads/).
+#   Note: Residual-stream steering runs by default. Pass --attention to steer the attention
+#   output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
 
 set -e
 

@@ -83,14 +83,14 @@ def compute_accuracy_for_file(
         print(f"  SKIP (no 'results' in path): {gen_path}")
         return None
 
-    model_id     = parts[results_idx + 1]
-    from_to      = parts[results_idx + 2]
+    model_id      = parts[results_idx + 1]
+    from_to       = parts[results_idx + 2]
     _, source, _, base = from_to.split("_")
-    method       = parts[results_idx + 3]
-    eval_subdir  = parts[results_idx + 4]
-    steer_subdir = parts[results_idx + 5]
-    # parts[results_idx + 6] == "eval"
-    filename     = parts[results_idx + 7]
+    norm_mode     = parts[results_idx + 3]
+    stream_mode   = parts[results_idx + 4]
+    scope         = parts[results_idx + 5]
+    steering_type = parts[results_idx + 6]
+    filename      = parts[results_idx + 7]
 
     m = GEN_RE.match(filename)
     if not m:
@@ -98,14 +98,14 @@ def compute_accuracy_for_file(
         return None
 
     N     = m.group("N")
-    reps  = m.group("REPS")
+    reps  = m.group("REPS") or "targeted"
     steer = m.group("STEERING_METHOD")
-    topk  = m.group("topk")
-    fn_base = f"{N}_{reps}_{steer}_topk_{topk}"
+    layer = m.group("layer")
+    fn_base = f"{N}_{reps}_{steer}_layer_{layer}"
 
     acc_dir = (
         output_dir / model_id / f"from_{source}_to_{base}"
-        / method / eval_subdir / steer_subdir
+        / norm_mode / stream_mode / scope / steering_type
     )
     wo_rf_path = acc_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
     w_rf_path  = acc_dir / f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"

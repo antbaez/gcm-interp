@@ -71,15 +71,15 @@ DATASET_TASKS = {
 }
 
 NORM_MODE = "normalized"
-STREAM_MODE = "residuals"
-SCOPE = "local"
+STREAMS = ("residuals", "attention")
+SCOPES = ("local", "global")
 
 # Accuracy files are named from run_judge.py's fn_base
-# (`<N>_<reps>_<ablation>_topk_<value>_gen_accuracy_*`), which is a different
-# shape from the condition dirs selection_utils parses — the sweep value always
-# sits in a `topk_` slot there, even for layer sweeps.
+# (`<N>_<reps>_<ablation>_layer_<value>_gen_accuracy_*`), which is a different
+# shape from the condition dirs selection_utils parses. The legacy `topk_` slot
+# is still matched so files written before the rename are still prunable.
 ACCURACY_FILE_RE = re.compile(
-    r"^(?P<N>\d+(?:\.\d+)?)_[^_]+_(?:steer|mean)_topk_(?P<value>all|\d+(?:\.\d+)?)_gen_accuracy_"
+    r"^(?P<N>\d+(?:\.\d+)?)_[^_]+_(?:steer|mean)_(?:layer|topk)_(?P<value>all|\d+(?:\.\d+)?)_gen_accuracy_"
 )
 
 
@@ -89,7 +89,7 @@ def _same_config(meta: dict, chosen: dict) -> bool:
 
 
 def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
-                        chosen: dict, dry_run: bool) -> list[Path]:
+                        chosen: dict, dry_run: bool, stream: str, scope: str) -> list[Path]:
     """Delete held-out conditions whose N/layer no longer match the selection.
 
     Works off what is on disk rather than off the previous best_configs.json, so
@@ -99,7 +99,7 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
     stopping at the first one that already looks clean.
     """
     test_file = f"{base}-heldout-test"
-    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / SCOPE / method
+    rel = Path(model_dir) / task / NORM_MODE / stream / scope / method
     removed = []
 
     # results/: the generated .txt/.json pair, which is what judging discovers.
@@ -123,18 +123,17 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
         if not dry_run:
             shutil.rmtree(cond_dir)
 
-    # accuracy/: feeds summarize_results.py only. Globbed rather than
-    # rebuilt from accuracy_paths(), whose layout does not match what is on disk
-    # (the norm_mode level is absent there), so both depths are tried: the
-    # current `<scope>/<method>/` layout (compute_accuracies.py writes a
-    # local/global scope segment) and the older flat `<method>/` layout,
-    # for accuracy trees not yet migrated.
+    # accuracy/: feeds summarize_results.py only. The current layout mirrors
+    # results/ and workdirs/ (`<norm>/<stream>/<scope>/<method>/`). Trees written
+    # before that layout landed had no norm or stream level and are residual by
+    # definition, so their shallower shapes are only swept for the residual
+    # stream — globbing them for attention would delete another stream's files.
     # Files whose name does not parse are left alone rather than guessed at.
     acc_task_dir = ACCURACY_ROOT / model_dir / task
-    acc_files = sorted(
-        set(acc_task_dir.glob(f"{method}/{test_file}/*.json"))
-        | set(acc_task_dir.glob(f"*/{method}/{test_file}/*.json"))
-    )
+    acc_globs = [f"{NORM_MODE}/{stream}/{scope}/{method}/{test_file}/*.json"]
+    if stream == "residuals":
+        acc_globs += [f"{method}/{test_file}/*.json", f"*/{method}/{test_file}/*.json"]
+    acc_files = sorted({p for g in acc_globs for p in acc_task_dir.glob(g)})
     for acc_file in acc_files:
         m = ACCURACY_FILE_RE.match(acc_file.name)
         if m is None:
@@ -148,14 +147,15 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
     return removed
 
 
-def heldout_exists(model_dir: str, task: str, base: str, method: str, chosen: dict) -> bool:
+def heldout_exists(model_dir: str, task: str, base: str, method: str, chosen: dict,
+                   stream: str, scope: str) -> bool:
     """Whether a held-out generation already exists at the selected config.
 
     Matches by parsing what is on disk rather than rebuilding the filename, for
     the same reason prune_stale_heldout does: the ablation tag and N formatting
     are decided at generation time.
     """
-    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / SCOPE / method
+    rel = Path(model_dir) / task / NORM_MODE / stream / scope / method
     for gen_json in (RESULTS_ROOT / rel).glob(f"*_{base}-heldout-test_gen.json"):
         meta = parse_condition_dir(gen_json.name[: -len("_gen.json")])
         if meta is not None and _same_config(meta, chosen):
@@ -163,13 +163,14 @@ def heldout_exists(model_dir: str, task: str, base: str, method: str, chosen: di
     return False
 
 
-def heldout_judged(model_dir: str, task: str, base: str, method: str, chosen: dict) -> bool:
+def heldout_judged(model_dir: str, task: str, base: str, method: str, chosen: dict,
+                   stream: str, scope: str) -> bool:
     """Whether the held-out generation at the selected config has actually been
     judged — i.e. its workdir has a non-empty judge_ratings.jsonl, which is what
     collect_pass_rates.py and select_best_config.py's own validation-side
     scanning both require. Generation existing is not enough: it can be left
     over from an earlier run whose judging step never completed."""
-    rel = Path(model_dir) / task / NORM_MODE / STREAM_MODE / SCOPE / method
+    rel = Path(model_dir) / task / NORM_MODE / stream / scope / method
     test_file = f"{base}-heldout-test"
     conditions = scan_conditions(WORKDIRS_ROOT / rel, test_file=test_file)
     return any(_same_config(c, chosen) for c in conditions)
@@ -200,8 +201,11 @@ def merge_best_configs(out_path: Path, updates: dict):
                     merged = json.load(f)
 
             for model_dir, tasks in updates.items():
-                for task, methods in tasks.items():
-                    merged.setdefault(model_dir, {}).setdefault(task, {}).update(methods)
+                for task, streams in tasks.items():
+                    for stream, scopes in streams.items():
+                        for scope, methods in scopes.items():
+                            merged.setdefault(model_dir, {}).setdefault(task, {}) \
+                                  .setdefault(stream, {}).setdefault(scope, {}).update(methods)
 
             tmp_path = out_path.with_name(out_path.name + ".tmp")
             with open(tmp_path, "w") as f:
@@ -228,6 +232,14 @@ def main():
     parser.add_argument("--model", default="all", help=f"model tag(s) or 'all' ({', '.join(MODEL_DIRS)})")
     parser.add_argument("--dataset", default="all", help=f"dataset tag(s) or 'all' ({', '.join(DATASET_TASKS)})")
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="Where to write best_configs.json")
+    parser.add_argument("--stream", default="residuals", choices=STREAMS,
+                        help="Which steering stream to select for. The two have separate "
+                             "workdir trees and separate entries in best_configs.json, so a "
+                             "selection for one never affects the other.")
+    parser.add_argument("--scope", default="local", choices=SCOPES,
+                        help="Which steering scope to select for: 'local' (single-layer sweep, "
+                             "the default) or 'global' (every layer at once). Separate workdir "
+                             "trees and separate entries in best_configs.json, like --stream.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print selections and prunes without writing or deleting anything")
     parser.add_argument("--no-prune", dest="prune", action="store_false",
@@ -251,10 +263,11 @@ def main():
             task, base = DATASET_TASKS[dataset_tag]
             val_split = f"{base}-test"
             scope_root = (
-                WORKDIRS_ROOT / model_dir / task / NORM_MODE / STREAM_MODE / SCOPE
+                WORKDIRS_ROOT / model_dir / task / NORM_MODE / args.stream / args.scope
             )
 
-            print(f"\n=== {model_tag} / {dataset_tag} (validation split: {val_split}) ===")
+            print(f"\n=== {model_tag} / {dataset_tag} / {args.stream} / {args.scope} "
+                  f"(validation split: {val_split}) ===")
             if not scope_root.is_dir():
                 print("  no validation workdirs, skipping")
                 continue
@@ -273,9 +286,11 @@ def main():
                       f"{len(conditions)} conditions, {ties} tied at best)")
 
                 # Keyed by the directory names run.py already computes
-                # (model dir + `from_<source>_to_<base>`) so --split test can look
-                # a config up without needing the short model/dataset tags.
-                best.setdefault(model_dir, {}).setdefault(task, {})[method] = {
+                # (model dir + `from_<source>_to_<base>` + stream + scope) so
+                # --split test can look a config up without needing the short
+                # model/dataset tags.
+                best.setdefault(model_dir, {}).setdefault(task, {}) \
+                    .setdefault(args.stream, {}).setdefault(args.scope, {})[method] = {
                     "N": chosen["N"],
                     "layer": int(chosen["value"]) if chosen["value"] != "all" else "all",
                     "val_pass_rate": chosen["rate"],
@@ -285,11 +300,13 @@ def main():
                     "n_tied_at_best": ties,
                     "model_tag": model_tag,
                     "dataset_tag": dataset_tag,
+                    "stream": args.stream,
+                    "scope": args.scope,
                 }
 
                 if args.prune:
                     stale = prune_stale_heldout(
-                        model_dir, task, base, method, chosen, args.dry_run
+                        model_dir, task, base, method, chosen, args.dry_run, args.stream, args.scope
                     )
                     for path in stale:
                         print(f"    {'would remove' if args.dry_run else 'removed'} stale held-out: "
@@ -297,11 +314,11 @@ def main():
 
                 # Checked after pruning, so a leftover run at a superseded config
                 # is already gone and cannot be mistaken for this one.
-                if not heldout_exists(model_dir, task, base, method, chosen):
+                if not heldout_exists(model_dir, task, base, method, chosen, args.stream, args.scope):
                     print(f"    held-out run needed at {condition_label(chosen)}: generation missing")
                     if (model_tag, dataset_tag) not in pending:
                         pending.append((model_tag, dataset_tag))
-                elif not heldout_judged(model_dir, task, base, method, chosen):
+                elif not heldout_judged(model_dir, task, base, method, chosen, args.stream, args.scope):
                     print(f"    held-out run needed at {condition_label(chosen)}: judging missing")
                     if (model_tag, dataset_tag) not in pending:
                         pending.append((model_tag, dataset_tag))
@@ -323,7 +340,12 @@ def main():
 
     out_path = Path(args.output)
     merge_best_configs(out_path, best)
-    n_entries = sum(len(methods) for tasks in best.values() for methods in tasks.values())
+    n_entries = sum(
+        len(methods)
+        for tasks in best.values()
+        for streams in tasks.values()
+        for methods in streams.values()
+    )
     print(f"\nMerged {n_entries} selection(s) into {out_path}")
 
 

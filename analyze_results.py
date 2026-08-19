@@ -7,16 +7,16 @@ For each model/dataset/method combo, finds the single held-out condition
 first N failing prompts + unsteered baseline + steered responses + ratings,
 in the order they appear in judge_ratings.jsonl.
 
-Writes to analysis/local/ (created if missing):
+Writes to analysis/residuals/local/ (created if missing; --attention writes to
+analysis/attention/local/ instead):
   qualitative_examples_<dataset>.txt  one per dataset, the pass/fail examples
   pass_rates.txt                      held-out pass rate per steering method
   failure_ratings.txt                 mean judge/fluency/relevance over the
                                       non-passing examples, showing which of
                                       the three criteria failures come from
 
-With --global, only analysis/global/pass_rates.txt is written (there's no
-held-out split for global steering, so it's the validation-sweep argmax per
-method instead — selection-biased, like collect_pass_rates.py's --split val).
+With --global, the same three files are written to analysis/<stream>/global/
+instead, reading the held-out run for the global (every-layer-at-once) scope.
 
 The pass rule mirrors judge-evals/selection_utils.py: empty responses are
 forced to fail, pass = judge_rating == 5 and fluency == 2 and relevance == 2.
@@ -222,25 +222,28 @@ def main():
     parser.add_argument("--output-dir", default=str(ANALYSIS_DIR),
                         help="Directory to write all .txt outputs to (created if missing)")
     parser.add_argument("--global", dest="global_scope", action="store_true",
-                        help="Analyze the 'global' steering scope instead of 'local'. There's no "
-                             "held-out split for global, so this reports the validation-sweep "
-                             "argmax per method (selection-biased) and only writes pass_rates.txt.")
+                        help="Analyze the 'global' steering scope instead of 'local'.")
+    parser.add_argument("--attention", action="store_true",
+                        help="Analyze the 'attention' steering stream instead of 'residuals'.")
     args = parser.parse_args()
 
     scope = "global" if args.global_scope else SCOPE
+    stream_filter = "attention" if args.attention else "residuals"
 
     combos = discover_local_combos(
         model_filter=resolve_filter(args.model, MODEL_DIRS),
         dataset_filter=resolve_filter(args.dataset, DATASET_TASKS),
         scope=scope,
+        stream_filter=stream_filter,
     )
     combos = [c for c in combos if c[0] != "gemma-4-12B-it"]
     if ENABLED_DATASET_TASKS is not None:
         combos = [c for c in combos if c[1] in ENABLED_DATASET_TASKS]
     if not combos:
-        raise SystemExit(f"No '{scope}' scope combinations found under results/ or judge-evals/workdirs/")
+        raise SystemExit(f"No '{scope}' scope '{stream_filter}' combinations found under "
+                          f"results/ or judge-evals/workdirs/")
 
-    out_dir = Path(args.output_dir) / scope
+    out_dir = Path(args.output_dir) / stream_filter / scope
     blocks = {}
     table_rows = []
     pass_rates = {}
@@ -251,7 +254,7 @@ def main():
         if not methods:
             continue
         workdir_base = WORKDIRS_ROOT / model / task / norm_mode / stream_mode / scope
-        test_file = split_test_file(task, "val" if args.global_scope else "test")
+        test_file = split_test_file(task, "test")
 
         skipped_methods = []
         found_methods = []
@@ -270,34 +273,33 @@ def main():
                 n_pass = sum(1 for ex in examples if ex["pass"])
                 pass_rates.setdefault((dataset_tag, model_tag), {})[method] = n_pass / len(examples)
 
-            if not args.global_scope:
-                passes = [ex for ex in examples if ex["pass"]][: args.n]
-                all_fails = [ex for ex in examples if not ex["pass"]]
-                fails = all_fails[: args.n]
+            passes = [ex for ex in examples if ex["pass"]][: args.n]
+            all_fails = [ex for ex in examples if not ex["pass"]]
+            fails = all_fails[: args.n]
 
-                if all_fails:
-                    table_rows.append({
-                        "model": model_tag,
-                        "dataset": dataset_tag,
-                        "method": method,
-                        "n_fail": len(all_fails),
-                        "judge": mean_rating(all_fails, "judge_rating"),
-                        "fluency": mean_rating(all_fails, "fluency"),
-                        "relevance": mean_rating(all_fails, "relevance"),
-                    })
+            if all_fails:
+                table_rows.append({
+                    "model": model_tag,
+                    "dataset": dataset_tag,
+                    "method": method,
+                    "n_fail": len(all_fails),
+                    "judge": mean_rating(all_fails, "judge_rating"),
+                    "fluency": mean_rating(all_fails, "fluency"),
+                    "relevance": mean_rating(all_fails, "relevance"),
+                })
 
-                header = (
-                    f"{'=' * 80}\n"
-                    f"MODEL: {model} | DATASET: {task} | METHOD: {method} | "
-                    f"CONFIG: {condition_label(chosen)}\n"
-                    f"{'=' * 80}\n"
-                )
-                body = [header]
-                for i, ex in enumerate(passes, 1):
-                    body.append(format_example(i, "PASS", ex))
-                for i, ex in enumerate(fails, 1):
-                    body.append(format_example(i, "FAIL", ex))
-                blocks.setdefault(dataset_tag, []).append("\n".join(body))
+            header = (
+                f"{'=' * 80}\n"
+                f"MODEL: {model} | DATASET: {task} | METHOD: {method} | "
+                f"CONFIG: {condition_label(chosen)}\n"
+                f"{'=' * 80}\n"
+            )
+            body = [header]
+            for i, ex in enumerate(passes, 1):
+                body.append(format_example(i, "PASS", ex))
+            for i, ex in enumerate(fails, 1):
+                body.append(format_example(i, "FAIL", ex))
+            blocks.setdefault(dataset_tag, []).append("\n".join(body))
             found_methods.append(method)
 
         if found_methods:
@@ -314,25 +316,13 @@ def main():
 
     pass_table = format_pass_rate_table(pass_rates)
     pass_path = out_dir / DEFAULT_PASS_OUTPUT.name
-    if args.global_scope:
-        pass_header = (
-            "Validation-sweep argmax pass rate per steering method, global scope "
-            "(✓ marks the best method per row). Selection-biased: there's no held-out\n"
-            "split for global steering, so this is the best of the N sweep on the same\n"
-            "prompts, unlike the local held-out pass_rates.txt.\n"
-            "Pass = judge_rating 5/5 and fluency 2/2 and relevance 2/2.\n\n"
-        )
-    else:
-        pass_header = (
-            "Held-out pass rate per steering method (✓ marks the best method per row).\n"
-            "Pass = judge_rating 5/5 and fluency 2/2 and relevance 2/2.\n\n"
-        )
+    pass_header = (
+        "Held-out pass rate per steering method (✓ marks the best method per row).\n"
+        "Pass = judge_rating 5/5 and fluency 2/2 and relevance 2/2.\n\n"
+    )
     pass_path.write_text(pass_header + pass_table)
     print(f"Wrote pass rates for {len(pass_rates)} combo(s) to {pass_path}")
     print(pass_table)
-
-    if args.global_scope:
-        return
 
     table = format_rating_table(table_rows)
     table_path = out_dir / DEFAULT_TABLE_OUTPUT.name

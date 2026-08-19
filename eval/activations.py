@@ -21,7 +21,7 @@ def steering_reps_cache(model, data_handler, batch_size=9, mean=True):
     source = data_handler.config.args.source
     resid = getattr(data_handler.config.args, 'resid', False)
     cache_dir = data_handler.config.get_output_prefix()
-    suffix = '_resid' if resid else ''
+    suffix = '_resid' if resid else '_attn'
     cache_path = f'{cache_dir}{model_name}_steering_cache_{source}{suffix}.pt'
 
     if os.path.exists(cache_path):

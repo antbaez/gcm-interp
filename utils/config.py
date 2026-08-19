@@ -36,7 +36,6 @@ class Config:
         parser.add_argument('-steering_sub_path', '--steering_sub_path', nargs='+', help='steering reps to subtract (one per dataset)')
         parser.add_argument('-source_dir', '--source_dir', nargs='+', default=None, help='Data subdirectory when it differs from source name (one per dataset)')
         parser.add_argument('-steering_n', '--steering_n', type=float, nargs='+', default=[1, 2, 4, 5, 6, 8, 10], help='Steering scale factors to sweep')
-        parser.add_argument('-topk_vals', '--topk_vals', type=float, nargs='+', default=[1.0, 0.01, 0.03, 0.05, 0.07, 0.09, 0.1, 0.5], help='Top-k fractions of heads to steer')
         parser.add_argument('-steering_types', '--steering_types', nargs='+', default=['last-token'], help='Steering vector aggregation types to run')
         parser.add_argument('-layers', '--layers', type=int, nargs='+', default=None, help='Explicit layers to steer, overriding the default layer-range sweep (used to pin a validation-selected layer)')
         parser.add_argument('-layer_range_start', '--layer_range_start', type=float, default=0.0, help='Start of the single-layer sweep range, as a fraction of total layers (default 0.0, i.e. from the first layer)')

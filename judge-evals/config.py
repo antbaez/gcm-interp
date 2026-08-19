@@ -20,18 +20,18 @@ TOKENIZER_MODEL_NAME = "meta-llama/Llama-3.1-70B-Instruct"
 RATING_REGEX = re.compile(r"(\d+)\]\]")
 
 # Filename pattern for generation outputs — accepts these formats:
-#   layer sweep: N=5_steer_layer=13_harmless-test_gen.json   (topk group holds the layer idx)
+#   layer sweep: N=5_steer_layer=13_harmless-test_gen.json
 #   global:      N=5_steer_layer=all_harmless-test_gen.json  (all layers steered at once)
-#   topk sweep:  N=5_steer_topk=0.5_harmless-test_gen.json
-#   old:         5_targeted_steer_0.5_harmless-test_gen.json
-# The layer index (or the `all` sentinel in global mode) reuses the `topk`
-# capture group (there is no top-k in layer/global mode).
+#   legacy:      N=5_steer_topk=0.5_harmless-test_gen.json   (pre-layer-sweep head selection)
+#   legacy:      5_targeted_steer_0.5_harmless-test_gen.json
+# The swept value is always a layer index (or the `all` sentinel in global mode);
+# the legacy `topk=` forms are still read so already-judged runs on disk parse.
 GEN_RE = re.compile(
     r"""
     (?:N=)?(?P<N>\d+(?:\.\d+)?)_
     (?:(?P<REPS>random|targeted)_)?
     (?P<STEERING_METHOD>steer|mean)_
-    (?:(?P<AXIS>topk|layer)=)?(?P<topk>all|\d+(?:\.\d+)?)_
+    (?:(?P<AXIS>topk|layer)=)?(?P<layer>all|\d+(?:\.\d+)?)_
     (?P<TEST_FILE>.+?-(?:long|single|test))
     _gen\.json$
     """,
@@ -49,26 +49,32 @@ PASSTHROUGH_COLS = [
     "MODEL_ID",
     "SOURCE",
     "BASE",
+    "NORM_MODE",
+    "STREAM_MODE",
+    "SCOPE",
     "STEERING_TYPE",
     "N",
     "REPS",
     "STEERING_METHOD",
-    "topk",
+    "layer",
+    "TEST_FILE",
 ]
 
 # Row-level merge key (unique per example)
 ROW_KEY_COLS = [
     "MODEL_ID", "SOURCE", "BASE",
     "STEERING_TYPE",
-    "N", "REPS", "STEERING_METHOD", "topk",
+    "N", "REPS", "STEERING_METHOD", "layer",
     "data_path_query",
 ]
 
-# Condition-level grouping key (accuracy aggregation)
+# Condition-level grouping key (accuracy aggregation). Norm/stream/scope are part
+# of the key so the two streams never aggregate into the same accuracy file.
 GROUP_COLS = [
     "MODEL_ID", "SOURCE", "BASE",
+    "NORM_MODE", "STREAM_MODE", "SCOPE",
     "STEERING_TYPE",
-    "N", "REPS", "STEERING_METHOD", "topk",
+    "N", "REPS", "STEERING_METHOD", "layer",
 ]
 
 # ---------------------------------------------------------------------------

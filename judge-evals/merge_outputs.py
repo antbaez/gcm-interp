@@ -183,12 +183,14 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
             "MODEL_ID": meta["MODEL_ID"],
             "SOURCE": source,
             "BASE": base,
+            "NORM_MODE": meta["NORM_MODE"],
             "STREAM_MODE": meta["STREAM_MODE"],
+            "SCOPE": meta["SCOPE"],
             "STEERING_TYPE": meta["STEERING_TYPE"],
             "N": meta["N"],
             "REPS": meta["REPS"] if meta["REPS"] is not None else "targeted",
             "STEERING_METHOD": meta["STEERING_METHOD"],
-            "topk": meta["topk"],
+            "layer": meta["layer"],
             "TEST_FILE": meta["TEST_FILE"],
         }
         validate_record(record)
@@ -208,7 +210,7 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
 def default_csv_path(gen_path: str) -> str:
     """Derive the default CSV output path from a gen.json path."""
     p = Path(gen_path)
-    stem = p.stem  # e.g. "N=1_steer_topk=0.01_sycophancy-test_gen"
+    stem = p.stem  # e.g. "N=1_steer_layer=13_sycophancy-test_gen"
     if stem.endswith("_gen"):
         stem = stem[:-4]
     return str(p.parent / f"{stem}_eval.csv")

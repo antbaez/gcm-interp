@@ -82,21 +82,29 @@ def gen_workdir(gen_path: str) -> Path:
 
 
 def accuracy_paths(meta: dict) -> tuple[Path, Path]:
+    # Mirrors the results/ and workdirs/ layout, so residual and attention runs
+    # at the same N/layer land in separate trees instead of overwriting each
+    # other. compute_accuracies.py builds the identical path — the two used to
+    # disagree, which made accuracy_exists() never match and re-judge everything.
     base_dir = (
         ACCURACY_DIR
         / meta["MODEL_ID"]
         / f"from_{meta['SOURCE']}_to_{meta['BASE']}"
         / meta["NORM_MODE"]
+        / meta["STREAM_MODE"]
+        / meta["SCOPE"]
         / meta["STEERING_TYPE"]
     )
     # Held-out (true test) runs get their own subdir so their accuracies never
-    # overwrite the validation sweep's. The default `<base>-test` split keeps the
-    # original layout on purpose: changing it would make every already-judged
-    # condition look unprocessed to accuracy_exists() and trigger a full re-judge.
+    # overwrite the validation sweep's.
     test_file = meta.get("TEST_FILE") or ""
     if test_file and test_file != f"{meta['BASE']}-test":
         base_dir = base_dir / test_file
-    fn_base = f"{meta['N']}_{meta['REPS']}_{meta['STEERING_METHOD']}_topk_{meta['topk']}"
+    # Current filenames carry no reps segment, so REPS parses as None; gen_to_csv
+    # defaults it to "targeted" and compute_accuracies names files from that, so
+    # the same default has to be applied here or the two never agree.
+    reps = meta["REPS"] if meta["REPS"] is not None else "targeted"
+    fn_base = f"{meta['N']}_{reps}_{meta['STEERING_METHOD']}_layer_{meta['layer']}"
     wo_rf = base_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
     w_rf  = base_dir / f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"
     return wo_rf, w_rf

@@ -82,9 +82,12 @@ def main():
 
                     if best_configs is not None:
                         task = f"from_{source}_to_{base}"
-                        entry = best_configs.get(model_name, {}).get(task, {}).get(steering_type)
+                        stream = 'residuals' if config.args.resid else 'attention'
+                        scope = 'global' if config.args.global_steer else 'local'
+                        entry = (best_configs.get(model_name, {}).get(task, {})
+                                 .get(stream, {}).get(scope, {}).get(steering_type))
                         if entry is None:
-                            print(f'No validation-selected config for {model_name}/{task}/{steering_type}, skipping')
+                            print(f'No validation-selected config for {model_name}/{task}/{stream}/{scope}/{steering_type}, skipping')
                             continue
                         # Collapse the sweep to the single config chosen on validation,
                         # so the held-out split is never used to pick anything.
@@ -94,7 +97,7 @@ def main():
                         print(f"Pinned from validation: N={entry['N']:g} layer={entry['layer']} "
                               f"(val w_rf={entry['val_pass_rate']:.3f})")
 
-                    run_eval(config, data_handler, model_handler, batch_handler, 'heads', original_outputs=original_outputs)
+                    run_eval(config, data_handler, model_handler, batch_handler, original_outputs=original_outputs)
 
 if __name__ == "__main__":
     main()

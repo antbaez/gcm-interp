@@ -5,8 +5,8 @@ set -e
 # --dataset defaults to "all" (harmful, sycophancy, verse).
 # --split val (default) sweeps N x layer on the validation split; --split test pins the
 # selection from best_configs.json and generates once on the held-out test split.
-# Residual-stream steering runs by default. Pass --attention for attention-head steering
-# (reads whatever head-selection artifacts already exist under results/.../heads/).
+# Residual-stream steering runs by default. Pass --attention to steer the attention
+# output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
 # By default steering is a single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END
 # of layers (below); --global steers all layers at once instead.
 
@@ -14,7 +14,6 @@ PATCHING_BATCH_SIZE=100
 SEED=42
 MAX_NEW_TOKENS=512
 BATCH_SIZE=50
-TOPK_VALS="1.0"
 
 # Fraction of total layers (0.0-1.0) the single-layer sweep ranges over; ignored
 # in --global mode. Defaults to the first two-thirds of layers (0.0, 0.667) —
@@ -26,19 +25,32 @@ LAYER_RANGE_END=0.6667
 # Local (single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END) and global
 # (all layers at once) get independent lists — steering every layer usually needs
 # different magnitudes than steering a single one. --global selects the GLOBAL list.
+# Residual-stream and attention (--attention) each get their own pair of lists:
+# o_proj outputs are on a different scale than the residual stream, so the same N
+# does not transfer between them.
 declare -A STEERING_N_LOCAL_BY_MODEL=(
     [olmo]="1 10 20 30 40 50 60 70 80 90 100"
     [qwen3]="1 25 50 75 100 125 150 175 200 225 250"
     [llama]="1 10 20 30 40 50 60 70 80 90 100"
     [gemma4]="1 10 25 50 75 100 125 150 175 200 225 250"
-    [gemma]="1 500 1000 2000 3000 4000 5000"
 )
 declare -A STEERING_N_GLOBAL_BY_MODEL=(
     [olmo]="0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2"
     [qwen3]="0.25 0.5 0.75 1 1.25 1.5 1.75 2 2.25 2.5 2.75 3 3.25 3.5 3.75 4 4.25 4.5 4.75 5"
     [llama]="0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2"
-    [gemma]="0.25 0.5 0.75 1 1.25 1.5 1.75 2 2.25 2.5 2.75 3 3.25 3.5 3.75 4 4.25 4.5 4.75 5"
     [gemma4]="0.25 0.5 0.75 1 1.25 1.5 1.75 2 2.25 2.5 2.75 3 3.25 3.5 3.75 4 4.25 4.5 4.75 5"
+)
+declare -A STEERING_N_LOCAL_ATTN_BY_MODEL=(
+    [olmo]="1 25 50 75 100 125 150 175 200 225 250"
+    [qwen3]="1 25 50 75 100 125 150 175 200 225 250"
+    [llama]="1 25 50 75 100 125 150 175 200 225 250"
+    [gemma4]="1 25 50 75 100 125 150 175 200 225 250"
+)
+declare -A STEERING_N_GLOBAL_ATTN_BY_MODEL=(
+    [olmo]="1 2 3 4 5 6 7 8 9 10"
+    [qwen3]="1 2 3 4 5 6 7 8 9 10"
+    [llama]="1 2 3 4 5 6 7 8 9 10"
+    [gemma4]="1 2 3 4 5 6 7 8 9 10"
 )
 
 EVAL_MODEL=true
@@ -111,8 +123,6 @@ else
     done
 fi
 
-if [ "$RESID" = true ]; then TOPK_VALS="1.0"; fi
-
 EVAL_FLAGS=""
 if [ "$EVAL_MODEL" = true ];   then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
 if [ "$STEERING" = true ];     then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
@@ -137,17 +147,23 @@ run_experiments_for_model() {
         llama) MODEL_ID="meta-llama/Llama-3.1-8B-Instruct" ;;
     esac
 
-    local STEERING_N
+    local STEERING_N WHICH_LIST
     if [ "$GLOBAL" = true ]; then
-        STEERING_N="${STEERING_N_GLOBAL_BY_MODEL[$M_TAG]}"
+        if [ "$RESID" = true ]; then
+            WHICH_LIST="STEERING_N_GLOBAL_BY_MODEL";      STEERING_N="${STEERING_N_GLOBAL_BY_MODEL[$M_TAG]}"
+        else
+            WHICH_LIST="STEERING_N_GLOBAL_ATTN_BY_MODEL"; STEERING_N="${STEERING_N_GLOBAL_ATTN_BY_MODEL[$M_TAG]}"
+        fi
     else
-        STEERING_N="${STEERING_N_LOCAL_BY_MODEL[$M_TAG]}"
+        if [ "$RESID" = true ]; then
+            WHICH_LIST="STEERING_N_LOCAL_BY_MODEL";       STEERING_N="${STEERING_N_LOCAL_BY_MODEL[$M_TAG]}"
+        else
+            WHICH_LIST="STEERING_N_LOCAL_ATTN_BY_MODEL";  STEERING_N="${STEERING_N_LOCAL_ATTN_BY_MODEL[$M_TAG]}"
+        fi
     fi
-    # Not every model has both lists filled in. Catch it here rather than letting
+    # Not every model has all four lists filled in. Catch it here rather than letting
     # run.py fail on an empty -steering_n, which reports itself as an argparse error.
     if [ -z "$STEERING_N" ]; then
-        local WHICH_LIST="STEERING_N_LOCAL_BY_MODEL"
-        [ "$GLOBAL" = true ] && WHICH_LIST="STEERING_N_GLOBAL_BY_MODEL"
         echo "Error: no N sweep defined for model '$M_TAG' in $WHICH_LIST (run_steering.sh). Add one."
         exit 1
     fi
@@ -167,7 +183,8 @@ run_experiments_for_model() {
     done
 
     echo ""
-    echo "[$M_TAG] split=$SPLIT  datasets=[${D_TAGS[*]}]  steering_types=[${STEERING_TYPES[*]}]  N=[$STEERING_N]  k=[$TOPK_VALS]"
+    local STREAM="residuals"; [ "$RESID" = false ] && STREAM="attention"
+    echo "[$M_TAG] split=$SPLIT  datasets=[${D_TAGS[*]}]  stream=$STREAM  steering_types=[${STEERING_TYPES[*]}]  N=[$STEERING_N]"
     local START_TIME=$SECONDS
 
     python -u run.py \
@@ -183,7 +200,6 @@ run_experiments_for_model() {
         -steering_sub_path "${SUB_PATHS[@]}" \
         -eval_batch_size "$BATCH_SIZE" \
         -steering_n $STEERING_N \
-        -topk_vals $TOPK_VALS \
         -steering_types "${STEERING_TYPES[@]}" \
         -layer_range_start "$LAYER_RANGE_START" \
         -layer_range_end "$LAYER_RANGE_END" \

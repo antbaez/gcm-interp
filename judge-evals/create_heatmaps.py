@@ -23,7 +23,9 @@ plt.rcParams.update({
 from config import BASE_DIR
 
 ACCURACY_DIR          = BASE_DIR / "judge-evals" / "accuracy"
-ACCURACY_RESIDUAL_DIR = BASE_DIR / "judge-evals" / "accuracy"
+# --padding compares against a summary built from a separately-judged tree; it
+# was referenced but never defined, which made --padding raise NameError.
+ACCURACY_PADDING_DIR  = BASE_DIR / "judge-evals" / "accuracy_padding"
 
 SOURCE_TO_TAG = {
     "harmful-long":                    "harmful",
@@ -82,13 +84,19 @@ def filter_hidden_n(df: pd.DataFrame) -> pd.DataFrame:
     return df[mask]
 
 
-def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_label: str = "normalized", compare_df: pd.DataFrame = None, padding: bool = False, resid: bool = False, multi: bool = False):
+def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_label: str = "normalized", compare_df: pd.DataFrame = None, padding: bool = False, resid: bool = False, multi: bool = False, wo_rf: bool = False):
     """
     One figure per (model, dataset). Used for global runs (all layers steered).
-    Grid rows = w_rf + wo_rf (or a padding comparison when compare_df provided), one heatmap per row.
-    Each heatmap: rows = steering_type, columns = N.
+    Grid rows = w_rf (default), plus a padding-comparison row when compare_df is
+    given, or a wo_rf row when wo_rf=True. Each heatmap: rows = steering_type,
+    columns = N.
     """
     import matplotlib as mpl
+
+    if wo_rf and "pass_rate_wo_rf" not in df.columns:
+        print("--wo_rf requested but `pass_rate_wo_rf` column not found in the summary CSV "
+              "— rerun summarize_results.py to add it. Skipping the wo_rf row.")
+        wo_rf = False
 
     steering_types = sorted(df["steering_type"].unique())
     cmap = "RdYlGn" if diff else "YlGn"
@@ -109,12 +117,23 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
         short_title  = f"{short_model}  |  {short_source}  (w_rf)"
 
         n_vals = sorted(group["N"].unique())
-        n_rows = 2  # main row + wo_rf (or padding-comparison) row
         n_cols = 1
 
         w_rf_max = group.groupby("steering_type")["pass_rate"].max()
         best_steers = (set(w_rf_max[w_rf_max == w_rf_max.max()].index)
                        if not w_rf_max.empty else set())
+
+        compare_group = compare_groups.get((model, dataset))
+        if compare_group is not None:
+            all_rows = [
+                ("pass_rate", group, "normal"),
+                ("pass_rate", compare_group, "padding"),
+            ]
+        else:
+            all_rows = [("pass_rate", group, "w_rf")]
+            if wo_rf:
+                all_rows.append(("pass_rate_wo_rf", group, "wo_rf"))
+        n_rows = len(all_rows)
 
         fig, axes = plt.subplots(
             n_rows, n_cols,
@@ -124,18 +143,6 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
             gridspec_kw={"hspace": 0.35},
         )
         fig.suptitle(short_title, fontsize=18)
-
-        compare_group = compare_groups.get((model, dataset))
-        if compare_group is not None:
-            all_rows = [
-                ("pass_rate", group, "normal"),
-                ("pass_rate", compare_group, "padding"),
-            ]
-        else:
-            all_rows = [
-                ("pass_rate", group, "w_rf"),
-                ("pass_rate_wo_rf", group, "wo_rf"),
-            ]
 
         for row_i, (val_col, src, row_label) in enumerate(all_rows):
             is_last_row = row_i == n_rows - 1
@@ -463,9 +470,9 @@ def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
                 # Derived from `matrix` (the same mean-aggregated values that are
                 # displayed) rather than raw `sub`, so the bolded cell always matches
                 # the highest number actually shown — duplicate condition rows
-                # (val-sweep + held-out runs sharing a (layer, N)) get averaged by
-                # the pivot_table the same way for both the annotation and the bold
-                # pick. Ties broken by lower N, then lower layer.
+                # sharing a (layer, N) get averaged by the pivot_table the same way
+                # for both the annotation and the bold pick. Ties broken by lower N,
+                # then lower layer.
                 best_layer = None
                 best_n = None
                 flat = matrix.stack()
@@ -630,12 +637,16 @@ def make_layer_heatmaps_agg(df: pd.DataFrame, figures_dir: Path, agg: str, norm_
 
 def generate_for_stream(args, resid: bool, norm_mode: str):
     figures_root = BASE_DIR / "figures"
+    stream = "residuals" if resid else "attention"
     if resid:
         full_dir = figures_root / "residuals"
-        csv_path = ACCURACY_RESIDUAL_DIR / "results_summary.csv"
     else:
         full_dir = figures_root / ("attention-padding" if args.padding else "attention")
-        csv_path = Path(args.csv)
+    # summarize_results.py writes one summary per stream; an explicit --csv wins,
+    # and the unsuffixed combined summary is the fallback for older trees.
+    csv_path = Path(args.csv) if args.csv else ACCURACY_DIR / f"results_summary_{stream}.csv"
+    if not csv_path.exists() and not args.csv:
+        csv_path = ACCURACY_DIR / "results_summary.csv"
 
     if not csv_path.exists():
         print(f"CSV not found: {csv_path}  —  run summarize_results.py first  "
@@ -644,6 +655,11 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
 
     df = pd.read_csv(csv_path)
     df = df[~df["model"].str.lower().str.contains("gemma-4", na=False)]
+    if "split" in df.columns:
+        df = df[df["split"] == "val"]
+    else:
+        print(f"WARNING: no `split` column in {csv_path.name} — rerun summarize_results.py "
+              f"to exclude held-out-test rows from these heatmaps.")
     print(f"Loaded {len(df)} rows from {csv_path.name}")
 
     full_dir.mkdir(parents=True, exist_ok=True)
@@ -654,13 +670,19 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
         base_mask &
         (df["norm_mode"] == norm_mode)
     ]
+    # The combined summary holds both streams, so restrict to this one; a
+    # per-stream summary is already filtered and the mask is a no-op there.
+    if "stream_mode" in base_df.columns:
+        base_df = base_df[base_df["stream_mode"] == stream]
     base_df = filter_hidden_n(base_df)
 
     compare_df = None
     if resid:
         pass  # no compare_df for resid mode
     elif args.padding:
-        padding_csv = ACCURACY_PADDING_DIR / "results_summary.csv"
+        padding_csv = ACCURACY_PADDING_DIR / f"results_summary_{stream}.csv"
+        if not padding_csv.exists():
+            padding_csv = ACCURACY_PADDING_DIR / "results_summary.csv"
         if not padding_csv.exists():
             print(f"Padding CSV not found: {padding_csv}  —  run summarize_results.py with accuracy_padding/ first")
             return
@@ -677,8 +699,8 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
 
     # Runs are split by scope: `local` = single-layer sweep over the middle third
     # (layer-axis heatmaps), `global` = all layers at once (N × steering-type
-    # heatmaps). Older summaries without a `scope` column fall back to the legacy
-    # `layer`-present / `topk == 1.0` heuristic. Figures are separated on disk into
+    # heatmaps). Summaries predating the `scope` column fall back to whether a
+    # layer index is present. Figures are separated on disk into
     # `<stream>/local/` and `<stream>/global/` subdirectories.
     has_scope = "scope" in base_df.columns
     local_dir  = full_dir / "local"
@@ -708,11 +730,6 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
                                 resid=resid, multi=args.multi,
                                 no_rel=args.no_rel, wo_rf=args.wo_rf)
 
-            paper_dir = full_dir / "paper"
-            paper_dir.mkdir(parents=True, exist_ok=True)
-            make_paper_heatmaps(layer_source_df, paper_dir, norm_label=norm_mode,
-                                resid=resid, multi=args.multi)
-
         base_stream_name = "residuals" if resid else ("attention-padding" if args.padding else "attention")
         for agg, flag in (("max", args.max), ("avg", args.avg)):
             if not flag:
@@ -727,27 +744,25 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
     if not args.global_scope:
         return
 
-    if has_scope:
-        base_df = base_df[base_df["scope"] == "global"]
-        if compare_df is not None and "scope" in compare_df.columns:
-            compare_df = compare_df[compare_df["scope"] == "global"]
-    else:
-        base_df = base_df[base_df["topk"] == 1.0]
-        if compare_df is not None:
-            compare_df = compare_df[compare_df["topk"] == 1.0]
+    if not has_scope:
+        return
+    base_df = base_df[base_df["scope"] == "global"]
+    if compare_df is not None and "scope" in compare_df.columns:
+        compare_df = compare_df[compare_df["scope"] == "global"]
 
     if base_df.empty:
         return
 
     norm_label = norm_mode
     global_dir.mkdir(parents=True, exist_ok=True)
-    make_heatmaps(base_df, global_dir, diff=args.diff, norm_label=norm_label, compare_df=compare_df, padding=args.padding, resid=resid, multi=args.multi)
+    make_heatmaps(base_df, global_dir, diff=args.diff, norm_label=norm_label, compare_df=compare_df, padding=args.padding, resid=resid, multi=args.multi, wo_rf=args.wo_rf)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", default=str(ACCURACY_DIR / "results_summary.csv"),
-                        help="Path to results_summary.csv from summarize_results.py")
+    parser.add_argument("--csv", default=None,
+                        help="Path to a results_summary CSV from summarize_results.py "
+                             "(default: the per-stream summary for each stream plotted)")
     parser.add_argument("--diff", action="store_true",
                         help="Plot other−last difference instead of raw pass rates")
     parser.add_argument("--unnormalized", action="store_true",
@@ -758,8 +773,11 @@ def main():
     parser.add_argument("--padding", action="store_true",
                         help="Compare accuracy/ (top row) vs accuracy_padding/ (bottom row)")
     parser.add_argument("--attention", action="store_true",
-                        help="Plot only attention-head results "
+                        help="Also plot attention-stream results "
                              "(by default only residual-stream results are plotted)")
+    parser.add_argument("--no-residuals", dest="residuals", action="store_false",
+                        help="Skip the residual stream (use with --attention to plot attention only)")
+    parser.set_defaults(residuals=True)
     parser.add_argument("--global", dest="global_scope", action="store_true",
                         help="Also create the global (N × steering-type) heatmaps; "
                              "by default only the local layer-sweep heatmaps are created")
@@ -777,8 +795,8 @@ def main():
                              "pass rate (drops the relevance check); requires results_summary.csv "
                              "to have been generated with the `pass_rate_no_rel` column")
     parser.add_argument("--wo_rf", dest="wo_rf", action="store_true",
-                        help="Add a second row of layer-sweep heatmaps using the wo_rf "
-                             "pass rate (drops both the relevance and fluency checks)")
+                        help="Add a second row (to both layer-sweep and global heatmaps) using "
+                             "the wo_rf pass rate (drops both the relevance and fluency checks)")
     parser.add_argument("--paper", action="store_true",
                         help="Only (re)generate the paper heatmaps (figures/<stream>/paper/), "
                              "skipping local/global/agg figures")
@@ -786,7 +804,9 @@ def main():
 
     norm_mode = "unnormalized" if args.unnormalized else (args.norm_mode or "normalized")
 
-    stream_modes = [False] if args.attention else [True]
+    stream_modes = ([True] if args.residuals else []) + ([False] if args.attention else [])
+    if not stream_modes:
+        raise SystemExit("Nothing to plot: --no-residuals was passed without --attention")
     for resid in stream_modes:
         generate_for_stream(args, resid, norm_mode)
 

@@ -45,6 +45,9 @@ def _process_judge_file(judge_path: Path, workdirs_dir: Path, stream_mode: str |
     stream_mode_i = parts[3]   # "attention" or "residuals"
     scope         = parts[4]   # "global" or "local"
     steering_type = parts[5]   # e.g. "positional", "last-token"
+    exp_dir       = parts[6]   # e.g. "N=10_steer_layer=all_harmless-test" (val)
+                                # or "N=225_steer_layer=all_harmless-heldout-test" (held-out)
+    split         = "test" if exp_dir.endswith("-heldout-test") else "val"
 
     if stream_mode is not None and stream_mode_i != stream_mode:
         return None
@@ -64,22 +67,19 @@ def _process_judge_file(judge_path: Path, workdirs_dir: Path, stream_mode: str |
     rel_recs = list(_read_jsonl(rel_path)) if rel_path.exists() else []
 
     first = judge_recs[0]
-    N    = first.get("N")
-    topk = first.get("topk")
-    if N is None or topk is None:
+    N = first.get("N")
+    # Ratings written before the topk -> layer rename carry the swept value under
+    # the old key; the value itself is the same layer index either way.
+    layer_raw = first.get("layer", first.get("topk"))
+    if N is None or layer_raw is None:
         return None
 
-    # Layer-sweep runs reuse the `topk` slot to carry the swept layer index and
-    # write `layer=<idx>` into the filename. Recover it as a proper `layer` column.
-    # Global runs use `layer=all` (all layers steered) — a non-numeric slot with
-    # no single layer index, so `layer` stays None and `topk` becomes NaN.
-    filename = str(first.get("filename", "") or "")
-    is_layer = "layer=" in filename
+    # Global runs use `layer=all` (every layer steered), which has no single
+    # index, so `layer` stays None there.
     try:
-        topk_val = float(topk)
+        layer = int(round(float(layer_raw)))
     except (TypeError, ValueError):
-        topk_val = float("nan")
-    layer = int(round(topk_val)) if (is_layer and not pd.isna(topk_val)) else None
+        layer = None
 
     flu_by_query = {r.get("data_path_query"): r.get("judge_rating") for r in flu_recs}
     rel_by_query = {r.get("data_path_query"): r.get("judge_rating") for r in rel_recs}
@@ -107,10 +107,11 @@ def _process_judge_file(judge_path: Path, workdirs_dir: Path, stream_mode: str |
     return dict(
         model=model, source=source, base=base,
         dataset=f"{source} → {base}",
-        N=N_val, topk=topk_val, layer=layer,
+        N=N_val, layer=layer,
         scope=scope,
         norm_mode=norm_mode,
         stream_mode=stream_mode_i,
+        split=split,
         steering_type=steering_type,
         condition=condition,
         pass_rate=sum(w_passes) / n,
@@ -150,8 +151,14 @@ def main():
         print("No rating files found.")
         return
 
-    csv_path = accuracy_dir / "results_summary.csv"
-    df.sort_values(["model", "dataset", "norm_mode", "stream_mode", "steering_type", "N", "topk"]) \
+    # A stream-filtered summary gets its own file: the two streams are summarized
+    # by separate runs, and sharing one filename would make whichever ran last
+    # clobber the other's rows. The unfiltered run keeps the combined name.
+    csv_path = accuracy_dir / (
+        "results_summary.csv" if args.stream_mode is None
+        else f"results_summary_{args.stream_mode}.csv"
+    )
+    df.sort_values(["model", "dataset", "norm_mode", "stream_mode", "split", "steering_type", "N", "layer"]) \
       .to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path}  ({len(df)} rows)")
 

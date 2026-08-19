@@ -13,8 +13,8 @@
 #
 # Usage:
 #   sbatch scripts/run_normal_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging]
-#   Note: Residual-stream steering runs by default. Pass --attention for attention-head steering
-#   (reads whatever head-selection artifacts already exist under results/.../heads/).
+#   Note: Residual-stream steering runs by default. Pass --attention to steer the attention
+#   output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
 #   With no --split, runs the whole pipeline: validation sweep, judging, selection,
 #   then the held-out split if the selection changed. --split val stops after
 #   judging the sweep; --split test selects from existing sweep results and
@@ -61,6 +61,13 @@ JUDGE_FLAGS=()
 [ "$UNNORMALIZED" = false ] && JUDGE_FLAGS+=(--normalized)
 [ "$RESID" = false ]       && JUDGE_FLAGS+=(--attention)
 
+# Selection and the pass tables are per-stream and per-scope: each has a
+# separate workdir tree, so they must be selected and collected separately.
+STREAM="residuals"
+[ "$RESID" = false ] && STREAM="attention"
+SCOPE="local"
+[ "$GLOBAL" = true ] && SCOPE="global"
+
 echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  unnormalized=$UNNORMALIZED  resid=$RESID  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY"
 
 cd ~/gcm-interp
@@ -86,7 +93,7 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
     echo ""
     echo "Selecting best validation config..."
     python judge-evals/select_best_config.py \
-        --model "$MODEL" --dataset "$DATASET" --pending-out "$PENDING_FILE"
+        --model "$MODEL" --dataset "$DATASET" --stream "$STREAM" --scope "$SCOPE" --pending-out "$PENDING_FILE"
 
     # --- Held-out split, only when the selection moved or was never run.
     # Generation would skip on its own, but not before loading the model and
@@ -111,5 +118,5 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
     # meant to be run by hand once every combination has finished.
     echo ""
     echo "Collecting held-out pass rates..."
-    python stats/collect_pass_rates.py --split test --model "$MODEL" --dataset "$DATASET"
+    python stats/collect_pass_rates.py --split test --model "$MODEL" --dataset "$DATASET" --stream "$STREAM" --scope "$SCOPE"
 fi

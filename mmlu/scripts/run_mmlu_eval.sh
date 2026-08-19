@@ -79,7 +79,7 @@ run_mmlu_for_model() {
     python -u mmlu/run_mmlu.py \
         -d "$DEVICE" \
         -model_id "$MODEL_ID" \
-        -batch_size "$BATCH_SIZE" \
+        --mmlu_batch_size "$BATCH_SIZE" \
         -eval_model \
         -source "$SOURCE" \
         -base "$BASE" \

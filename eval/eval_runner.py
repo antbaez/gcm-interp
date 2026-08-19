@@ -1,12 +1,10 @@
 from asyncio import log
 # from setup import set_seed
-from eval.logits_handler import load_logits, get_top_k_layer_and_head
 from eval.activations import steering_reps_cache
 from eval.generation import select_gen_qs_toks, generate_with_patches, decode_responses
 import os
 import gc
 import json
-import pandas as pd
 from tqdm import tqdm
 import sys
 import torch
@@ -27,13 +25,6 @@ def save_prompt_responses(responses, path):
             f.write('-' * 40 + '\n')
     with open(path.replace('.txt', '.json'), 'w') as jf:
         json.dump(responses, jf)
-
-def save_top_k(reps_type, config, model_handler, topk, logits, logit_metric):
-    topk_df = get_top_k_layer_and_head(logits, topk)
-
-    os.makedirs(config.get_output_prefix(), exist_ok=True)
-    topk_df.to_csv(f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{topk}.csv", index=False)
-    return topk_df
 
 def generate_baseline(config, data_handler, model_handler):
     """Unsteered generation on the eval test set. Independent of steering_type,
@@ -63,25 +54,16 @@ def generate_baseline(config, data_handler, model_handler):
         print(f"  Baseline batch {batch_num}/{baseline_total} — done in {time.time()-_t0:.1f}s")
     return original_outputs
 
-def run_eval(config, data_handler, model_handler, batch_handler, which_patch, topk_vals=None, N=None, original_outputs=None):
+def run_eval(config, data_handler, model_handler, batch_handler, N=None, original_outputs=None):
     # set_seed()
-    print(f"Starting evaluation — task: {config.args.source} -> {config.args.base}, test: {config.args.test_dataset}, N={config.args.steering_n}, topk={config.args.topk_vals}")
+    print(f"Starting evaluation — task: {config.args.source} -> {config.args.base}, test: {config.args.test_dataset}, N={config.args.steering_n}")
 
     model = model_handler.model
     resid = getattr(config.args, 'resid', False)
     global_steer = getattr(config.args, 'global_steer', False)
-    # Head localization (top-k ATP selection) only happens in attention mode and not --global.
-    # Otherwise whole layers are steered: a single-layer sweep over
+    # Whole layers are steered in both streams: a single-layer sweep over
     # -layer_range_start/-layer_range_end (default) or every layer at once (--global).
-    head_selection = (not resid) and (not global_steer)
-    layer_sweep = (not global_steer) and (not head_selection)
-    if head_selection:
-        if os.path.exists(f"{config.get_output_prefix()}/heads/numerator_1_{which_patch}.pt"):
-            logits = torch.load(f"{config.get_output_prefix()}/heads/numerator_1_{which_patch}.pt")
-        else:
-            logits = load_logits(config, data_handler, which_patch, model_handler)
-    else:
-        logits = None
+    layer_sweep = not global_steer
     patching_reps = load_patching_reps(data_handler, model_handler)
     ablation = data_handler.config.args.ablation
     reps_types = ['targeted']
@@ -92,17 +74,14 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
         print(f"[eval] weighted-pos coverage: {steering_coverage.shape[0]} positions, "
               f"mean={steering_coverage.mean():.4f}, min={steering_coverage.min():.4f}")
 
-    if topk_vals is None:
-        topk_vals = config.args.topk_vals
     if N is not None:
         config.args.N = N
 
     # Decide what the inner sweep ranges over. Layer sweeps steer one layer at a
     # time over [-layer_range_start, -layer_range_end) of all layers; the swept
-    # value is written into the filename as `layer=<idx>`. Global / head-selection
-    # runs keep `topk=<val>`.
+    # value is written into the filename as `layer=<idx>`.
+    sweep_axis = 'layer'
     if layer_sweep:
-        sweep_axis = 'layer'
         explicit_layers = getattr(config.args, 'layers', None)
         if explicit_layers:
             # A pinned layer set (e.g. the one chosen on validation) replaces the
@@ -117,15 +96,10 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
             sweep_vals = list(range(layer_lo, layer_hi))
             print(f"Single-layer sweep over layers {layer_lo}..{layer_hi - 1} "
                   f"({len(sweep_vals)} layers, range=[{range_start:g}, {range_end:g}))")
-    elif global_steer:
+    else:
         # Every layer is steered at once, so there is no swept index; the
         # filename slot is a fixed `layer=all` sentinel.
-        sweep_axis = 'layer'
         sweep_vals = ['all']
-    else:
-        sweep_axis = 'topk'
-        sweep_vals = topk_vals
-    logit_metric = 'numerator_1'
 
     decoded_responses = {}
     pre_patch_logits = None
@@ -168,18 +142,10 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
                 decoded_responses[reps_type][sweep_val] = []
                 gen_file = f"{new_stem}.txt"
 
-                csv_path = f"{config.get_output_prefix()}/{logit_metric}_{reps_type}_{sweep_val}.csv"
-                if head_selection and os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')) and os.path.exists(csv_path):
-                    print(f"Skipping generation as all relevant files exist.")
-                    continue
                 if layer_sweep:
-                    topk_df = pd.DataFrame({'layer': [sweep_val]})
-                elif global_steer:
-                    topk_df = pd.DataFrame({'layer': list(range(model_handler.num_layers))})
-                elif not os.path.exists(csv_path):
-                    topk_df = save_top_k(reps_type, config, model_handler, sweep_val, logits, logit_metric)
+                    steer_layers = [sweep_val]
                 else:
-                    topk_df = pd.read_csv(csv_path)
+                    steer_layers = list(range(model_handler.num_layers))
 
                 batch_handler = BatchHandler(config, data_handler)
                 len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
@@ -187,7 +153,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, which_patch, to
                 for batch_num, idx in enumerate(range(0, len_gen_qs, config.args.batch_size), start=1):
                     _t0 = time.time()
                     gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, topk_df, config.args.N, model_handler.dim, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, resid=resid, coverage=steering_coverage)
+                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, steer_layers, config.args.N, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, resid=resid, coverage=steering_coverage)
                     decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
                     gc.collect()
                     torch.cuda.empty_cache()

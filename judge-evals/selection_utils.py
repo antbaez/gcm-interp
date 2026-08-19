@@ -17,8 +17,9 @@ import re
 import statistics
 from pathlib import Path
 
-# Condition dirs are named like `N=100_steer_layer=13_harmless-test` (layer
-# sweep) or `N=10_steer_topk=1.0_harmless-test` (older head-selection runs).
+# Condition dirs are named like `N=100_steer_layer=13_harmless-test`. The
+# `topk=` axis is legacy only (pre-layer-sweep head-selection runs); it is still
+# parsed so old dirs on disk do not raise, and then filtered out below.
 CONDITION_RE = re.compile(
     r"^N=(?P<N>\d+(?:\.\d+)?)_"
     r"(?P<ablation>steer|mean)_"
@@ -96,7 +97,7 @@ def scan_conditions(method_root: Path, test_file: str | None = None) -> list[dic
         meta = parse_condition_dir(cond_dir.name)
         if meta is None:
             continue
-        # Skip stale pre-layer-sweep condition dirs (old "topk=" naming); only
+        # Skip stale pre-layer-sweep condition dirs (legacy "topk=" naming); only
         # the current "layer=" sweep naming is considered.
         if meta["axis"] != "layer":
             continue

@@ -1,8 +1,9 @@
 """
 Per-prompt pass/fail comparison between steering methods (steering_types), for
 every model / dataset / norm_mode / stream_mode combination found
-under `results/` and/or `judge-evals/workdirs/` — restricted to the `local`
-(per-layer/per-head localized) scope, never `global`.
+under `results/` and/or `judge-evals/workdirs/` — restricted to one scope at a
+time (`--scope local`, the default single-layer sweep, or `--scope global`),
+never mixing the two.
 
 Two splits, selected with `--split`:
 
@@ -96,7 +97,8 @@ def best_config_for_method(method_root: Path, test_file: str | None):
     return chosen["rows"], condition_label(chosen), chosen["rate"], len(conditions)
 
 
-def discover_local_combos(model_filter=None, dataset_filter=None, scope=SCOPE):
+def discover_local_combos(model_filter=None, dataset_filter=None, scope=SCOPE,
+                          stream_filter=None):
     """Find every <model>/<task>/<norm_mode>/<stream_mode>
     combination that has a `scope` dir (`local` by default) under results/
     and/or workdirs/, along with the steering methods available under it.
@@ -115,6 +117,8 @@ def discover_local_combos(model_filter=None, dataset_filter=None, scope=SCOPE):
                 continue
             if dataset_filter and task not in dataset_filter:
                 continue
+            if stream_filter and stream_mode != stream_filter:
+                continue
             methods = {p.name for p in scope_dir.iterdir() if p.is_dir()}
             if methods:
                 key = (model, task, norm_mode, stream_mode)
@@ -132,11 +136,11 @@ def split_test_file(task: str, split: str) -> str | None:
     return f"{base}-heldout-test" if split == "test" else f"{base}-test"
 
 
-def build_comparison_csv(model, task, norm_mode, stream_mode, methods, split):
+def build_comparison_csv(model, task, norm_mode, stream_mode, methods, split, scope=SCOPE):
     """Compute the per-prompt pass/fail comparison across `methods` for one
     combo, reading judge ratings from the mirrored workdirs tree. Returns the
     output DataFrame, or None if no method had any judge ratings."""
-    workdir_base = WORKDIRS_ROOT / model / task / norm_mode / stream_mode / SCOPE
+    workdir_base = WORKDIRS_ROOT / model / task / norm_mode / stream_mode / scope
     test_file = split_test_file(task, split)
 
     per_method = {}
@@ -181,6 +185,12 @@ def main():
     parser.add_argument("--split", default="test", choices=["val", "test"],
                         help="test (default): the single held-out run on <base>-heldout-test (unbiased). "
                              "val: best of the N/layer sweep on <base>-test (selection-biased)")
+    parser.add_argument("--stream", default=None, choices=["residuals", "attention"],
+                        help="Restrict to one steering stream. Default: every stream found "
+                             "(each already gets its own output subdir)")
+    parser.add_argument("--scope", default=SCOPE, choices=["local", "global"],
+                        help="Which steering scope to report on: 'local' (single-layer sweep, "
+                             "the default) or 'global' (every layer at once).")
     parser.add_argument("--output-dir", default=str(PASS_RESULTS_ROOT), help="Root dir for output CSVs")
     parser.add_argument("--dry-run", action="store_true", help="List combos that would be processed, without writing CSVs")
     parser.add_argument("--no-force", dest="force", action="store_false",
@@ -191,16 +201,18 @@ def main():
     combos = discover_local_combos(
         model_filter=resolve_filter(args.model, MODEL_DIRS),
         dataset_filter=resolve_filter(args.dataset, DATASET_TASKS),
+        scope=args.scope,
+        stream_filter=args.stream,
     )
     if not combos:
-        raise SystemExit(f"No '{SCOPE}' scope combinations found under {RESULTS_ROOT} or {WORKDIRS_ROOT}")
+        raise SystemExit(f"No '{args.scope}' scope combinations found under {RESULTS_ROOT} or {WORKDIRS_ROOT}")
 
     output_root = Path(args.output_dir)
     n_written = 0
     n_skipped = 0
     # Validation keeps the original filename so existing CSVs stay valid; the
     # held-out split gets its own so the two are never confused downstream.
-    stem = SCOPE if args.split == "val" else f"{SCOPE}_test"
+    stem = args.scope if args.split == "val" else f"{args.scope}_test"
 
     print("n=200")
 
@@ -217,7 +229,7 @@ def main():
             n_skipped += 1
             continue
 
-        df = build_comparison_csv(model, task, norm_mode, stream_mode, methods, args.split)
+        df = build_comparison_csv(model, task, norm_mode, stream_mode, methods, args.split, scope=args.scope)
         if df is None:
             print(f"  no judge ratings found for any method, skipping")
             continue

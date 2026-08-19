@@ -40,3 +40,5 @@ judge-evals/workdirs_old/
 judge-evals/workdirs_residual_old/
 results-resid_old/
 results_old/
+
+mmlu/data/mmlu_test.jsonl

@@ -36,9 +36,8 @@ def _prepare_steering_vector(patch_activations, layer_idx, steering_type, normal
     return sv
 
 
-def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, DIM, max_new_tokens=256, normalize=True, steering_type='last_token', resid=False, coverage=None):
+def generate_with_patches(model, gen_toks, patch_activations, layer_ids, N, max_new_tokens=256, normalize=True, steering_type='last_token', resid=False, coverage=None):
     patch_activations = patch_activations.to(model.device)
-    layer_ids = topk_df['layer'].unique()
     pos_weights = None
     if steering_type == 'weighted-pos':
         if coverage is None:

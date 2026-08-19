@@ -64,8 +64,7 @@ COMPARISONS = [("mean", "last"), ("positional", "last")]
 ALPHA = 0.05
 
 NORM_MODE = "normalized"
-STREAM_MODE = "residuals"
-SCOPE = "local"
+STREAMS = ("residuals", "attention")
 
 
 def mcnemar_exact_p(wins_a: int, wins_b: int) -> float:
@@ -257,6 +256,11 @@ def main():
                          help=f"model tag(s), comma-separated, or 'all' ({', '.join(MODEL_DIRS)})")
     parser.add_argument("--dataset", default="all",
                          help=f"dataset tag(s), comma-separated, or 'all' ({', '.join(DATASET_TASKS)})")
+    parser.add_argument("--stream", default="residuals", choices=STREAMS,
+                         help="Which steering stream's pass tables to test (default: residuals)")
+    parser.add_argument("--scope", default="local", choices=["local", "global"],
+                         help="Which steering scope's pass tables to test: 'local' (single-layer "
+                              "sweep, the default) or 'global' (every layer at once)")
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR),
                          help="Root dir to save per-combo McNemar result CSVs")
     parser.add_argument("--simulate-n", type=int, nargs="+", default=None,
@@ -272,7 +276,7 @@ def main():
     output_root = Path(args.output_dir)
     # Encodes which split these results are from in every output filename (val vs
     # test read different input CSVs and must never overwrite each other's output).
-    stem = SCOPE if args.split == "val" else f"{SCOPE}_test"
+    stem = args.scope if args.split == "val" else f"{args.scope}_test"
     # Collects every combo's rows so the alpha/n header, per-dataset tables, and the
     # compiled summary.csv can all be built after the loop below. Real and simulated
     # results are kept separate (sim_all_rows is one list per --simulate-n target) so
@@ -285,7 +289,7 @@ def main():
 
         for model_tag in model_tags:
             model_dir = MODEL_DIRS[model_tag]
-            csv_path = PASS_RESULTS_ROOT / model_dir / task / NORM_MODE / STREAM_MODE / f"{stem}.csv"
+            csv_path = PASS_RESULTS_ROOT / model_dir / task / NORM_MODE / args.stream / f"{stem}.csv"
 
             if not csv_path.exists():
                 continue

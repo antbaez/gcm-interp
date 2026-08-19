@@ -20,7 +20,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from config import ROW_KEY_COLS, GROUP_COLS, load_jsonl_or_json
+from config import ROW_KEY_COLS, GROUP_COLS, GEN_RE, load_jsonl_or_json
 
 
 # ---------------------------------------------------------------------------
@@ -65,12 +65,28 @@ def load_ratings(json_path: str) -> pd.DataFrame:
         return pd.DataFrame()
 
     items = load_jsonl_or_json(json_path)
-    return pd.DataFrame(items).drop_duplicates()
+    df = pd.DataFrame(items).drop_duplicates()
+    # Ratings written before the topk -> layer rename carry the swept value under
+    # the old column name; it holds the same layer index either way.
+    if "topk" in df.columns and "layer" not in df.columns:
+        df = df.rename(columns={"topk": "layer"})
+    return df
 
 
 # ---------------------------------------------------------------------------
 # Shared compute logic
 # ---------------------------------------------------------------------------
+
+def _path_cols(df: pd.DataFrame) -> list[str]:
+    """Columns kept alongside the merge keys because the output path is built
+    from them. They are not part of ROW_KEY_COLS, so without this the merge
+    projection below drops them: the accuracy tree would then lose its
+    norm/stream/scope levels (filing attention runs under `residuals`) and its
+    held-out subdir. `filename` is the fallback for ratings written before
+    TEST_FILE / the path columns became passthroughs."""
+    return [c for c in ("NORM_MODE", "STREAM_MODE", "SCOPE", "TEST_FILE", "filename")
+            if c in df.columns]
+
 
 def _compute_and_write(
     jp_df: pd.DataFrame,
@@ -105,14 +121,14 @@ def _compute_and_write(
 
     if not jp_df.empty:
         available_keys = [c for c in ROW_KEY_COLS if c in jp_df.columns]
-        merged = jp_df[available_keys + ["jp_rating"]].copy()
+        merged = jp_df[available_keys + _path_cols(jp_df) + ["jp_rating"]].copy()
     elif not rf_flu_df.empty:
         available_keys = [c for c in ROW_KEY_COLS if c in rf_flu_df.columns]
-        merged = rf_flu_df[available_keys + ["fluency_rating"]].copy()
+        merged = rf_flu_df[available_keys + _path_cols(rf_flu_df) + ["fluency_rating"]].copy()
         merged["jp_rating"] = float("nan")
     else:
         available_keys = [c for c in ROW_KEY_COLS if c in rf_rel_df.columns]
-        merged = rf_rel_df[available_keys + ["relevance_rating"]].copy()
+        merged = rf_rel_df[available_keys + _path_cols(rf_rel_df) + ["relevance_rating"]].copy()
         merged["jp_rating"] = float("nan")
 
     if "fluency_rating" not in merged.columns:
@@ -152,21 +168,37 @@ def _compute_and_write(
 
     for _, group in tqdm(grouped):
         row = group.iloc[0]
-        # `topk` holds the layer index for a local layer-sweep condition, or the
-        # literal "all" for a global (--global) condition — there is no other
-        # signal of scope this far downstream, since STREAM_MODE/SCOPE are not
-        # propagated as columns.
-        scope = "global" if str(row["topk"]) == "all" else "local"
+        # Norm/stream/scope come straight from the columns merge_outputs.py
+        # propagates. Older CSVs predate those columns, so fall back to the
+        # defaults they were written under: the layer value is "all" only for a
+        # global run, and everything before the split was residual + normalized.
+        norm_mode   = str(row["NORM_MODE"]) if "NORM_MODE" in row else "normalized"
+        stream_mode = str(row["STREAM_MODE"]) if "STREAM_MODE" in row else "residuals"
+        if "SCOPE" in row:
+            scope = str(row["SCOPE"])
+        else:
+            scope = "global" if str(row["layer"]) == "all" else "local"
         base_dir = os.path.join(
             output_dir,
             str(row["MODEL_ID"]),
             f"from_{row['SOURCE']}_to_{row['BASE']}",
+            norm_mode,
+            stream_mode,
             scope,
             str(row["STEERING_TYPE"]),
         )
+        # Held-out runs get their own subdir, matching run_judge.accuracy_paths().
+        # TEST_FILE is a recent passthrough column; older ratings only have the
+        # filename, which still names the split.
+        test_file = str(row["TEST_FILE"]) if "TEST_FILE" in row else ""
+        if not test_file:
+            m = GEN_RE.match(str(row.get("filename", "")))
+            test_file = m.group("TEST_FILE") if m else ""
+        if test_file and test_file != f"{row['BASE']}-test":
+            base_dir = os.path.join(base_dir, test_file)
         os.makedirs(base_dir, exist_ok=True)
         fn_base = (
-            f"{row['N']}_{row['REPS']}_{row['STEERING_METHOD']}_topk_{row['topk']}"
+            f"{row['N']}_{row['REPS']}_{row['STEERING_METHOD']}_layer_{row['layer']}"
         )
 
         if has_jp:
