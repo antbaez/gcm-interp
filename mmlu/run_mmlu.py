@@ -1,10 +1,12 @@
 import argparse
 import json
 import os
+import random
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import numpy as np
 import torch
 from utils.config import Config
 from utils.model_handler import ModelHandler
@@ -20,6 +22,8 @@ def parse_mmlu_args():
     parser.add_argument('--mmlu_results_dir', type=str, default='mmlu/results')
     parser.add_argument('--mmlu_seed', type=int, default=42)
     parser.add_argument('--mmlu_batch_size', type=int, default=25)
+    parser.add_argument('--print_examples', action='store_true',
+                         help='Print 5 random example question/prediction pairs after each eval')
     known, remaining = parser.parse_known_args()
     # Config() below re-parses sys.argv with its own argparser, which would
     # error on our flags above — strip them out first.
@@ -29,6 +33,13 @@ def parse_mmlu_args():
 
 def main():
     mmlu_args = parse_mmlu_args()
+
+    # Seed once, up front, so sample_mmlu()'s subject loop draws from one
+    # continuously-advancing RNG stream instead of reseeding per subject.
+    random.seed(mmlu_args.mmlu_seed)
+    np.random.seed(mmlu_args.mmlu_seed)
+    torch.manual_seed(mmlu_args.mmlu_seed)
+    torch.cuda.manual_seed_all(mmlu_args.mmlu_seed)
 
     print('Parsing config...')
     config = Config()
@@ -48,7 +59,7 @@ def main():
     config.set_output_prefix()
 
     rows_by_subject = scoring.load_mmlu(mmlu_args.mmlu_data)
-    sampled_rows = scoring.sample_mmlu(rows_by_subject, mmlu_args.fraction, seed=mmlu_args.mmlu_seed)
+    sampled_rows = scoring.sample_mmlu(rows_by_subject, mmlu_args.fraction)
     print(f"MMLU: {len(sampled_rows)} sampled questions across {len(rows_by_subject)} subjects "
           f"(fraction={mmlu_args.fraction}, seed={mmlu_args.mmlu_seed})")
 
@@ -68,7 +79,7 @@ def main():
     baseline_path = f"{mmlu_args.mmlu_results_dir}/{model_name}/baseline_mmlu_accuracy.json"
     if not os.path.exists(baseline_path):
         print("\n=== Baseline (unsteered) MMLU ===")
-        result = scoring.evaluate_mmlu(model, batches, answer_token_ids)
+        result = scoring.evaluate_mmlu(model, batches, answer_token_ids, print_examples=mmlu_args.print_examples)
         result.update({"model": model_name, "fraction": mmlu_args.fraction, "seed": mmlu_args.mmlu_seed})
         scoring.atomic_write_json(baseline_path, result)
         print(f"Baseline accuracy: {result['accuracy']:.3f} ({result['n_correct']}/{result['n_samples']})")
@@ -103,6 +114,7 @@ def main():
                 model, batches, answer_token_ids,
                 patch_activations=patch_activations, layer_ids=[layer], N=N,
                 steering_type=steering_type, resid=resid, normalize=config.args.normalize,
+                print_examples=mmlu_args.print_examples,
             )
             result.update({
                 "model": model_name, "task": task, "stream": stream, "steering_type": steering_type,

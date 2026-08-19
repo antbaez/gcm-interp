@@ -10,7 +10,10 @@ set -e
 # (--fraction of questions per subject, fixed seed), plus one unsteered baseline
 # per model. Always local scope / normalized — the only held-out configs that exist.
 
-BATCH_SIZE=50
+# Controls MMLU eval batching (--mmlu_batch_size, what build_batches() actually
+# uses); also forwarded as -batch_size to satisfy Config's required arg, which
+# is otherwise unused on this code path.
+BATCH_SIZE=32
 FRACTION=0.1
 
 MODEL_TAG=""
@@ -81,6 +84,7 @@ run_mmlu_for_model() {
         -source "$SOURCE" \
         -base "$BASE" \
         --fraction "$FRACTION" \
+        --mmlu_batch_size "$BATCH_SIZE" \
         --best_configs judge-evals/best_configs.json \
         --mmlu_data mmlu/data/mmlu_test.jsonl \
         --mmlu_results_dir mmlu/results

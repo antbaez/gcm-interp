@@ -1,8 +1,10 @@
 import json
 import os
 import random
+import time
 
 import torch
+from tqdm import tqdm
 
 from eval.generation import _get_layers, _prepare_steering_vector
 
@@ -21,12 +23,15 @@ def load_mmlu(path):
     return rows_by_subject
 
 
-def sample_mmlu(rows_by_subject, fraction, seed=42):
+def sample_mmlu(rows_by_subject, fraction):
+    # Relies on the global random seed being set once by the caller (run_mmlu.py)
+    # rather than reseeding here, so the RNG state advances across subjects
+    # instead of every subject drawing from an identically-reset stream.
     sampled = []
     for subject in sorted(rows_by_subject.keys()):
         rows = rows_by_subject[subject]
         k = min(len(rows), max(1, round(len(rows) * fraction)))
-        sampled.extend(random.Random(seed).sample(rows, k))
+        sampled.extend(random.sample(rows, k))
     return sampled
 
 
@@ -75,12 +80,14 @@ def resolve_answer_token_ids(tokenizer):
 
 def _align_positional(sv, target_seq_len):
     # Positional vectors are cached at the original task's prompt length, not
-    # MMLU's — crop from the front if longer, leave the tail unsteered if shorter.
+    # MMLU's, and both are left-padded (position -1 is always the real,
+    # generation-adjacent token) — so alignment must anchor on the tail, not
+    # the front: slice the front off if longer, pad the front if shorter.
     p = sv.shape[0]
     if p >= target_seq_len:
-        return sv[:target_seq_len]
+        return sv[-target_seq_len:]
     pad = torch.zeros(target_seq_len - p, sv.shape[1], dtype=sv.dtype, device=sv.device)
-    return torch.cat([sv, pad], dim=0)
+    return torch.cat([pad, sv], dim=0)
 
 
 def score_batch_with_patches(model, prompt_toks, answer_token_ids, patch_activations=None,
@@ -91,7 +98,14 @@ def score_batch_with_patches(model, prompt_toks, answer_token_ids, patch_activat
     )
     seq_len = prompt_toks['input_ids'].shape[1]
 
-    with model.trace(prompt_toks) as tracer:
+    # Same call path as generate_with_patches() (eval/generation.py) — gets
+    # transformers' implicit torch.no_grad() and applies interventions to
+    # prefill only, matching the rest of the pipeline. max_new_tokens=1 since
+    # we only need the forced-choice logits at the first generated position.
+    gen_kwargs = dict(pad_token_id=model.tokenizer.eos_token_id, use_cache=True,
+                       do_sample=False, top_p=None, top_k=None, temperature=None,
+                       max_new_tokens=1)
+    with model.generate(prompt_toks, **gen_kwargs) as tracer:
         if patch_activations is not None and layer_ids:
             patch_activations_dev = patch_activations.to(model.device)
             for layer_idx in layer_ids:
@@ -113,16 +127,32 @@ def score_batch_with_patches(model, prompt_toks, answer_token_ids, patch_activat
 
 
 def evaluate_mmlu(model, batches, answer_token_ids, patch_activations=None, layer_ids=None,
-                   N=None, steering_type=None, resid=False, normalize=True):
+                   N=None, steering_type=None, resid=False, normalize=True, print_examples=False):
     n_correct = 0
     n_total = 0
     per_subject = {}
-    for batch_rows, prompt_toks in batches:
+    examples = []
+    n_batches = len(batches)
+    print(f"Scoring {n_batches} batches...")
+    total_time = 0.0
+    allocated_sum = 0.0
+    reserved_sum = 0.0
+    torch.cuda.reset_peak_memory_stats(model.device)
+    pbar = tqdm(batches, total=n_batches, desc="MMLU batches")
+    for i, (batch_rows, prompt_toks) in enumerate(pbar, start=1):
+        t0 = time.time()
         preds = score_batch_with_patches(
             model, prompt_toks, answer_token_ids,
             patch_activations=patch_activations, layer_ids=layer_ids, N=N,
             steering_type=steering_type, resid=resid, normalize=normalize,
         )
+        elapsed = time.time() - t0
+        total_time += elapsed
+        pbar.set_postfix(avg_s=f"{total_time / i:.2f}")
+
+        allocated_sum += torch.cuda.memory_allocated(model.device) / 1024**3
+        reserved_sum += torch.cuda.memory_reserved(model.device) / 1024**3
+
         for row, pred in zip(batch_rows, preds):
             correct = int(pred == row["answer"])
             n_correct += correct
@@ -130,6 +160,31 @@ def evaluate_mmlu(model, batches, answer_token_ids, patch_activations=None, laye
             subj = per_subject.setdefault(row["subject"], {"n": 0, "correct": 0})
             subj["n"] += 1
             subj["correct"] += correct
+            if print_examples:
+                examples.append({
+                    "subject": row["subject"], "question": row["question"], "choices": row["choices"],
+                    "correct_letter": LETTERS[row["answer"]], "predicted_letter": LETTERS[pred],
+                    "correct": bool(correct),
+                })
+    avg_time = total_time / n_batches if n_batches else 0.0
+    print(f"Average time per batch: {avg_time:.2f}s")
+    if n_batches:
+        max_allocated = torch.cuda.max_memory_allocated(model.device) / 1024**3
+        max_reserved = torch.cuda.max_memory_reserved(model.device) / 1024**3
+        print(f"VRAM allocated: avg={allocated_sum / n_batches:.2f} GiB max={max_allocated:.2f} GiB")
+        print(f"VRAM reserved:  avg={reserved_sum / n_batches:.2f} GiB max={max_reserved:.2f} GiB")
+
+    n_show = min(5, len(examples)) if print_examples else 0
+    if n_show:
+        print(f"\n--- {n_show} random example predictions ---")
+        for ex in random.sample(examples, n_show):
+            print(f"[{ex['subject']}] {ex['question']}")
+            for letter, choice in zip(LETTERS, ex['choices']):
+                print(f"  {letter}. {choice}")
+            status = "correct" if ex['correct'] else "WRONG"
+            print(f"  -> predicted: {ex['predicted_letter']}  correct: {ex['correct_letter']}  [{status}]")
+            print()
+
     return {
         "n_samples": n_total,
         "n_correct": n_correct,
