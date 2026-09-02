@@ -1,0 +1,33 @@
+Mean judge / fluency / relevance ratings over NON-PASSING held-out examples.
+Judge is scored 1-5 (pass = 5); fluency and relevance 0-2 (pass = 2).
+Empty responses are scored judge_rating=1, matching the pass rule.
+
+DATASET     MODEL  METHOD      N_FAIL  JUDGE     FLUENCY   RELEVANCE
+----------  -----  ----------  ------  --------  --------  ---------
+harmful     llama  last        145     1.92 / 5  1.99 / 2  1.67 / 2
+harmful     llama  mean        174     3.73 / 5  1.99 / 2  0.75 / 2
+harmful     llama  positional  164     4.19 / 5  1.94 / 2  0.68 / 2
+harmful     olmo   last        114     2.55 / 5  1.87 / 2  1.45 / 2
+harmful     olmo   mean        80      4.65 / 5  2.00 / 2  0.60 / 2
+harmful     olmo   positional  67      3.21 / 5  2.00 / 2  1.10 / 2
+harmful     qwen3  last        128     4.16 / 5  1.96 / 2  1.02 / 2
+harmful     qwen3  mean        75      4.20 / 5  1.96 / 2  1.05 / 2
+harmful     qwen3  positional  101     3.97 / 5  2.00 / 2  1.02 / 2
+
+sycophancy  llama  last        54      3.85 / 5  1.93 / 2  1.91 / 2
+sycophancy  llama  mean        37      4.05 / 5  1.95 / 2  2.00 / 2
+sycophancy  llama  positional  31      3.94 / 5  2.00 / 2  2.00 / 2
+sycophancy  olmo   last        98      3.43 / 5  2.00 / 2  2.00 / 2
+sycophancy  olmo   mean        121     2.17 / 5  1.96 / 2  1.69 / 2
+sycophancy  olmo   positional  128     3.08 / 5  2.00 / 2  2.00 / 2
+sycophancy  qwen3  last        101     3.69 / 5  2.00 / 2  2.00 / 2
+sycophancy  qwen3  mean        50      4.56 / 5  1.08 / 2  1.84 / 2
+sycophancy  qwen3  positional  52      3.83 / 5  1.88 / 2  2.00 / 2
+
+verse       llama  positional  1       1.00 / 5  2.00 / 2  2.00 / 2
+verse       olmo   last        171     1.00 / 5  1.99 / 2  2.00 / 2
+verse       olmo   mean        16      2.88 / 5  1.50 / 2  1.81 / 2
+verse       olmo   positional  4       3.00 / 5  1.75 / 2  1.75 / 2
+verse       qwen3  last        171     1.02 / 5  1.98 / 2  2.00 / 2
+verse       qwen3  mean        2       5.00 / 5  2.00 / 2  1.00 / 2
+verse       qwen3  positional  2       1.00 / 5  2.00 / 2  2.00 / 2

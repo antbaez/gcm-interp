@@ -1,13 +1,16 @@
 """
-Generate heatmap figures from a results_summary.csv produced by summarize_results.py.
+Same as create_heatmaps.py, but each cell is pass_rate divided by the MMLU
+accuracy of that condition (from mmlu/results/mmlu_summary.csv), instead of
+raw pass_rate — i.e. how much steered behavior you get per unit of retained
+general capability.
 
 Usage:
-    python create_heatmaps.py [--csv PATH] [--diff]
+    python analysis/create_heatmap_mmlu.py [--csv PATH] [--diff]
 """
 
 import argparse
 import re
-from concurrent.futures import ThreadPoolExecutor
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -20,12 +23,12 @@ plt.rcParams.update({
     "font.serif": ["DejaVu Serif", "Georgia", "Times New Roman", "serif"],
 })
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "judge-evals"))
 from config import BASE_DIR
 
-ACCURACY_DIR          = BASE_DIR / "judge-evals" / "accuracy"
-# --padding compares against a summary built from a separately-judged tree; it
-# was referenced but never defined, which made --padding raise NameError.
-ACCURACY_PADDING_DIR  = BASE_DIR / "judge-evals" / "accuracy_padding"
+ACCURACY_DIR = BASE_DIR / "judge-evals" / "accuracy"
+
+MMLU_SUMMARY_PATH = BASE_DIR / "mmlu" / "results" / "mmlu_summary.csv"
 
 SOURCE_TO_TAG = {
     "harmful-long":                    "harmful",
@@ -84,12 +87,40 @@ def filter_hidden_n(df: pd.DataFrame) -> pd.DataFrame:
     return df[mask]
 
 
-def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_label: str = "normalized", compare_df: pd.DataFrame = None, padding: bool = False, resid: bool = False, multi: bool = False, wo_rf: bool = False):
+def divide_by_mmlu_accuracy(df: pd.DataFrame, stream: str) -> pd.DataFrame:
+    """Merge in each condition's MMLU accuracy (from mmlu/summarize_mmlu.py's
+    mmlu_summary.csv) and divide `pass_rate` by it in place. Joined on
+    model/task/scope/steering_type/split/N/layer; conditions with no matching
+    MMLU run get `pass_rate` set to NaN (blank cell)."""
+    if not MMLU_SUMMARY_PATH.exists():
+        print(f"MMLU summary not found: {MMLU_SUMMARY_PATH}  —  "
+              f"run mmlu/summarize_mmlu.py first. All cells will be blank.")
+        df = df.copy()
+        df["pass_rate"] = float("nan")
+        return df
+
+    mmlu = pd.read_csv(MMLU_SUMMARY_PATH)
+    mmlu = mmlu[mmlu["stream"] == stream]
+    mmlu["layer_key"] = mmlu["layer"].astype(str)
+
+    df = df.copy()
+    df["task"] = "from_" + df["source"] + "_to_" + df["base"]
+    df["layer_key"] = df["layer"].apply(lambda v: "all" if pd.isna(v) else str(int(v)))
+
+    df = df.merge(
+        mmlu[["model", "task", "scope", "steering_type", "split", "N", "layer_key", "accuracy"]],
+        on=["model", "task", "scope", "steering_type", "split", "N", "layer_key"],
+        how="left",
+    )
+    df["pass_rate"] = df["pass_rate"] / df["accuracy"]
+    return df.drop(columns=["task", "layer_key", "accuracy"])
+
+
+def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_label: str = "normalized", resid: bool = False, wo_rf: bool = False):
     """
     One figure per (model, dataset). Used for global runs (all layers steered).
-    Grid rows = w_rf (default), plus a padding-comparison row when compare_df is
-    given, or a wo_rf row when wo_rf=True. Each heatmap: rows = steering_type,
-    columns = N.
+    Grid rows = w_rf (default), plus a wo_rf row when wo_rf=True. Each heatmap:
+    rows = steering_type, columns = N.
     """
     import matplotlib as mpl
 
@@ -100,12 +131,9 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
 
     steering_types = sorted(df["steering_type"].unique())
     cmap = "RdYlGn" if diff else "YlGn"
-    vmin, vmax = (-1, 1) if diff else (0, 1)
-
-    compare_groups = {}
-    if compare_df is not None:
-        for (model, dataset), grp in compare_df.groupby(["model", "dataset"]):
-            compare_groups[(model, dataset)] = grp
+    # pass_rate is now pass_rate / mmlu_accuracy, not bounded to [0, 1].
+    pass_rate_max = df["pass_rate"].max()
+    vmin, vmax = (-1, 1) if diff else (0, pass_rate_max if pd.notna(pass_rate_max) else 1)
 
     def _process_group(model, dataset, group):
         source, base = dataset.split(" → ")
@@ -123,22 +151,15 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
         best_steers = (set(w_rf_max[w_rf_max == w_rf_max.max()].index)
                        if not w_rf_max.empty else set())
 
-        compare_group = compare_groups.get((model, dataset))
-        if compare_group is not None:
-            all_rows = [
-                ("pass_rate", group, "normal"),
-                ("pass_rate", compare_group, "padding"),
-            ]
-        else:
-            all_rows = [("pass_rate", group, "w_rf")]
-            if wo_rf:
-                all_rows.append(("pass_rate_wo_rf", group, "wo_rf"))
+        all_rows = [("pass_rate", group, "w_rf")]
+        if wo_rf:
+            all_rows.append(("pass_rate_wo_rf", group, "wo_rf"))
         n_rows = len(all_rows)
 
         fig, axes = plt.subplots(
             n_rows, n_cols,
             figsize=(1.2 + 0.7 * len(n_vals),
-                     1.0 + 0.5 * len(steering_types) * n_rows),
+                     1.0 + 0.5 * len(steering_types) * n_rows + 1),
             squeeze=False,
             gridspec_kw={"hspace": 0.35},
         )
@@ -181,8 +202,8 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
                 ax.tick_params(axis="x", bottom=False)
 
         sm  = mpl.cm.ScalarMappable(cmap=cmap, norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax))
-        cax = fig.add_axes([0.92, 0.1, 0.005, 0.8])
-        fig.colorbar(sm, cax=cax)
+        fig.colorbar(sm, ax=axes.ravel().tolist(), orientation="horizontal",
+                     location="bottom", fraction=0.025, pad=0.165)
 
         suffix   = "_diff" if diff else ""
         fig_path = figures_dir / f"heatmap_{short_model}_{short_source}{suffix}_global.png"
@@ -190,18 +211,12 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
         plt.close()
         print(f"Saved: {fig_path.name}")
 
-    groups = list(df.groupby(["model", "dataset"]))
-    if multi:
-        with ThreadPoolExecutor() as pool:
-            list(pool.map(lambda item: _process_group(item[0][0], item[0][1], item[1]), groups))
-    else:
-        for (model, dataset), group in groups:
-            _process_group(model, dataset, group)
+    for (model, dataset), group in df.groupby(["model", "dataset"]):
+        _process_group(model, dataset, group)
 
 
 def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "normalized",
-                        resid: bool = False, multi: bool = False,
-                        no_rel: bool = False, wo_rf: bool = False):
+                        resid: bool = False, no_rel: bool = False, wo_rf: bool = False):
     """
     One figure per (model, dataset) for single-layer-sweep runs.
     One subplot per steering_type, laid out in a row; each heatmap has rows = layer,
@@ -220,7 +235,9 @@ def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
     import matplotlib as mpl
 
     cmap = "YlGn"
-    vmin, vmax = 0, 1
+    # pass_rate is now pass_rate / mmlu_accuracy, not bounded to [0, 1].
+    pass_rate_max = df["pass_rate"].max()
+    vmin, vmax = 0, pass_rate_max if pd.notna(pass_rate_max) else 1
     steering_types = sorted(df["steering_type"].unique())
 
     if no_rel and "pass_rate_no_rel" not in df.columns:
@@ -260,9 +277,9 @@ def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
         fig, axes = plt.subplots(
             n_rows, n_types,
             figsize=(1.6 + 0.7 * len(n_vals) * n_types,
-                     (1.0 + 0.35 * len(layer_vals)) * n_rows),
+                     (1.0 + 0.35 * len(layer_vals)) * n_rows + 1),
             squeeze=False,
-            gridspec_kw={"wspace": 0.2, "hspace": 0.5},
+            gridspec_kw={"wspace": 0.08, "hspace": 0.5},
         )
         title_tag = " / ".join(label for _, label, _ in row_specs)
         fig.suptitle(f"{short_model}  |  {short_source}  ({title_tag})",
@@ -305,7 +322,7 @@ def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
                 best_layer = None
                 best_n = None
                 if not sub.empty:
-                    per_layer_max = sub.groupby("layer")[val_col].max()
+                    per_layer_max = sub.groupby("layer")[val_col].max().dropna()
                     if not per_layer_max.empty:
                         best_layer = int(per_layer_max.idxmax())
                         best_row = sub[sub["layer"] == best_layer]
@@ -339,44 +356,36 @@ def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
                         tick.set_fontweight("bold")
 
         # Static-scale rows (w_rf, fluency-only) share one colorbar spanning their
-        # combined vertical extent; a dynamic-scale row (wo_rf − w_rf) gets its own,
+        # combined axes; a dynamic-scale row (wo_rf − w_rf) gets its own,
         # since its range differs from the shared 0..1 scale.
         static_row_idxs  = [i for i, spec in enumerate(row_specs) if not spec[2]]
         dynamic_row_idxs = [i for i, spec in enumerate(row_specs) if spec[2]]
 
-        def _row_y_span(idxs):
-            positions = [axes[i][0].get_position() for i in idxs]
-            return min(p.y0 for p in positions), max(p.y1 for p in positions)
+        def _row_axes(idxs):
+            return [axes[i][j] for i in idxs for j in range(n_types)]
 
         if static_row_idxs:
-            y0, y1 = _row_y_span(static_row_idxs)
             sm  = mpl.cm.ScalarMappable(cmap=cmap, norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax))
-            cax = fig.add_axes([0.92, y0, 0.005, y1 - y0])
-            fig.colorbar(sm, cax=cax)
+            fig.colorbar(sm, ax=_row_axes(static_row_idxs), orientation="horizontal",
+                         location="bottom", fraction=0.02, pad=0.235)
 
         for row_i in dynamic_row_idxs:
-            y0, y1 = _row_y_span([row_i])
             row_vmin, row_vmax = row_scales[row_i]
             sm  = mpl.cm.ScalarMappable(cmap=cmap, norm=mpl.colors.Normalize(vmin=row_vmin, vmax=row_vmax))
-            cax = fig.add_axes([0.92, y0, 0.005, y1 - y0])
-            fig.colorbar(sm, cax=cax)
+            fig.colorbar(sm, ax=_row_axes([row_i]), orientation="horizontal",
+                         location="bottom", fraction=0.02, pad=0.235)
 
         fig_path = figures_dir / f"heatmap_{short_model}_{short_source}.png"
         plt.savefig(fig_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"Saved: {fig_path.name}")
 
-    groups = list(df.groupby(["model", "dataset"]))
-    if multi:
-        with ThreadPoolExecutor() as pool:
-            list(pool.map(lambda item: _process_group(item[0][0], item[0][1], item[1]), groups))
-    else:
-        for (model, dataset), group in groups:
-            _process_group(model, dataset, group)
+    for (model, dataset), group in df.groupby(["model", "dataset"]):
+        _process_group(model, dataset, group)
 
 
 def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "normalized",
-                        resid: bool = False, multi: bool = False):
+                        resid: bool = False):
     """
     One figure per dataset, for the paper: rows stacked by model in PAPER_MODEL_ORDER
     (OLMo, Qwen3, Llama), columns = steering_type, cells = layer x N w_rf pass-rate
@@ -390,12 +399,14 @@ def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
     """
 
     cmap = "YlGn"
-    vmin, vmax = 0, 1
+    # pass_rate is now pass_rate / mmlu_accuracy, not bounded to [0, 1].
+    pass_rate_max = df["pass_rate"].max()
+    vmin, vmax = 0, pass_rate_max if pd.notna(pass_rate_max) else 1
     steering_types = sorted(df["steering_type"].unique())
     n_types = len(steering_types)
 
     CELL_W, CELL_H       = 0.55, 0.30
-    COL_GAP, ROW_GAP      = 0.45, 0.55
+    COL_GAP, ROW_GAP      = 0.20, 0.55
     LEFT_MARGIN           = 1.3
     RIGHT_MARGIN          = 0.3
     TOP_MARGIN            = 0.95
@@ -431,7 +442,7 @@ def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
         row_widths     = [len(nv) * CELL_W for nv in row_n_vals]
 
         fig_width  = LEFT_MARGIN + n_types * max(row_widths) + (n_types - 1) * COL_GAP + RIGHT_MARGIN
-        fig_height = TOP_MARGIN + sum(row_heights) + ROW_GAP * (n_rows - 1) + BOTTOM_MARGIN
+        fig_height = TOP_MARGIN + sum(row_heights) + ROW_GAP * (n_rows - 1) + BOTTOM_MARGIN + 1
 
         fig = plt.figure(figsize=(fig_width, fig_height))
         fig.suptitle(short_source.capitalize(), fontsize=22,
@@ -506,142 +517,14 @@ def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
         plt.close()
         print(f"Saved: {fig_path.name}")
 
-    groups = list(df.groupby("dataset"))
-    if multi:
-        with ThreadPoolExecutor() as pool:
-            list(pool.map(lambda item: _process_dataset(item[0], item[1]), groups))
-    else:
-        for dataset, group in groups:
-            _process_dataset(dataset, group)
-
-
-def make_layer_heatmaps_agg(df: pd.DataFrame, figures_dir: Path, agg: str, norm_label: str = "normalized",
-                            resid: bool = False, multi: bool = False):
-    """
-    Like make_layer_heatmaps, but collapses the N axis into a single aggregated
-    value per layer: agg='max' takes the max pass rate over N, agg='avg' takes
-    the mean pass rate over N. One figure per (model, dataset); one subplot per
-    steering_type; each heatmap has rows = layer, a single column = the aggregate.
-    """
-    import matplotlib as mpl
-
-    cmap = "YlGn"
-    vmin, vmax = 0, 1
-    steering_types = sorted(df["steering_type"].unique())
-    agg_fn    = "max" if agg == "max" else "mean"
-    agg_label = "max over N" if agg == "max" else "avg over N"
-
-    def _process_group(model, dataset, group):
-        source, base = dataset.split(" → ")
-        short_model  = next(
-            (label for label, needle in SHORT_MODEL_NEEDLES if needle in model.lower()),
-            model.split("/")[-1],
-        )
-        short_source = SOURCE_TO_TAG.get(source, re.sub(r"-(long|single)$", "", source))
-
-        layer_vals = sorted(int(l) for l in group["layer"].dropna().unique())
-        n_types    = len(steering_types)
-
-        st_max = group.groupby("steering_type")["pass_rate"].max()
-        best_steers = (set(st_max[st_max == st_max.max()].index)
-                       if not st_max.empty else set())
-
-        n_rows_shown = len(layer_vals) + (1 if agg == "avg" else 0)
-        fig, axes = plt.subplots(
-            1, n_types,
-            figsize=(1.6 + 1.2 * n_types, 1.0 + 0.35 * n_rows_shown),
-            squeeze=False,
-            gridspec_kw={"wspace": 0.25},
-        )
-        fig.suptitle(f"{short_model}  |  {short_source}  ({agg_label}, w_rf)",
-                     fontsize=17)
-
-        for col_i, st in enumerate(steering_types):
-            ax  = axes[0][col_i]
-            sub = group[group["steering_type"] == st]
-            agg_series = sub.groupby("layer")["pass_rate"].agg(agg_fn).reindex(layer_vals)
-
-            best_n_by_layer = {}
-            if agg == "max" and not sub.empty:
-                idx = sub.groupby("layer")["pass_rate"].idxmax()
-                best_n_by_layer = sub.loc[idx].set_index("layer")["N"].to_dict()
-
-            best_layer = None
-            if not agg_series.dropna().empty:
-                best_layer = int(agg_series.idxmax())
-
-            row_labels = [str(l) for l in layer_vals]
-            values     = list(agg_series.values)
-            if agg == "avg":
-                row_labels = row_labels + ["avg"]
-                values     = values + [agg_series.mean()]
-
-            matrix = pd.DataFrame({agg_label: values}, index=row_labels)
-
-            sns.heatmap(matrix, ax=ax, vmin=vmin, vmax=vmax,
-                        annot=False, cmap=cmap, linewidths=0.5, cbar=False)
-
-            for r_i in range(matrix.shape[0]):
-                val = matrix.iat[r_i, 0]
-                if pd.isna(val):
-                    continue
-                best_n = None
-                is_best_layer_row = agg == "max" and r_i < len(layer_vals) and layer_vals[r_i] == best_layer
-                if agg == "max" and r_i < len(layer_vals):
-                    best_n = best_n_by_layer.get(layer_vals[r_i])
-                if best_n is None:
-                    ax.text(0.5, r_i + 0.5, f"{val:.2f}",
-                            ha="center", va="center", color="black", fontsize=10)
-                else:
-                    ax.text(0.5, r_i + 0.42, f"{val:.2f}",
-                            ha="center", va="center", color="black", fontsize=10)
-                    ax.text(0.5, r_i + 0.72, f"N={best_n:g}",
-                            ha="center", va="center", color="black", fontsize=10 * 2 / 3,
-                            fontweight="bold" if is_best_layer_row else "normal")
-
-            if agg == "avg":
-                ax.axhline(len(layer_vals), color="black", linewidth=1.5)
-
-            ax.set_title(st.capitalize(), fontsize=15,
-                         fontweight="bold" if st in best_steers else "normal",
-                         loc="left", pad=6)
-
-            ax.set_ylabel("Layer" if col_i == 0 else "", fontsize=14)
-            ax.set_yticklabels(row_labels, rotation=0, fontsize=10)
-            for tick in ax.get_yticklabels():
-                if best_layer is not None and tick.get_text() == str(best_layer):
-                    tick.set_fontweight("bold")
-                elif tick.get_text() == "avg":
-                    tick.set_fontweight("bold")
-
-            ax.set_xticklabels([agg_label], rotation=0, fontsize=11)
-            ax.set_xlabel("")
-
-        sm  = mpl.cm.ScalarMappable(cmap=cmap, norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax))
-        cax = fig.add_axes([0.92, 0.1, 0.005, 0.8])
-        fig.colorbar(sm, cax=cax)
-
-        fig_path = figures_dir / f"heatmap_{short_model}_{short_source}_{agg}.png"
-        plt.savefig(fig_path, dpi=150, bbox_inches="tight")
-        plt.close()
-        print(f"Saved: {fig_path.name}")
-
-    groups = list(df.groupby(["model", "dataset"]))
-    if multi:
-        with ThreadPoolExecutor() as pool:
-            list(pool.map(lambda item: _process_group(item[0][0], item[0][1], item[1]), groups))
-    else:
-        for (model, dataset), group in groups:
-            _process_group(model, dataset, group)
+    for dataset, group in df.groupby("dataset"):
+        _process_dataset(dataset, group)
 
 
 def generate_for_stream(args, resid: bool, norm_mode: str):
-    figures_root = BASE_DIR / "figures"
+    figures_root = BASE_DIR / "figures_mmlu"
     stream = "residuals" if resid else "attention"
-    if resid:
-        full_dir = figures_root / "residuals"
-    else:
-        full_dir = figures_root / ("attention-padding" if args.padding else "attention")
+    full_dir = figures_root / stream
     # summarize_results.py writes one summary per stream; an explicit --csv wins,
     # and the unsuffixed combined summary is the fallback for older trees.
     csv_path = Path(args.csv) if args.csv else ACCURACY_DIR / f"results_summary_{stream}.csv"
@@ -662,6 +545,8 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
               f"to exclude held-out-test rows from these heatmaps.")
     print(f"Loaded {len(df)} rows from {csv_path.name}")
 
+    df = divide_by_mmlu_accuracy(df, stream)
+
     full_dir.mkdir(parents=True, exist_ok=True)
 
     CANONICAL_BASES = {"harmless", "sycophancy", "prose"}
@@ -675,27 +560,6 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
     if "stream_mode" in base_df.columns:
         base_df = base_df[base_df["stream_mode"] == stream]
     base_df = filter_hidden_n(base_df)
-
-    compare_df = None
-    if resid:
-        pass  # no compare_df for resid mode
-    elif args.padding:
-        padding_csv = ACCURACY_PADDING_DIR / f"results_summary_{stream}.csv"
-        if not padding_csv.exists():
-            padding_csv = ACCURACY_PADDING_DIR / "results_summary.csv"
-        if not padding_csv.exists():
-            print(f"Padding CSV not found: {padding_csv}  —  run summarize_results.py with accuracy_padding/ first")
-            return
-        padding_raw = pd.read_csv(padding_csv)
-        padding_raw = padding_raw[~padding_raw["model"].str.lower().str.contains("gemma-4", na=False)]
-        pad_mask = padding_raw["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
-        compare_df = padding_raw[
-            pad_mask &
-            (padding_raw["norm_mode"] == norm_mode)
-        ]
-        compare_df = filter_hidden_n(compare_df)
-        common_pairs = compare_df[["model", "dataset"]].drop_duplicates()
-        base_df = base_df.merge(common_pairs, on=["model", "dataset"], how="inner")
 
     # Runs are split by scope: `local` = single-layer sweep over the middle third
     # (layer-axis heatmaps), `global` = all layers at once (N × steering-type
@@ -719,25 +583,12 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
         if args.paper:
             paper_dir = full_dir / "paper"
             paper_dir.mkdir(parents=True, exist_ok=True)
-            make_paper_heatmaps(layer_source_df, paper_dir, norm_label=norm_mode,
-                                resid=resid, multi=args.multi)
+            make_paper_heatmaps(layer_source_df, paper_dir, norm_label=norm_mode, resid=resid)
             return
 
-        agg_requested = args.max or args.avg
-        if not agg_requested:
-            local_dir.mkdir(parents=True, exist_ok=True)
-            make_layer_heatmaps(layer_source_df, local_dir, norm_label=norm_mode,
-                                resid=resid, multi=args.multi,
-                                no_rel=args.no_rel, wo_rf=args.wo_rf)
-
-        base_stream_name = "residuals" if resid else ("attention-padding" if args.padding else "attention")
-        for agg, flag in (("max", args.max), ("avg", args.avg)):
-            if not flag:
-                continue
-            agg_dir = figures_root / f"{base_stream_name}_{agg}" / "local"
-            agg_dir.mkdir(parents=True, exist_ok=True)
-            make_layer_heatmaps_agg(layer_source_df, agg_dir, agg=agg, norm_label=norm_mode,
-                                     resid=resid, multi=args.multi)
+        local_dir.mkdir(parents=True, exist_ok=True)
+        make_layer_heatmaps(layer_source_df, local_dir, norm_label=norm_mode,
+                            resid=resid, no_rel=args.no_rel, wo_rf=args.wo_rf)
     elif args.paper:
         return
 
@@ -747,15 +598,13 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
     if not has_scope:
         return
     base_df = base_df[base_df["scope"] == "global"]
-    if compare_df is not None and "scope" in compare_df.columns:
-        compare_df = compare_df[compare_df["scope"] == "global"]
 
     if base_df.empty:
         return
 
     norm_label = norm_mode
     global_dir.mkdir(parents=True, exist_ok=True)
-    make_heatmaps(base_df, global_dir, diff=args.diff, norm_label=norm_label, compare_df=compare_df, padding=args.padding, resid=resid, multi=args.multi, wo_rf=args.wo_rf)
+    make_heatmaps(base_df, global_dir, diff=args.diff, norm_label=norm_label, resid=resid, wo_rf=args.wo_rf)
 
 
 def main():
@@ -767,29 +616,12 @@ def main():
                         help="Plot other−last difference instead of raw pass rates")
     parser.add_argument("--unnormalized", action="store_true",
                         help="Plot unnormalized data; outputs to figures_unnormalized / figures_full_unnormalized")
-    parser.add_argument("--norm_mode", default=None,
-                        choices=["normalized", "unnormalized"],
-                        help="Which normalization condition to plot (overridden by --unnormalized)")
-    parser.add_argument("--padding", action="store_true",
-                        help="Compare accuracy/ (top row) vs accuracy_padding/ (bottom row)")
     parser.add_argument("--attention", action="store_true",
-                        help="Also plot attention-stream results "
-                             "(by default only residual-stream results are plotted)")
-    parser.add_argument("--no-residuals", dest="residuals", action="store_false",
-                        help="Skip the residual stream (use with --attention to plot attention only)")
-    parser.set_defaults(residuals=True)
+                        help="Plot attention-stream results instead of residual-stream results "
+                             "(the two are mutually exclusive; residual-stream is the default)")
     parser.add_argument("--global", dest="global_scope", action="store_true",
                         help="Also create the global (N × steering-type) heatmaps; "
                              "by default only the local layer-sweep heatmaps are created")
-    parser.add_argument("--max", action="store_true",
-                        help="Additionally create layer-sweep figures with cells aggregated via "
-                             "max over N, saved to figures/<stream>_max/local/")
-    parser.add_argument("--avg", action="store_true",
-                        help="Additionally create layer-sweep figures with cells aggregated via "
-                             "mean over N, saved to figures/<stream>_avg/local/")
-    parser.add_argument("--multi", action="store_true",
-                        help="Generate figures in parallel using a thread pool "
-                             "(default: single-threaded)")
     parser.add_argument("--no-rel", dest="no_rel", action="store_true",
                         help="Add a second row of layer-sweep heatmaps using the fluency-only "
                              "pass rate (drops the relevance check); requires results_summary.csv "
@@ -798,17 +630,13 @@ def main():
                         help="Add a second row (to both layer-sweep and global heatmaps) using "
                              "the wo_rf pass rate (drops both the relevance and fluency checks)")
     parser.add_argument("--paper", action="store_true",
-                        help="Only (re)generate the paper heatmaps (figures/<stream>/paper/), "
-                             "skipping local/global/agg figures")
+                        help="Only (re)generate the paper heatmaps (figures_mmlu/<stream>/paper/), "
+                             "skipping local/global figures")
     args = parser.parse_args()
 
-    norm_mode = "unnormalized" if args.unnormalized else (args.norm_mode or "normalized")
+    norm_mode = "unnormalized" if args.unnormalized else "normalized"
 
-    stream_modes = ([True] if args.residuals else []) + ([False] if args.attention else [])
-    if not stream_modes:
-        raise SystemExit("Nothing to plot: --no-residuals was passed without --attention")
-    for resid in stream_modes:
-        generate_for_stream(args, resid, norm_mode)
+    generate_for_stream(args, not args.attention, norm_mode)
 
 
 if __name__ == "__main__":

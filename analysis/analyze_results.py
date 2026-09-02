@@ -22,18 +22,19 @@ The pass rule mirrors judge-evals/selection_utils.py: empty responses are
 forced to fail, pass = judge_rating == 5 and fluency == 2 and relevance == 2.
 
 Usage (from the repo root):
-    python analyze_results.py
-    python analyze_results.py --n 5
-    python analyze_results.py --model qwen3 --dataset harmful
-    python analyze_results.py --output-dir my_analysis
-    python analyze_results.py --global
+    python analysis/analyze_results.py
+    python analysis/analyze_results.py --n 5
+    python analysis/analyze_results.py --model qwen3 --dataset harmful
+    python analysis/analyze_results.py --output-dir my_analysis
+    python analysis/analyze_results.py --global
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "stats"))
 sys.path.insert(0, str(REPO_ROOT / "judge-evals"))
 
@@ -65,6 +66,8 @@ ENABLED_DATASET_TASKS = set(DATASET_TASKS.values())
 ANALYSIS_DIR = REPO_ROOT / "analysis"
 DEFAULT_TABLE_OUTPUT = ANALYSIS_DIR / "failure_ratings.txt"
 DEFAULT_PASS_OUTPUT = ANALYSIS_DIR / "pass_rates.txt"
+
+MMLU_RESULTS_ROOT = REPO_ROOT / "mmlu" / "results"
 
 
 def load_examples(cond_dir: Path) -> list[dict]:
@@ -131,6 +134,27 @@ def mean_rating(examples: list[dict], key: str) -> float:
     """Mean of one rating across examples, ignoring missing (None) ratings."""
     vals = [ex[key] for ex in examples if isinstance(ex[key], (int, float))]
     return sum(vals) / len(vals) if vals else float("nan")
+
+
+def load_mmlu_accuracy(path: Path) -> float | None:
+    """The 'accuracy' field from an MMLU accuracy JSON file, or None if the
+    file doesn't exist (that condition was never run through mmlu/run_mmlu.py)."""
+    if not path.exists():
+        return None
+    with open(path) as f:
+        return json.load(f).get("accuracy")
+
+
+def mmlu_accuracy_for_condition(model: str, task: str, stream_mode: str, scope: str,
+                                 method: str, chosen: dict) -> float | None:
+    """MMLU accuracy for the held-out condition select_best() chose, mirroring
+    mmlu/results/<model>/<task>/<stream>/<scope>/<method>/<condition_label>_mmlu_accuracy.json."""
+    fname = f"{condition_label(chosen)}_mmlu_accuracy.json"
+    return load_mmlu_accuracy(MMLU_RESULTS_ROOT / model / task / stream_mode / scope / method / fname)
+
+
+def baseline_mmlu_accuracy(model: str) -> float | None:
+    return load_mmlu_accuracy(MMLU_RESULTS_ROOT / model / "baseline_mmlu_accuracy.json")
 
 
 def format_rating_table(rows: list[dict]) -> str:
@@ -210,6 +234,49 @@ def format_pass_rate_table(rates: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def format_mmlu_table(accuracies: dict, baselines: dict) -> str:
+    """Held-out MMLU accuracy delta from the model's unsteered baseline, per
+    steering method, grouped into one block per dataset (✓ marks the method
+    closest to baseline, i.e. least MMLU degradation, of that row)."""
+    if not accuracies:
+        return "No MMLU accuracies found.\n"
+
+    dataset_order = list(DATASET_TASKS)
+    def dataset_key(name):
+        return (dataset_order.index(name) if name in dataset_order else len(dataset_order), name)
+
+    methods = [m for m in METHOD_ORDER if any(m in v for v in accuracies.values())]
+    methods += sorted({m for v in accuracies.values() for m in v} - set(methods))
+
+    headers = ["DATASET", "MODEL", *(m.upper() for m in methods)]
+    blocks = {}
+    for (dataset, model), by_method in accuracies.items():
+        base = baselines.get(model)
+        deltas = {m: v - base for m, v in by_method.items() if base is not None}
+        best = min(deltas.values(), key=abs) if deltas else None
+        row = [dataset, model]
+        for m in methods:
+            if m not in deltas:
+                row.append("-")
+            else:
+                d = deltas[m]
+                row.append(f"{d:+.3f}" + (" ✓" if d == best else "  "))
+        blocks.setdefault(dataset, []).append(row)
+
+    every_row = [headers] + [row for block in blocks.values() for row in block]
+    widths = [max(len(row[i]) for row in every_row) for i in range(len(headers))]
+
+    def render(row):
+        return "  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip()
+
+    lines = [render(headers), "  ".join("-" * w for w in widths)]
+    for idx, dataset in enumerate(sorted(blocks, key=dataset_key)):
+        if idx:
+            lines.append("")
+        lines.extend(render(row) for row in sorted(blocks[dataset], key=lambda r: r[1]))
+    return "\n".join(lines) + "\n"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", default=None,
@@ -247,6 +314,8 @@ def main():
     blocks = {}
     table_rows = []
     pass_rates = {}
+    mmlu_accuracies = {}
+    mmlu_baselines = {}
 
     for model, task, norm_mode, stream_mode, methods in combos:
         if ENABLED_METHODS is not None:
@@ -272,6 +341,12 @@ def main():
             if examples:
                 n_pass = sum(1 for ex in examples if ex["pass"])
                 pass_rates.setdefault((dataset_tag, model_tag), {})[method] = n_pass / len(examples)
+
+            mmlu_acc = mmlu_accuracy_for_condition(model, task, stream_mode, scope, method, chosen)
+            if mmlu_acc is not None:
+                mmlu_accuracies.setdefault((dataset_tag, model_tag), {})[method] = mmlu_acc
+                if model_tag not in mmlu_baselines:
+                    mmlu_baselines[model_tag] = baseline_mmlu_accuracy(model)
 
             passes = [ex for ex in examples if ex["pass"]][: args.n]
             all_fails = [ex for ex in examples if not ex["pass"]]
@@ -315,14 +390,27 @@ def main():
         print(f"Wrote {len(blocks[dataset_tag])} combo block(s) to {examples_path}")
 
     pass_table = format_pass_rate_table(pass_rates)
-    pass_path = out_dir / DEFAULT_PASS_OUTPUT.name
     pass_header = (
+        "PASS RATES\n"
         "Held-out pass rate per steering method (✓ marks the best method per row).\n"
         "Pass = judge_rating 5/5 and fluency 2/2 and relevance 2/2.\n\n"
     )
-    pass_path.write_text(pass_header + pass_table)
-    print(f"Wrote pass rates for {len(pass_rates)} combo(s) to {pass_path}")
+
+    mmlu_table = format_mmlu_table(mmlu_accuracies, mmlu_baselines)
+    mmlu_header = (
+        "MMLU\n"
+        "Held-out MMLU accuracy delta from the model's unsteered baseline, per "
+        "steering method (✓ marks the method closest to baseline, i.e. least "
+        "MMLU degradation, per row).\n"
+        f"Source: {MMLU_RESULTS_ROOT}\n\n"
+    )
+
+    pass_path = out_dir / DEFAULT_PASS_OUTPUT.name
+    pass_path.write_text(pass_header + pass_table + "\n" + mmlu_header + mmlu_table)
+    print(f"Wrote pass rates for {len(pass_rates)} combo(s) and MMLU accuracy for "
+          f"{len(mmlu_accuracies)} combo(s) to {pass_path}")
     print(pass_table)
+    print(mmlu_table)
 
     table = format_rating_table(table_rows)
     table_path = out_dir / DEFAULT_TABLE_OUTPUT.name

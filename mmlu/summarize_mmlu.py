@@ -8,7 +8,7 @@ import glob
 import json
 import os
 
-FIELDS = ["model", "task", "stream", "steering_type", "N", "layer",
+FIELDS = ["model", "task", "stream", "scope", "steering_type", "split", "N", "layer",
           "fraction", "n_samples", "accuracy", "baseline_accuracy", "delta"]
 
 
@@ -26,13 +26,20 @@ def main():
         baselines[data['model']] = data['accuracy']
 
     rows = []
-    pattern = os.path.join(args.results_dir, '*', '*', '*', 'local', '*', 'N=*_layer=*_mmlu_accuracy.json')
-    for path in sorted(glob.glob(pattern)):
+    # scope dir (local/global) used to be hardcoded 'local'; glob both now that
+    # run_mmlu.py writes global-scope results too. `**` (recursive) covers both
+    # the flat test-split layout (.../<steering_type>/N=..._mmlu_accuracy.json)
+    # and the val-split layout one directory deeper
+    # (.../<steering_type>/val/N=..._mmlu_accuracy.json).
+    pattern = os.path.join(args.results_dir, '*', '*', '*', '*', '*', '**', 'N=*_layer=*_mmlu_accuracy.json')
+    for path in sorted(glob.glob(pattern, recursive=True)):
         with open(path) as f:
             data = json.load(f)
         baseline_acc = baselines.get(data['model'])
         rows.append({
             "model": data['model'], "task": data['task'], "stream": data['stream'],
+            # Older result files predate the scope/split fields and are local/test-only.
+            "scope": data.get('scope', 'local'), "split": data.get('split', 'test'),
             "steering_type": data['steering_type'], "N": data['N'], "layer": data['layer'],
             "fraction": data['fraction'], "n_samples": data['n_samples'], "accuracy": data['accuracy'],
             "baseline_accuracy": baseline_acc,

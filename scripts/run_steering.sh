@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--attention] [--global] [--split val|test] [--device <cuda:0>]
+# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--attention] [--global] [--split val|test] [--device <cuda:0>] [--no-model-cache]
 # --dataset defaults to "all" (harmful, sycophancy, verse).
 # --split val (default) sweeps N x layer on the validation split; --split test pins the
 # selection from best_configs.json and generates once on the held-out test split.
@@ -18,8 +18,11 @@ BATCH_SIZE=50
 # Fraction of total layers (0.0-1.0) the single-layer sweep ranges over; ignored
 # in --global mode. Defaults to the first two-thirds of layers (0.0, 0.667) —
 # set to (0.333, 0.667) for the old middle-third sweep.
-LAYER_RANGE_START=0.333
-LAYER_RANGE_END=0.6667
+# LAYER_RANGE_START=0.333
+# LAYER_RANGE_END=0.6667
+
+LAYER_RANGE_START=0
+LAYER_RANGE_END=0.333
 
 # Per-model steering N sweep (edit each model's list independently).
 # Local (single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END) and global
@@ -61,6 +64,7 @@ DATASET_TAG="all"
 DEVICE="cuda:0"
 RESID=true
 GLOBAL=false
+NO_MODEL_CACHE=false
 # val: sweep N x layer on <base>-test.jsonl (the validation split).
 # test: pin the config select_best_config.py chose on validation and generate
 # once on <base>-heldout-test.jsonl, which the sweep never touched.
@@ -85,6 +89,7 @@ while [[ $# -gt 0 ]]; do
         --seed)    SEED="$2";           shift 2 ;;
         --split)   SPLIT="$2";          shift 2 ;;
         --best-configs) BEST_CONFIGS="$2"; shift 2 ;;
+        --no-model-cache) NO_MODEL_CACHE=true; shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -132,6 +137,7 @@ if [ "$GLOBAL" = true ];       then EVAL_FLAGS="$EVAL_FLAGS --global"; fi
 # In test mode run.py reads N/layer per dataset+steering type out of best_configs.json,
 # so the swept -steering_n list passed below is ignored.
 if [ "$SPLIT" = "test" ];      then EVAL_FLAGS="$EVAL_FLAGS -split test -best_configs $BEST_CONFIGS"; fi
+if [ "$NO_MODEL_CACHE" = true ]; then EVAL_FLAGS="$EVAL_FLAGS --no-model-cache"; fi
 
 run_experiments_for_model() {
     local M_TAG="$1"

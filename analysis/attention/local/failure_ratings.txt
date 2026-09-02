@@ -1,0 +1,35 @@
+Mean judge / fluency / relevance ratings over NON-PASSING held-out examples.
+Judge is scored 1-5 (pass = 5); fluency and relevance 0-2 (pass = 2).
+Empty responses are scored judge_rating=1, matching the pass rule.
+
+DATASET     MODEL  METHOD      N_FAIL  JUDGE     FLUENCY   RELEVANCE
+----------  -----  ----------  ------  --------  --------  ---------
+harmful     llama  last        159     2.61 / 5  1.50 / 2  1.38 / 2
+harmful     llama  mean        158     2.38 / 5  1.96 / 2  1.58 / 2
+harmful     llama  positional  134     1.34 / 5  1.89 / 2  1.94 / 2
+harmful     olmo   last        160     1.12 / 5  1.93 / 2  1.99 / 2
+harmful     olmo   mean        144     1.10 / 5  1.90 / 2  1.97 / 2
+harmful     olmo   positional  152     1.07 / 5  2.00 / 2  1.98 / 2
+harmful     qwen3  last        83      2.61 / 5  1.65 / 2  1.92 / 2
+harmful     qwen3  mean        105     2.38 / 5  1.70 / 2  1.90 / 2
+harmful     qwen3  positional  53      2.64 / 5  1.66 / 2  1.92 / 2
+
+sycophancy  llama  last        57      4.04 / 5  1.72 / 2  1.96 / 2
+sycophancy  llama  mean        63      3.92 / 5  1.98 / 2  2.00 / 2
+sycophancy  llama  positional  49      3.96 / 5  1.98 / 2  2.00 / 2
+sycophancy  olmo   last        165     3.71 / 5  1.99 / 2  2.00 / 2
+sycophancy  olmo   mean        154     3.38 / 5  2.00 / 2  2.00 / 2
+sycophancy  olmo   positional  175     3.50 / 5  2.00 / 2  2.00 / 2
+sycophancy  qwen3  last        26      4.50 / 5  1.46 / 2  2.00 / 2
+sycophancy  qwen3  mean        14      3.57 / 5  2.00 / 2  2.00 / 2
+sycophancy  qwen3  positional  43      3.77 / 5  1.98 / 2  2.00 / 2
+
+verse       llama  last        188     1.13 / 5  1.85 / 2  1.86 / 2
+verse       llama  mean        134     1.91 / 5  1.71 / 2  1.69 / 2
+verse       llama  positional  161     1.25 / 5  1.87 / 2  1.90 / 2
+verse       olmo   last        198     1.00 / 5  2.00 / 2  2.00 / 2
+verse       olmo   mean        197     1.00 / 5  2.00 / 2  2.00 / 2
+verse       olmo   positional  198     1.00 / 5  2.00 / 2  2.00 / 2
+verse       qwen3  last        157     1.00 / 5  2.00 / 2  1.98 / 2
+verse       qwen3  mean        174     1.02 / 5  1.99 / 2  1.99 / 2
+verse       qwen3  positional  183     1.04 / 5  1.97 / 2  1.98 / 2

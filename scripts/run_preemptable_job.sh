@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -p mit_preemptable
-#SBATCH --gres=gpu:h200:1
+#SBATCH --gres=gpu:h100:1
 #SBATCH -c 8
 #SBATCH --mem=100G
-#SBATCH --time=8:00:00
+#SBATCH --time=12:00:00
 #SBATCH --requeue
 #SBATCH --output=logs/out/%j.out
 #SBATCH --error=logs/err/%j.err
@@ -13,7 +13,7 @@
 # comma-separated or "all" model/dataset values, it will not fan out.
 #
 # Usage:
-#   sbatch scripts/run_preemptable_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging]
+#   sbatch scripts/run_preemptable_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--no-model-cache]
 #   Note: Residual-stream steering runs by default. Pass --attention to steer the attention
 #   output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
 #   With no --split, runs the whole pipeline: validation sweep, judging, selection,
@@ -37,6 +37,7 @@ GLOBAL=false
 # held-out run as a side effect.
 SPLIT="all"
 SEED=""
+NO_MODEL_CACHE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -49,6 +50,7 @@ while [[ $# -gt 0 ]]; do
         --global)       GLOBAL=true;       shift ;;
         --split)        SPLIT="$2";        shift 2 ;;
         --seed)         SEED="$2";         shift 2 ;;
+        --no-model-cache) NO_MODEL_CACHE=true; shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -59,6 +61,7 @@ EXTRA_FLAGS=()
 [ "$RESID" = false ]       && EXTRA_FLAGS+=(--attention)
 [ "$GLOBAL" = true ]       && EXTRA_FLAGS+=(--global)
 [ -n "$SEED" ]             && EXTRA_FLAGS+=(--seed "$SEED")
+[ "$NO_MODEL_CACHE" = true ] && EXTRA_FLAGS+=(--no-model-cache)
 
 JUDGE_FLAGS=()
 [ "$UNNORMALIZED" = true ] && JUDGE_FLAGS+=(--unnormalized)
@@ -72,7 +75,7 @@ STREAM="residuals"
 SCOPE="local"
 [ "$GLOBAL" = true ] && SCOPE="global"
 
-echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  unnormalized=$UNNORMALIZED  resid=$RESID  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY"
+echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  unnormalized=$UNNORMALIZED  resid=$RESID  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY  no_model_cache=$NO_MODEL_CACHE"
 
 cd ~/gcm-interp
 

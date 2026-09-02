@@ -47,6 +47,7 @@ class Config:
         parser.add_argument('--resid', action='store_true', help='Steer residual stream (layer.output[0]) instead of attention o_proj')
         parser.add_argument('--global', dest='global_steer', action='store_true', help='Steer all layers simultaneously (default is a single-layer sweep over -layer_range_start/-layer_range_end)')
         parser.add_argument('--thinking', action='store_true', help='Enable the reasoning block for chat templates that gate one (Qwen3, Gemma 4); off by default so completions are answer-only')
+        parser.add_argument('--no-model-cache', dest='no_model_cache', action='store_true', help='Download the model/tokenizer to a temporary directory instead of the persistent Hugging Face cache, and delete it once loaded into memory')
 
         args = parser.parse_args()
         if not args.eval_model:

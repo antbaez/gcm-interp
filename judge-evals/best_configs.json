@@ -2,235 +2,511 @@
   "Llama-3.1-8B-Instruct": {
     "from_harmful-long_to_harmless": {
       "attention": {
-        "last": {
-          "N": 25.0,
-          "dataset_tag": "harmful",
-          "layer": 12,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.24,
-          "val_split": "harmless-test"
+        "global": {
+          "last": {
+            "N": 1.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 10,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.0,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 1.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 10,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.0,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 1.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.18,
+            "val_split": "harmless-test"
+          }
         },
-        "mean": {
-          "N": 25.0,
-          "dataset_tag": "harmful",
-          "layer": 16,
-          "model_tag": "llama",
-          "n_conditions": 106,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.24,
-          "val_split": "harmless-test"
-        },
-        "positional": {
-          "N": 100.0,
-          "dataset_tag": "harmful",
-          "layer": 18,
-          "model_tag": "llama",
-          "n_conditions": 100,
-          "n_tied_at_best": 3,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.52,
-          "val_split": "harmless-test"
+        "local": {
+          "last": {
+            "N": 25.0,
+            "dataset_tag": "harmful",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.24,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 25.0,
+            "dataset_tag": "harmful",
+            "layer": 16,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.24,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "harmful",
+            "layer": 18,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 3,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.52,
+            "val_split": "harmless-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 10.0,
-          "dataset_tag": "harmful",
-          "layer": 12,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.5,
-          "val_split": "harmless-test"
+        "global": {
+          "last": {
+            "N": 0.3,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.4,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 0.2,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.1,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 0.3,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.3,
+            "val_split": "harmless-test"
+          }
         },
-        "mean": {
-          "N": 20.0,
-          "dataset_tag": "harmful",
-          "layer": 15,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.56,
-          "val_split": "harmless-test"
-        },
-        "positional": {
-          "N": 40.0,
-          "dataset_tag": "harmful",
-          "layer": 18,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.56,
-          "val_split": "harmless-test"
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.5,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 20.0,
+            "dataset_tag": "harmful",
+            "layer": 15,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.56,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 40.0,
+            "dataset_tag": "harmful",
+            "layer": 18,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.56,
+            "val_split": "harmless-test"
+          }
         }
       }
     },
     "from_non-sycophantic-long_to_sycophancy": {
       "attention": {
-        "last": {
-          "N": 25.0,
-          "dataset_tag": "sycophancy",
-          "layer": 16,
-          "model_tag": "llama",
-          "n_conditions": 100,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.62,
-          "val_split": "sycophancy-test"
+        "global": {
+          "last": {
+            "N": 1.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 10,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.0,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 1.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 10,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.0,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 1.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.44,
+            "val_split": "sycophancy-test"
+          }
         },
-        "mean": {
-          "N": 25.0,
-          "dataset_tag": "sycophancy",
-          "layer": 19,
-          "model_tag": "llama",
-          "n_conditions": 100,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.7,
-          "val_split": "sycophancy-test"
-        },
-        "positional": {
-          "N": 50.0,
-          "dataset_tag": "sycophancy",
-          "layer": 19,
-          "model_tag": "llama",
-          "n_conditions": 100,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.72,
-          "val_split": "sycophancy-test"
+        "local": {
+          "last": {
+            "N": 25.0,
+            "dataset_tag": "sycophancy",
+            "layer": 16,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.62,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 25.0,
+            "dataset_tag": "sycophancy",
+            "layer": 19,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.7,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 50.0,
+            "dataset_tag": "sycophancy",
+            "layer": 19,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.72,
+            "val_split": "sycophancy-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 10.0,
-          "dataset_tag": "sycophancy",
-          "layer": 14,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 3,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.76,
-          "val_split": "sycophancy-test"
+        "global": {
+          "last": {
+            "N": 0.4,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.86,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 0.2,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.88,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 0.6,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.92,
+            "val_split": "sycophancy-test"
+          }
         },
-        "mean": {
-          "N": 10.0,
-          "dataset_tag": "sycophancy",
-          "layer": 15,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 2,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.74,
-          "val_split": "sycophancy-test"
-        },
-        "positional": {
-          "N": 100.0,
-          "dataset_tag": "sycophancy",
-          "layer": 20,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.9,
-          "val_split": "sycophancy-test"
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": 14,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 3,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.76,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": 15,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 2,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.74,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy",
+            "layer": 20,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.9,
+            "val_split": "sycophancy-test"
+          }
         }
       }
     },
     "from_verse-long_to_prose": {
       "attention": {
-        "last": {
-          "N": 25.0,
-          "dataset_tag": "verse",
-          "layer": 14,
-          "model_tag": "llama",
-          "n_conditions": 73,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.18,
-          "val_split": "prose-test"
+        "global": {
+          "last": {
+            "N": 1.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 10,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.0,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 1.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 10,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 1.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.02,
+            "val_split": "prose-test"
+          }
         },
-        "mean": {
-          "N": 20.0,
-          "dataset_tag": "verse",
-          "layer": 14,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.5,
-          "val_split": "prose-test"
-        },
-        "positional": {
-          "N": 30.0,
-          "dataset_tag": "verse",
-          "layer": 14,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.4,
-          "val_split": "prose-test"
+        "local": {
+          "last": {
+            "N": 25.0,
+            "dataset_tag": "verse",
+            "layer": 14,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.18,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 25.0,
+            "dataset_tag": "verse",
+            "layer": 14,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.34,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 25.0,
+            "dataset_tag": "verse",
+            "layer": 14,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.24,
+            "val_split": "prose-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 10.0,
-          "dataset_tag": "verse",
-          "layer": 11,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.72,
-          "val_split": "prose-test"
+        "global": {
+          "last": {
+            "N": 0.4,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 0.2,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 2,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 0.2,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "llama",
+            "n_conditions": 20,
+            "n_tied_at_best": 2,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          }
         },
-        "mean": {
-          "N": 10.0,
-          "dataset_tag": "verse",
-          "layer": 12,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.74,
-          "val_split": "prose-test"
-        },
-        "positional": {
-          "N": 10.0,
-          "dataset_tag": "verse",
-          "layer": 12,
-          "model_tag": "llama",
-          "n_conditions": 110,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.94,
-          "val_split": "prose-test"
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 11,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.72,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.74,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.94,
+            "val_split": "prose-test"
+          }
         }
       }
     }
@@ -238,235 +514,511 @@
   "OLMo-2-1124-13B-DPO": {
     "from_harmful-long_to_harmless": {
       "attention": {
-        "last": {
-          "N": 75.0,
-          "dataset_tag": "harmful",
-          "layer": 17,
-          "model_tag": "olmo",
-          "n_conditions": 145,
-          "n_tied_at_best": 3,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.28,
-          "val_split": "harmless-test"
+        "global": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.82,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.86,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 9.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.84,
+            "val_split": "harmless-test"
+          }
         },
-        "mean": {
-          "N": 200.0,
-          "dataset_tag": "harmful",
-          "layer": 17,
-          "model_tag": "olmo",
-          "n_conditions": 140,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.42,
-          "val_split": "harmless-test"
-        },
-        "positional": {
-          "N": 150.0,
-          "dataset_tag": "harmful",
-          "layer": 17,
-          "model_tag": "olmo",
-          "n_conditions": 140,
-          "n_tied_at_best": 2,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.38,
-          "val_split": "harmless-test"
+        "local": {
+          "last": {
+            "N": 75.0,
+            "dataset_tag": "harmful",
+            "layer": 17,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 3,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.28,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 200.0,
+            "dataset_tag": "harmful",
+            "layer": 17,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.42,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 150.0,
+            "dataset_tag": "harmful",
+            "layer": 17,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 2,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.38,
+            "val_split": "harmless-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 20.0,
-          "dataset_tag": "harmful",
-          "layer": 15,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.62,
-          "val_split": "harmless-test"
+        "global": {
+          "last": {
+            "N": 2.25,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 36,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.44,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 0.6,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 36,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.74,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 0.5,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 36,
+            "n_tied_at_best": 2,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.76,
+            "val_split": "harmless-test"
+          }
         },
-        "mean": {
-          "N": 10.0,
-          "dataset_tag": "harmful",
-          "layer": 16,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.82,
-          "val_split": "harmless-test"
-        },
-        "positional": {
-          "N": 90.0,
-          "dataset_tag": "harmful",
-          "layer": 24,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.94,
-          "val_split": "harmless-test"
+        "local": {
+          "last": {
+            "N": 20.0,
+            "dataset_tag": "harmful",
+            "layer": 15,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.62,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": 16,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.82,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 90.0,
+            "dataset_tag": "harmful",
+            "layer": 24,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.94,
+            "val_split": "harmless-test"
+          }
         }
       }
     },
     "from_non-sycophantic-long_to_sycophancy": {
       "attention": {
-        "last": {
-          "N": 250.0,
-          "dataset_tag": "sycophancy",
-          "layer": 13,
-          "model_tag": "olmo",
-          "n_conditions": 140,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.24,
-          "val_split": "sycophancy-test"
+        "global": {
+          "last": {
+            "N": 7.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.12,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 8.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.82,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.22,
+            "val_split": "sycophancy-test"
+          }
         },
-        "mean": {
-          "N": 150.0,
-          "dataset_tag": "sycophancy",
-          "layer": 16,
-          "model_tag": "olmo",
-          "n_conditions": 140,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.26,
-          "val_split": "sycophancy-test"
-        },
-        "positional": {
-          "N": 75.0,
-          "dataset_tag": "sycophancy",
-          "layer": 18,
-          "model_tag": "olmo",
-          "n_conditions": 140,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.14,
-          "val_split": "sycophancy-test"
+        "local": {
+          "last": {
+            "N": 250.0,
+            "dataset_tag": "sycophancy",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.24,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 150.0,
+            "dataset_tag": "sycophancy",
+            "layer": 16,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.26,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 75.0,
+            "dataset_tag": "sycophancy",
+            "layer": 18,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.14,
+            "val_split": "sycophancy-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 20.0,
-          "dataset_tag": "sycophancy",
-          "layer": 16,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.46,
-          "val_split": "sycophancy-test"
+        "global": {
+          "last": {
+            "N": 1.5,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.48,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 0.9,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.5,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 2.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.4,
+            "val_split": "sycophancy-test"
+          }
         },
-        "mean": {
-          "N": 10.0,
-          "dataset_tag": "sycophancy",
-          "layer": 15,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.48,
-          "val_split": "sycophancy-test"
-        },
-        "positional": {
-          "N": 60.0,
-          "dataset_tag": "sycophancy",
-          "layer": 14,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 2,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.48,
-          "val_split": "sycophancy-test"
+        "local": {
+          "last": {
+            "N": 20.0,
+            "dataset_tag": "sycophancy",
+            "layer": 16,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.46,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": 15,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.48,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 60.0,
+            "dataset_tag": "sycophancy",
+            "layer": 14,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 2,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.48,
+            "val_split": "sycophancy-test"
+          }
         }
       }
     },
     "from_verse-long_to_prose": {
       "attention": {
-        "last": {
-          "N": 25.0,
-          "dataset_tag": "verse",
-          "layer": 15,
-          "model_tag": "olmo",
-          "n_conditions": 140,
-          "n_tied_at_best": 3,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.02,
-          "val_split": "prose-test"
+        "global": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.58,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.74,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 8.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 10,
+            "n_tied_at_best": 3,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.94,
+            "val_split": "prose-test"
+          }
         },
-        "mean": {
-          "N": 25.0,
-          "dataset_tag": "verse",
-          "layer": 13,
-          "model_tag": "olmo",
-          "n_conditions": 140,
-          "n_tied_at_best": 6,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.02,
-          "val_split": "prose-test"
-        },
-        "positional": {
-          "N": 25.0,
-          "dataset_tag": "verse",
-          "layer": 15,
-          "model_tag": "olmo",
-          "n_conditions": 140,
-          "n_tied_at_best": 13,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.02,
-          "val_split": "prose-test"
+        "local": {
+          "last": {
+            "N": 25.0,
+            "dataset_tag": "verse",
+            "layer": 15,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 3,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.02,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 25.0,
+            "dataset_tag": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 6,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.02,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 25.0,
+            "dataset_tag": "verse",
+            "layer": 15,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 13,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.02,
+            "val_split": "prose-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 90.0,
-          "dataset_tag": "verse",
-          "layer": 22,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.18,
-          "val_split": "prose-test"
+        "global": {
+          "last": {
+            "N": 1.1,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 36,
+            "n_tied_at_best": 2,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.18,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 1.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 36,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.98,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 0.7,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "olmo",
+            "n_conditions": 36,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          }
         },
-        "mean": {
-          "N": 10.0,
-          "dataset_tag": "verse",
-          "layer": 13,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.36,
-          "val_split": "prose-test"
-        },
-        "positional": {
-          "N": 10.0,
-          "dataset_tag": "verse",
-          "layer": 13,
-          "model_tag": "olmo",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.98,
-          "val_split": "prose-test"
+        "local": {
+          "last": {
+            "N": 90.0,
+            "dataset_tag": "verse",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.18,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.36,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.98,
+            "val_split": "prose-test"
+          }
         }
       }
     }
@@ -474,235 +1026,511 @@
   "Qwen3-14B": {
     "from_harmful-long_to_harmless": {
       "attention": {
-        "last": {
-          "N": 225.0,
-          "dataset_tag": "harmful",
-          "layer": 17,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 2,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.72,
-          "val_split": "harmless-test"
+        "global": {
+          "last": {
+            "N": 6.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.4,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 4.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.38,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 5.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.38,
+            "val_split": "harmless-test"
+          }
         },
-        "mean": {
-          "N": 175.0,
-          "dataset_tag": "harmful",
-          "layer": 20,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.68,
-          "val_split": "harmless-test"
-        },
-        "positional": {
-          "N": 250.0,
-          "dataset_tag": "harmful",
-          "layer": 17,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.72,
-          "val_split": "harmless-test"
+        "local": {
+          "last": {
+            "N": 225.0,
+            "dataset_tag": "harmful",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 2,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.72,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 175.0,
+            "dataset_tag": "harmful",
+            "layer": 20,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.68,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 250.0,
+            "dataset_tag": "harmful",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.72,
+            "val_split": "harmless-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 150.0,
-          "dataset_tag": "harmful",
-          "layer": 14,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.82,
-          "val_split": "harmless-test"
+        "global": {
+          "last": {
+            "N": 4.75,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.44,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 2.5,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.76,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 3.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.64,
+            "val_split": "harmless-test"
+          }
         },
-        "mean": {
-          "N": 50.0,
-          "dataset_tag": "harmful",
-          "layer": 13,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 2,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.72,
-          "val_split": "harmless-test"
-        },
-        "positional": {
-          "N": 75.0,
-          "dataset_tag": "harmful",
-          "layer": 13,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.88,
-          "val_split": "harmless-test"
+        "local": {
+          "last": {
+            "N": 150.0,
+            "dataset_tag": "harmful",
+            "layer": 14,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.82,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 50.0,
+            "dataset_tag": "harmful",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 2,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.72,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 75.0,
+            "dataset_tag": "harmful",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.88,
+            "val_split": "harmless-test"
+          }
         }
       }
     },
     "from_non-sycophantic-long_to_sycophancy": {
       "attention": {
-        "last": {
-          "N": 35.0,
-          "dataset_tag": "sycophancy",
-          "layer": 20,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 3,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.52,
-          "val_split": "sycophancy-test"
+        "global": {
+          "last": {
+            "N": 4.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.42,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 4.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.82,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 8.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.54,
+            "val_split": "sycophancy-test"
+          }
         },
-        "mean": {
-          "N": 50.0,
-          "dataset_tag": "sycophancy",
-          "layer": 18,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.52,
-          "val_split": "sycophancy-test"
-        },
-        "positional": {
-          "N": 40.0,
-          "dataset_tag": "sycophancy",
-          "layer": 14,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.48,
-          "val_split": "sycophancy-test"
+        "local": {
+          "last": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.88,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 75.0,
+            "dataset_tag": "sycophancy",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.9,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 175.0,
+            "dataset_tag": "sycophancy",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.86,
+            "val_split": "sycophancy-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 100.0,
-          "dataset_tag": "sycophancy",
-          "layer": 13,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.78,
-          "val_split": "sycophancy-test"
+        "global": {
+          "last": {
+            "N": 5.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.36,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 3.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.72,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 5.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.78,
+            "val_split": "sycophancy-test"
+          }
         },
-        "mean": {
-          "N": 100.0,
-          "dataset_tag": "sycophancy",
-          "layer": 15,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.98,
-          "val_split": "sycophancy-test"
-        },
-        "positional": {
-          "N": 125.0,
-          "dataset_tag": "sycophancy",
-          "layer": 18,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.9,
-          "val_split": "sycophancy-test"
+        "local": {
+          "last": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.78,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy",
+            "layer": 15,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.98,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 125.0,
+            "dataset_tag": "sycophancy",
+            "layer": 18,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.9,
+            "val_split": "sycophancy-test"
+          }
         }
       }
     },
     "from_verse-long_to_prose": {
       "attention": {
-        "last": {
-          "N": 250.0,
-          "dataset_tag": "verse",
-          "layer": 26,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.28,
-          "val_split": "prose-test"
+        "global": {
+          "last": {
+            "N": 5.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.86,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 3.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 10,
+            "n_tied_at_best": 2,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 3.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 10,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          }
         },
-        "mean": {
-          "N": 175.0,
-          "dataset_tag": "verse",
-          "layer": 22,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 2,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.16,
-          "val_split": "prose-test"
-        },
-        "positional": {
-          "N": 225.0,
-          "dataset_tag": "verse",
-          "layer": 20,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.22,
-          "val_split": "prose-test"
+        "local": {
+          "last": {
+            "N": 250.0,
+            "dataset_tag": "verse",
+            "layer": 26,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.28,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 175.0,
+            "dataset_tag": "verse",
+            "layer": 22,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 2,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.16,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 225.0,
+            "dataset_tag": "verse",
+            "layer": 20,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.22,
+            "val_split": "prose-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 75.0,
-          "dataset_tag": "verse",
-          "layer": 17,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.8,
-          "val_split": "prose-test"
+        "global": {
+          "last": {
+            "N": 5.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.22,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 2.25,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 5,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 2.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "qwen3",
+            "n_conditions": 20,
+            "n_tied_at_best": 5,
+            "scope": "global",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          }
         },
-        "mean": {
-          "N": 50.0,
-          "dataset_tag": "verse",
-          "layer": 13,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 4,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 1.0,
-          "val_split": "prose-test"
-        },
-        "positional": {
-          "N": 50.0,
-          "dataset_tag": "verse",
-          "layer": 16,
-          "model_tag": "qwen3",
-          "n_conditions": 154,
-          "n_tied_at_best": 8,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 1.0,
-          "val_split": "prose-test"
+        "local": {
+          "last": {
+            "N": 75.0,
+            "dataset_tag": "verse",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.8,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 50.0,
+            "dataset_tag": "verse",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 4,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 50.0,
+            "dataset_tag": "verse",
+            "layer": 16,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 8,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          }
         }
       }
     }
@@ -710,197 +1538,222 @@
   "gemma-4-12B-it": {
     "from_harmful-long_to_harmless": {
       "attention": {
-        "last": {
-          "N": 50.0,
-          "dataset_tag": "harmful",
-          "layer": 19,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.28,
-          "val_split": "harmless-test"
-        },
-        "mean": {
-          "N": 35.0,
-          "dataset_tag": "harmful",
-          "layer": 27,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 2,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.26,
-          "val_split": "harmless-test"
-        },
-        "positional": {
-          "N": 40.0,
-          "dataset_tag": "harmful",
-          "layer": 27,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.24,
-          "val_split": "harmless-test"
+        "global": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.46,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.24,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.34,
+            "val_split": "harmless-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 50.0,
-          "dataset_tag": "harmful",
-          "layer": 17,
-          "model_tag": "gemma4",
-          "n_conditions": 192,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.74,
-          "val_split": "harmless-test"
-        },
-        "mean": {
-          "N": 50.0,
-          "dataset_tag": "harmful",
-          "layer": 29,
-          "model_tag": "gemma4",
-          "n_conditions": 192,
-          "n_tied_at_best": 2,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.68,
-          "val_split": "harmless-test"
-        },
-        "positional": {
-          "N": 50.0,
-          "dataset_tag": "harmful",
-          "layer": 31,
-          "model_tag": "gemma4",
-          "n_conditions": 192,
-          "n_tied_at_best": 1,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 0.66,
-          "val_split": "harmless-test"
+        "local": {
+          "last": {
+            "N": 50.0,
+            "dataset_tag": "harmful",
+            "layer": 17,
+            "model_tag": "gemma4",
+            "n_conditions": 192,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.74,
+            "val_split": "harmless-test"
+          },
+          "mean": {
+            "N": 50.0,
+            "dataset_tag": "harmful",
+            "layer": 29,
+            "model_tag": "gemma4",
+            "n_conditions": 192,
+            "n_tied_at_best": 2,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.68,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 50.0,
+            "dataset_tag": "harmful",
+            "layer": 31,
+            "model_tag": "gemma4",
+            "n_conditions": 192,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.66,
+            "val_split": "harmless-test"
+          }
         }
       }
     },
     "from_non-sycophantic-long_to_sycophancy": {
       "attention": {
-        "last": {
-          "N": 35.0,
-          "dataset_tag": "sycophancy",
-          "layer": 23,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.16,
-          "val_split": "sycophancy-test"
-        },
-        "mean": {
-          "N": 40.0,
-          "dataset_tag": "sycophancy",
-          "layer": 25,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.12,
-          "val_split": "sycophancy-test"
-        },
-        "positional": {
-          "N": 50.0,
-          "dataset_tag": "sycophancy",
-          "layer": 18,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 1,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 0.12,
-          "val_split": "sycophancy-test"
+        "global": {
+          "last": {
+            "N": 2.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.08,
+            "val_split": "sycophancy-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.08,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 1.0,
+            "dataset_tag": "sycophancy",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.06,
+            "val_split": "sycophancy-test"
+          }
         }
       }
     },
     "from_verse-long_to_prose": {
       "attention": {
-        "last": {
-          "N": 35.0,
-          "dataset_tag": "verse",
-          "layer": 21,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 4,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 1.0,
-          "val_split": "prose-test"
-        },
-        "mean": {
-          "N": 30.0,
-          "dataset_tag": "verse",
-          "layer": 21,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 5,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 1.0,
-          "val_split": "prose-test"
-        },
-        "positional": {
-          "N": 45.0,
-          "dataset_tag": "verse",
-          "layer": 21,
-          "model_tag": "gemma4",
-          "n_conditions": 176,
-          "n_tied_at_best": 2,
-          "stream": "attention",
-          "val_n": 50,
-          "val_pass_rate": 1.0,
-          "val_split": "prose-test"
+        "global": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.94,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": "all",
+            "model_tag": "gemma4",
+            "n_conditions": 6,
+            "n_tied_at_best": 1,
+            "scope": "global",
+            "stream": "attention",
+            "val_n": 50,
+            "val_pass_rate": 0.94,
+            "val_split": "prose-test"
+          }
         }
       },
       "residuals": {
-        "last": {
-          "N": 25.0,
-          "dataset_tag": "verse",
-          "layer": 22,
-          "model_tag": "gemma4",
-          "n_conditions": 192,
-          "n_tied_at_best": 3,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 1.0,
-          "val_split": "prose-test"
-        },
-        "mean": {
-          "N": 10.0,
-          "dataset_tag": "verse",
-          "layer": 20,
-          "model_tag": "gemma4",
-          "n_conditions": 192,
-          "n_tied_at_best": 17,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 1.0,
-          "val_split": "prose-test"
-        },
-        "positional": {
-          "N": 10.0,
-          "dataset_tag": "verse",
-          "layer": 16,
-          "model_tag": "gemma4",
-          "n_conditions": 192,
-          "n_tied_at_best": 13,
-          "stream": "residuals",
-          "val_n": 50,
-          "val_pass_rate": 1.0,
-          "val_split": "prose-test"
+        "local": {
+          "last": {
+            "N": 25.0,
+            "dataset_tag": "verse",
+            "layer": 22,
+            "model_tag": "gemma4",
+            "n_conditions": 192,
+            "n_tied_at_best": 3,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          },
+          "mean": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 20,
+            "model_tag": "gemma4",
+            "n_conditions": 192,
+            "n_tied_at_best": 17,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 16,
+            "model_tag": "gemma4",
+            "n_conditions": 192,
+            "n_tied_at_best": 13,
+            "scope": "local",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.0,
+            "val_split": "prose-test"
+          }
         }
       }
     }

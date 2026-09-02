@@ -1,4 +1,6 @@
 import re
+import shutil
+import tempfile
 import torch
 from transformers import BitsAndBytesConfig, AutoTokenizer, AutoModelForSequenceClassification
 import os
@@ -19,9 +21,18 @@ class ModelHandler:
         self.template_kwargs = (
             {'enable_thinking': self.thinking} if self.is_qwen3 or self.is_gemma4 else {}
         )
+        # gemma4 already routes through its own persistent cache_dir below, so
+        # --no-model-cache only applies to models that would otherwise land in
+        # the default $HF_HOME cache.
+        self.no_model_cache = getattr(config.args, 'no_model_cache', False) and not self.is_gemma4
+        self._temp_cache_dir = tempfile.mkdtemp(prefix='hf-nocache-') if self.no_model_cache else None
         self.tokenizer = self.load_tokenizer(model_id)
         self.model = self.load_model(model_id, self.device)
         self.model.tokenizer = self.tokenizer
+        if self._temp_cache_dir:
+            # Weights are already copied onto self.device by dispatch=True, so the
+            # on-disk snapshot is safe to remove — it just frees quota-limited disk.
+            shutil.rmtree(self._temp_cache_dir, ignore_errors=True)
         model_config = self.model.config.to_dict()
         tc = model_config.get('text_config', model_config)
         hidden_size = tc['hidden_size']
@@ -56,11 +67,11 @@ class ModelHandler:
 
     def load_tokenizer(self, model_id):
         if 'qwen'  in model_id.lower():
-            tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.environ['HF_TOKEN'], pad_token='<|pad|>', eos_token='<|endoftext|>',)
+            tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.environ['HF_TOKEN'], pad_token='<|pad|>', eos_token='<|endoftext|>', cache_dir=self._temp_cache_dir)
             tokenizer.add_special_tokens({'pad_token': '<|endoftext|>'})
             tokenizer.padding_side = 'left'
         else:
-            tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.environ['HF_TOKEN'])
+            tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.environ['HF_TOKEN'], cache_dir=self._temp_cache_dir)
             tokenizer.pad_token = tokenizer.eos_token
             tokenizer.padding_side = 'left'
         print(f"Loading model {model_id} (padding: {tokenizer.padding_side})...")
@@ -72,5 +83,5 @@ class ModelHandler:
             gemma4_cache_dir = os.path.expanduser("~/orcd/pool/huggingface")
             os.makedirs(gemma4_cache_dir, exist_ok=True)
             return VisionLanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True, cache_dir=gemma4_cache_dir)
-        return LanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True)
+        return LanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True, cache_dir=self._temp_cache_dir)
     

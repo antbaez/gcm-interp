@@ -1,0 +1,35 @@
+PASS RATES
+Held-out pass rate per steering method (✓ marks the best method per row).
+Pass = judge_rating 5/5 and fluency 2/2 and relevance 2/2.
+
+DATASET     MODEL  LAST     MEAN     POSITIONAL
+----------  -----  -------  -------  ----------
+harmful     llama  0.400    0.505    0.535 ✓
+harmful     olmo   0.500    0.675    0.805 ✓
+harmful     qwen3  0.685    0.655    0.785 ✓
+
+sycophancy  llama  0.780    0.715    0.880 ✓
+sycophancy  olmo   0.365    0.495    0.505 ✓
+sycophancy  qwen3  0.770    0.945 ✓  0.845
+
+verse       llama  0.690    0.610    0.865 ✓
+verse       olmo   0.110    0.305    0.920 ✓
+verse       qwen3  0.695    0.990 ✓  0.975
+
+MMLU
+Held-out MMLU accuracy delta from the model's unsteered baseline, per steering method (✓ marks the method closest to baseline, i.e. least MMLU degradation, per row).
+Source: /home/acbaez/gcm-interp/mmlu/results
+
+DATASET     MODEL  LAST      MEAN      POSITIONAL
+----------  -----  --------  --------  ----------
+harmful     llama  -0.353    -0.299    -0.248 ✓
+harmful     olmo   -0.233    -0.078    -0.005 ✓
+harmful     qwen3  -0.487    -0.124    +0.009 ✓
+
+sycophancy  llama  -0.344    -0.171 ✓  -0.304
+sycophancy  olmo   -0.181    -0.050 ✓  -0.328
+sycophancy  qwen3  -0.496    -0.433 ✓  -0.462
+
+verse       llama  -0.346    -0.311    -0.269 ✓
+verse       olmo   -0.357    -0.123    -0.018 ✓
+verse       qwen3  -0.222    -0.053 ✓  -0.087

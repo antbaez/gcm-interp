@@ -12,7 +12,7 @@
 # comma-separated or "all" model/dataset values, it will not fan out.
 #
 # Usage:
-#   sbatch scripts/run_normal_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging]
+#   sbatch scripts/run_normal_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--no-model-cache]
 #   Note: Residual-stream steering runs by default. Pass --attention to steer the attention
 #   output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
 #   With no --split, runs the whole pipeline: validation sweep, judging, selection,
@@ -29,6 +29,7 @@ UNNORMALIZED=false
 JUDGING_ONLY=false
 RESID=true
 GLOBAL=false
+NO_MODEL_CACHE=false
 # Which phases to run: "all" (default) does the validation sweep, selection, and
 # the held-out split; "val" stops after judging the sweep; "test" selects from
 # existing sweep results and regenerates the held-out split only when the winner
@@ -46,6 +47,7 @@ while [[ $# -gt 0 ]]; do
         --attention)    RESID=false;       shift ;;
         --global)       GLOBAL=true;       shift ;;
         --split)        SPLIT="$2";        shift 2 ;;
+        --no-model-cache) NO_MODEL_CACHE=true; shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -55,6 +57,7 @@ EXTRA_FLAGS=()
 [ "$UNNORMALIZED" = true ] && EXTRA_FLAGS+=(--unnormalized)
 [ "$RESID" = false ]       && EXTRA_FLAGS+=(--attention)
 [ "$GLOBAL" = true ]       && EXTRA_FLAGS+=(--global)
+[ "$NO_MODEL_CACHE" = true ] && EXTRA_FLAGS+=(--no-model-cache)
 
 JUDGE_FLAGS=()
 [ "$UNNORMALIZED" = true ] && JUDGE_FLAGS+=(--unnormalized)
@@ -68,7 +71,7 @@ STREAM="residuals"
 SCOPE="local"
 [ "$GLOBAL" = true ] && SCOPE="global"
 
-echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  unnormalized=$UNNORMALIZED  resid=$RESID  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY"
+echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  unnormalized=$UNNORMALIZED  resid=$RESID  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY  no_model_cache=$NO_MODEL_CACHE"
 
 cd ~/gcm-interp
 

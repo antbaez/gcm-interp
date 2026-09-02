@@ -91,7 +91,7 @@ Scores generated outputs with the local vLLM judge or an OpenAI API judge. Calls
 **Summarize** (`summarize_results.py`):
 
 13. Walks `judge-evals/workdirs/` for `judge_ratings.jsonl`, filtered to `--stream_mode` if passed.
-14. Aggregates pass rates into `judge-evals/accuracy/results_summary_<stream_mode>.csv` (or `results_summary.csv` when no `--stream_mode` is given, covering both streams) — per-stream files so the two summarize runs don't clobber each other. No longer makes heatmaps itself — that's the standalone `judge-evals/create_heatmaps.py`.
+14. Aggregates pass rates into `judge-evals/accuracy/results_summary_<stream_mode>.csv` (or `results_summary.csv` when no `--stream_mode` is given, covering both streams) — per-stream files so the two summarize runs don't clobber each other. No longer makes heatmaps itself — that's the standalone `analysis/create_heatmaps.py`.
 
 ---
 
@@ -150,7 +150,7 @@ Both `stats/*.py` scripts resolve paths relative to their own location, so they 
 | `judge-evals/api_evaluator.py` | OpenAI API judge (`make_api_generate_fn`) — drop-in alternative to `evaluator.py`, used with `--judge`/`--judge_model` |
 | `judge-evals/compute_accuracies.py` | Computes pass rates from rating JSONL files |
 | `judge-evals/summarize_results.py` | Aggregates ratings into `judge-evals/accuracy/results_summary_<stream>.csv` |
-| `judge-evals/create_heatmaps.py` | Standalone, manually-run: reads the per-stream `results_summary_*.csv`, produces N × steering-type and layer-axis heatmaps. Residuals by default; `--attention` adds the attention stream, `--no-residuals` drops residuals |
+| `analysis/create_heatmaps.py` | Standalone, manually-run: reads the per-stream `results_summary_*.csv`, produces N × steering-type and layer-axis heatmaps. Residuals by default; `--attention` adds the attention stream, `--no-residuals` drops residuals |
 | `judge-evals/select_best_config.py` | Picks best (N, layer) per model/dataset/stream/scope/method on the validation split; writes `best_configs.json`; prunes superseded held-out runs |
 | `judge-evals/selection_utils.py` | Shared condition-scanning + pass-rule logic for `select_best_config.py` and `stats/collect_pass_rates.py` |
 | `stats/collect_pass_rates.py` | Per-prompt pass/fail CSV across steering methods, per model/dataset combo (val or held-out test split) |

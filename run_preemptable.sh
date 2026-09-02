@@ -4,10 +4,12 @@
 # model x dataset combo via scripts/run_preemptable_job.sh.
 #
 # Usage:
-#   bash run_preemptable.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--seed N]
+#   bash run_preemptable.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--seed N] [--no-model-cache]
 #   Defaults: --model all --dataset all (uses steering types from scripts/run_steering.sh)
 #   Note: Residual-stream steering runs by default. Pass --attention to steer the attention
 #   output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
+#   --no-model-cache downloads the model/tokenizer to a temp directory instead of the
+#   persistent HF cache, and deletes it once loaded — avoids filling disk quota.
 
 set -e
 
@@ -19,6 +21,7 @@ JUDGING_ONLY=false
 RESID=true
 GLOBAL=false
 SEED=""
+NO_MODEL_CACHE=false
 # Which phases to run. Omitted (the default "all") runs the validation sweep,
 # selection, and the held-out split in one go. "val" stops after judging the
 # sweep; "test" selects from whatever sweep results already exist and only
@@ -36,6 +39,7 @@ while [[ $# -gt 0 ]]; do
         --global)       GLOBAL=true;       shift ;;
         --seed)         SEED="$2";         shift 2 ;;
         --split)        SPLIT="$2";        shift 2 ;;
+        --no-model-cache) NO_MODEL_CACHE=true; shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -58,6 +62,7 @@ JOB_FLAGS=()
 [ "$GLOBAL" = true ]       && JOB_FLAGS+=(--global)
 [ -n "$SEED" ]             && JOB_FLAGS+=(--seed "$SEED")
 [ "$SPLIT" != "all" ]      && JOB_FLAGS+=(--split "$SPLIT")
+[ "$NO_MODEL_CACHE" = true ] && JOB_FLAGS+=(--no-model-cache)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
