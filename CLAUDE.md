@@ -96,17 +96,6 @@ Scores generated outputs with the local vLLM judge or an OpenAI API judge. Calls
 
 ---
 
-## run_harmonic_tests.py
-
-Local (no sbatch) held-out runs at hand-picked configs. Takes a JSON spec — `{"device"?, "setup"?, "judge_setup"?, "tests": [{"model", "dataset", "method", "N", "layer"}, ...]}` with short tags (full format in the docstring), or a nested `model/task/stream/scope/method` best-configs file such as `best_configs_harmonic_floor.json` (aliases `mean-padding`→`mean`, `weighted-pos`→`positional` mapped; unsupported tasks/streams/scopes skipped with a note; `--device` flag since it has no top-level options) — then generates on `<base>-heldout-test.jsonl` via `run_steering.sh --split test --best-configs <tmp>`, judges via `run_judging.sh --split test`, then saves the raw outputs (no pass rates computed). run.py reads one config per (model, task, method), so tests are packed into rounds, each with its own temp best_configs-format file. Generation and judging already on disk are skipped. `--dry-run` prints the commands; `--save-only` just copies what's on disk. Only normalized/residual/KV-cached/local mode. Held-out runs at a non-selected config get pruned by the next `select_best_config.py` and can leak into `collect_pass_rates.py`, so it warns about those. To survive pruning, it copies each test's `*_gen.json`/`.txt` and `*_ratings.jsonl` into `harmonic_results/{generations,judge_scores}/`, mirroring the `results/`/`workdirs/` paths (scores only once judged). olmo/qwen3/llama weights aren't kept on disk: each generation call exports `HF_HUB_CACHE`/`HUGGINGFACE_HUB_CACHE`/`TRANSFORMERS_CACHE` (after sourcing setup) to a per-model temp dir under `--weights-dir` (default `$TMPDIR`), deleted after that model's last call or on error — so they re-download every run. Each call and the judging step print `[time]` durations.
-
-
-## calculate_harmonic_scores.py
-
-Reads saved judge outputs (default `harmonic_results/judge_scores/`; `--root judge-evals/workdirs` works too, same layout) and reports, per model/dataset/method/condition, the mean over prompts of the per-prompt harmonic mean of concept, fluency and relevance. Concept (1-5, all three tasks) maps 1-3→0, 4→1, 5→2 so every component is 0-2; fluency/relevance are used as-is; a 0 in any component makes the harmonic mean 0. Empty responses count as concept 1, as in `selection_utils.py`; unparsed/out-of-range ratings score 0 and stay in n (`unparsed` column); prompts missing from the fluency/relevance files are dropped (`dropped` column). Also prints component means. `--split heldout-test` filters by test file; `--out` writes CSV.
-
----
-
 ## Steering mechanism
 
 Steering vectors come from the difference between `add` (desired) and `sub` (undesired) prompt sets. Capture point depends on `--resid`:
@@ -167,8 +156,6 @@ Both `stats/*.py` scripts resolve paths relative to their own location, so they 
 | `judge-evals/select_best_config.py` | Picks best (N, layer) per model/dataset/method on the validation split; writes `best_configs.json`; prunes superseded held-out runs |
 | `judge-evals/selection_utils.py` | Shared condition-scanning + pass-rule logic for `select_best_config.py` and `stats/collect_pass_rates.py` |
 | `stats/collect_pass_rates.py` | Per-prompt pass/fail CSV across steering methods, per model/dataset combo (val or held-out test split) |
-| `run_harmonic_tests.py` | Local held-out generation + judging, saving raw generations and judge scores to `harmonic_results/` for a JSON list of explicit (model, dataset, method, N, layer) configs |
-| `calculate_harmonic_scores.py` | Mean per-prompt harmonic mean of 0-2-scaled concept/fluency/relevance ratings, per model/dataset/method |
 | `stats/run_mcnemar_test.py` | Paired McNemar's significance test between steering methods on `collect_pass_rates.py` output |
 
 ---
