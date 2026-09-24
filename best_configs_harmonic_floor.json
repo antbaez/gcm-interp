@@ -1,0 +1,1205 @@
+{
+  "Llama-3.1-8B-Instruct": {
+    "from_harmful-long_to_harmless": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 30.0,
+            "dataset_tag": "harmful",
+            "layer": 19,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.27,
+            "val_split": "harmless-test"
+          },
+          "mean-padding": {
+            "N": 20.0,
+            "dataset_tag": "harmful",
+            "layer": 15,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.24,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": 16,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.3980000000000001,
+            "val_split": "harmless-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long-more-templates_to_sycophancy-more-templates": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 14,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.85,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 15,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 3,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.84,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 20,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.95,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long-unaligned_to_sycophancy-unaligned": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 14,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.85,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 15,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 3,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.84,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 20,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.95,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long_to_sycophancy": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": 14,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.85,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": 15,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 3,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.84,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy",
+            "layer": 20,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.95,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-aligned_to_prose-aligned": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 11,
+            "model_tag": "llama",
+            "n_conditions": 212,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.56,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.72,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.97,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-longer_to_prose-longer": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 11,
+            "model_tag": "llama",
+            "n_conditions": 212,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.56,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.72,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.97,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-varied_to_prose-varied": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 11,
+            "model_tag": "llama",
+            "n_conditions": 212,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.56,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.72,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.97,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long_to_prose": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 11,
+            "model_tag": "llama",
+            "n_conditions": 212,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.56,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.72,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 12,
+            "model_tag": "llama",
+            "n_conditions": 110,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.97,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    }
+  },
+  "OLMo-2-1124-13B-DPO": {
+    "from_harmful-long_to_harmless": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 20.0,
+            "dataset_tag": "harmful",
+            "layer": 15,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.504,
+            "val_split": "harmless-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "harmful",
+            "layer": 16,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.73,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 90.0,
+            "dataset_tag": "harmful",
+            "layer": 24,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.88,
+            "val_split": "harmless-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long-more-templates_to_sycophancy-more-templates": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.51,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.67,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.65,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long-unaligned_to_sycophancy-unaligned": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.51,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.67,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.65,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long_to_sycophancy": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.51,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.67,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.65,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-aligned_to_prose-aligned": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 90.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.42,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.75,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.96,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-longer_to_prose-longer": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 90.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.42,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.75,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.96,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-varied_to_prose-varied": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 90.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.42,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.75,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.96,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long_to_prose": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 90.0,
+            "dataset_tag": "verse",
+            "layer": 22,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.42,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 0.75,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 10.0,
+            "dataset_tag": "verse",
+            "layer": 13,
+            "model_tag": "olmo",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.96,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    }
+  },
+  "Qwen3-14B": {
+    "from_harmful-long_to_harmless": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 150.0,
+            "dataset_tag": "harmful",
+            "layer": 14,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.844,
+            "val_split": "harmless-test"
+          },
+          "mean-padding": {
+            "N": 75.0,
+            "dataset_tag": "harmful",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.824,
+            "val_split": "harmless-test"
+          },
+          "positional": {
+            "N": 75.0,
+            "dataset_tag": "harmful",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.88,
+            "val_split": "harmless-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long-more-templates_to_sycophancy-more-templates": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 125.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 16,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.8,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 15,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.99,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy-more-templates",
+            "inherited_from": "sycophancy",
+            "layer": 18,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.93,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long-unaligned_to_sycophancy-unaligned": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 125.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 16,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.8,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 15,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.99,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy-unaligned",
+            "inherited_from": "sycophancy",
+            "layer": 18,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.93,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_non-sycophantic-long_to_sycophancy": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 125.0,
+            "dataset_tag": "sycophancy",
+            "layer": 16,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.8,
+            "val_split": "sycophancy-test"
+          },
+          "mean-padding": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy",
+            "layer": 15,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.99,
+            "val_split": "sycophancy-test"
+          },
+          "positional": {
+            "N": 100.0,
+            "dataset_tag": "sycophancy",
+            "layer": 18,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.93,
+            "val_split": "sycophancy-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-aligned_to_prose-aligned": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 75.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 241,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.6,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 50.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 4,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 2.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 50.0,
+            "dataset_tag": "verse-aligned",
+            "inherited_from": "verse",
+            "layer": 16,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 8,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 2.0,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-longer_to_prose-longer": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 75.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 241,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.6,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 50.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 4,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 2.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 50.0,
+            "dataset_tag": "verse-longer",
+            "inherited_from": "verse",
+            "layer": 16,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 8,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 2.0,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long-varied_to_prose-varied": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 75.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 241,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.6,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 50.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 4,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 2.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 50.0,
+            "dataset_tag": "verse-varied",
+            "inherited_from": "verse",
+            "layer": 16,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 8,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 2.0,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    },
+    "from_verse-long_to_prose": {
+      "residuals": {
+        "local": {
+          "last": {
+            "N": 75.0,
+            "dataset_tag": "verse",
+            "layer": 17,
+            "model_tag": "qwen3",
+            "n_conditions": 241,
+            "n_tied_at_best": 1,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 1.6,
+            "val_split": "prose-test"
+          },
+          "mean-padding": {
+            "N": 50.0,
+            "dataset_tag": "verse",
+            "layer": 13,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 4,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 2.0,
+            "val_split": "prose-test"
+          },
+          "positional": {
+            "N": 50.0,
+            "dataset_tag": "verse",
+            "layer": 16,
+            "model_tag": "qwen3",
+            "n_conditions": 154,
+            "n_tied_at_best": 8,
+            "scope": "local",
+            "score_mode": "harmonic_floor",
+            "stream": "residuals",
+            "val_n": 50,
+            "val_pass_rate": 2.0,
+            "val_split": "prose-test"
+          }
+        }
+      }
+    }
+  }
+}
