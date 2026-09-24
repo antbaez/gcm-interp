@@ -42,3 +42,12 @@ results-resid_old/
 results_old/
 
 mmlu/data/mmlu_test.jsonl
+
+judge-evals/accuracy_axbench_prompts.pre-reasoning-judge-20260923/
+judge-evals/accuracy_axbench_prompts/
+judge-evals/best_configs_axbench_prompts.json
+judge-evals/best_configs_axbench_prompts.json.lock
+judge-evals/best_configs_axbench_prompts.pre-reasoning-judge-20260923.json
+judge-evals/rating_histograms.py
+judge-evals/workdirs_axbench_prompts.pre-reasoning-judge-20260923/
+judge-evals/workdirs_axbench_prompts/
