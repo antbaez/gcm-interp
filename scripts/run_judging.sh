@@ -8,7 +8,9 @@ BATCH_SIZE=128
 EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
 
 # Usage: ./scripts/run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--attention] [--device <cuda:0>] [--force]
-# --dataset defaults to "all" (harmful, sycophancy, verse).
+# --dataset defaults to "all" (harmful, sycophancy, verse). Dataset variants
+# (VARIANT_DATASETS below, e.g. verse-varied) can be named explicitly but are
+# never part of "all".
 # Residual-stream judging runs by default. Pass --attention to judge attention-head steering results instead.
 MODEL_TAG=""
 DATASET_TAG="all"
@@ -52,6 +54,8 @@ fi
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
 ALL_DATASETS=("harmful" "sycophancy" "verse")
+# Variants of the sycophancy/verse datasets: accepted by --dataset, excluded from "all".
+VARIANT_DATASETS=("sycophancy-more-templates" "sycophancy-unaligned" "sycophancy-diff-length" "sycophancy-unaligned-diff-length" "verse-aligned" "verse-longer" "verse-varied")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -71,8 +75,8 @@ if [ "$DATASET_TAG" = "all" ]; then
 else
     IFS=',' read -ra DATASETS <<< "$DATASET_TAG"
     for D in "${DATASETS[@]}"; do
-        if [[ ! " ${ALL_DATASETS[*]} " == *" $D "* ]]; then
-            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, all"; exit 1
+        if [[ ! " ${ALL_DATASETS[*]} ${VARIANT_DATASETS[*]} " == *" $D "* ]]; then
+            echo "Error: unknown dataset '$D'. Must be one of: ${ALL_DATASETS[*]} ${VARIANT_DATASETS[*]} all"; exit 1
         fi
     done
 fi
@@ -95,6 +99,13 @@ for M_TAG in "${MODELS[@]}"; do
             harmful)                  SOURCE="harmful-long";               BASE="harmless";                DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
             sycophancy)               SOURCE="non-sycophantic-long";       BASE="sycophancy";              DATA_SOURCE="sycophancy-long"; DATA_BASE="sycophancy" ;;
             verse)                    SOURCE="verse-long";                 BASE="prose";                   DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+            sycophancy-more-templates) SOURCE="non-sycophantic-long-more-templates"; BASE="sycophancy-more-templates"; DATA_SOURCE="sycophancy-long-more-templates"; DATA_BASE="$BASE" ;;
+            sycophancy-unaligned)     SOURCE="non-sycophantic-long-unaligned"; BASE="sycophancy-unaligned"; DATA_SOURCE="sycophancy-long-unaligned"; DATA_BASE="$BASE" ;;
+            sycophancy-diff-length)   SOURCE="non-sycophantic-long-diff-length"; BASE="sycophancy-diff-length"; DATA_SOURCE="sycophancy-long-diff-length"; DATA_BASE="$BASE" ;;
+            sycophancy-unaligned-diff-length) SOURCE="non-sycophantic-long-unaligned-diff-length"; BASE="sycophancy-unaligned-diff-length"; DATA_SOURCE="sycophancy-long-unaligned-diff-length"; DATA_BASE="$BASE" ;;
+            verse-aligned)            SOURCE="verse-long-aligned"; BASE="prose-aligned"; DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+            verse-longer)             SOURCE="verse-long-longer"; BASE="prose-longer"; DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
+            verse-varied)             SOURCE="verse-long-varied"; BASE="prose-varied"; DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
         esac
 
         # The split's test-file stem is what distinguishes validation-sweep

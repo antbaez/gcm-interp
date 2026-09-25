@@ -2,7 +2,9 @@
 set -e
 
 # Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--attention] [--global] [--split val|test] [--device <cuda:0>] [--no-model-cache]
-# --dataset defaults to "all" (harmful, sycophancy, verse).
+# --dataset defaults to "all" (harmful, sycophancy, verse). Dataset variants
+# (VARIANT_DATASETS below, e.g. verse-varied) can be named explicitly but are
+# never part of "all".
 # --split val (default) sweeps N x layer on the validation split; --split test pins the
 # selection from best_configs.json and generates once on the held-out test split.
 # Residual-stream steering runs by default. Pass --attention to steer the attention
@@ -103,6 +105,8 @@ fi
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
 ALL_DATASETS=("harmful" "sycophancy" "verse")
+# Variants of the sycophancy/verse datasets: accepted by --dataset, excluded from "all".
+VARIANT_DATASETS=("sycophancy-more-templates" "sycophancy-unaligned" "sycophancy-diff-length" "sycophancy-unaligned-diff-length" "verse-aligned" "verse-longer" "verse-varied")
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen,gemma")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -122,8 +126,8 @@ if [ "$DATASET_TAG" = "all" ]; then
 else
     IFS=',' read -ra DATASETS <<< "$DATASET_TAG"
     for D in "${DATASETS[@]}"; do
-        if [[ ! " ${ALL_DATASETS[*]} " == *" $D "* ]]; then
-            echo "Error: unknown dataset '$D'. Must be one of: harmful, sycophancy, verse, all"; exit 1
+        if [[ ! " ${ALL_DATASETS[*]} ${VARIANT_DATASETS[*]} " == *" $D "* ]]; then
+            echo "Error: unknown dataset '$D'. Must be one of: ${ALL_DATASETS[*]} ${VARIANT_DATASETS[*]} all"; exit 1
         fi
     done
 fi
@@ -180,6 +184,13 @@ run_experiments_for_model() {
             harmful)                D_SOURCE="harmful-long";              D_BASE="harmless";               D_DIR="harmful-long" ;;
             sycophancy)             D_SOURCE="non-sycophantic-long";      D_BASE="sycophancy";             D_DIR="sycophancy-long" ;;
             verse)                  D_SOURCE="verse-long";                D_BASE="prose";                  D_DIR="verse-long" ;;
+            sycophancy-more-templates) D_SOURCE="non-sycophantic-long-more-templates"; D_BASE="sycophancy-more-templates"; D_DIR="sycophancy-long-more-templates" ;;
+            sycophancy-unaligned)   D_SOURCE="non-sycophantic-long-unaligned"; D_BASE="sycophancy-unaligned"; D_DIR="sycophancy-long-unaligned" ;;
+            sycophancy-diff-length) D_SOURCE="non-sycophantic-long-diff-length"; D_BASE="sycophancy-diff-length"; D_DIR="sycophancy-long-diff-length" ;;
+            sycophancy-unaligned-diff-length) D_SOURCE="non-sycophantic-long-unaligned-diff-length"; D_BASE="sycophancy-unaligned-diff-length"; D_DIR="sycophancy-long-unaligned-diff-length" ;;
+            verse-aligned)          D_SOURCE="verse-long-aligned"; D_BASE="prose-aligned"; D_DIR="verse-long-aligned" ;;
+            verse-longer)           D_SOURCE="verse-long-longer"; D_BASE="prose-longer"; D_DIR="verse-long-longer" ;;
+            verse-varied)           D_SOURCE="verse-long-varied"; D_BASE="prose-varied"; D_DIR="verse-long-varied" ;;
         esac
         SOURCES+=("$D_SOURCE")
         BASES+=("$D_BASE")

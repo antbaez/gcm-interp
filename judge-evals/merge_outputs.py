@@ -68,6 +68,14 @@ SOURCE_TO_DIR = {
     ("non-sycophantic-poem-long",          "sycophancy-poem"):          "sycophancy-poem-long",
     ("non-sycophantic-poem-long",          "sycophancy-poem-concise"):  "sycophancy-poem-concise-long",
     ("non-sycophantic-poem-concise-long",  "sycophancy-poem-concise"):  "sycophancy-poem-concise-long",
+    # Dataset variants (run_steering.sh VARIANT_DATASETS)
+    "non-sycophantic-long-more-templates":        "sycophancy-long-more-templates",
+    "non-sycophantic-long-unaligned":             "sycophancy-long-unaligned",
+    "non-sycophantic-long-diff-length":           "sycophancy-long-diff-length",
+    "non-sycophantic-long-unaligned-diff-length": "sycophancy-long-unaligned-diff-length",
+    "verse-long-aligned":                         "verse-long-aligned",
+    "verse-long-longer":                          "verse-long-longer",
+    "verse-long-varied":                          "verse-long-varied",
 }
 
 

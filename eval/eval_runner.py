@@ -2,6 +2,7 @@ from asyncio import log
 # from setup import set_seed
 from eval.activations import steering_reps_cache
 from eval.generation import select_gen_qs_toks, generate_with_patches, decode_responses
+import hashlib
 import os
 import gc
 import json
@@ -26,10 +27,52 @@ def save_prompt_responses(responses, path):
     with open(path.replace('.txt', '.json'), 'w') as jf:
         json.dump(responses, jf)
 
+def baseline_cache_path(config):
+    """On-disk baseline for the current dataset + eval split, beside its config.yml.
+
+    Lives at the task-dir level (not under <norm>/<stream>/<scope>/<method>/) and
+    doesn't end in `_gen.json`, so neither the judge's gen-file discovery nor
+    select_best_config.py's held-out pruning ever picks it up.
+    """
+    return os.path.join(config.get_output_prefix(), "baseline", f"baseline_{config.args.test_dataset}.json")
+
+
+def _baseline_key(config, data_handler):
+    """Everything the unsteered outputs depend on, so a stale cache is never reused."""
+    input_ids = select_gen_qs_toks(config, data_handler)['input_ids']
+    return {
+        "model_id": config.args.model_id,
+        "test_dataset": config.args.test_dataset,
+        "max_new_tokens": config.args.max_new_tokens,
+        # Batches are left-padded to their longest prompt, so batch composition
+        # is part of what the greedy outputs depend on.
+        "batch_size": config.args.batch_size,
+        "input_hash": hashlib.sha1(input_ids.cpu().numpy().tobytes()).hexdigest(),
+        "n": int(input_ids.shape[0]),
+    }
+
+
 def generate_baseline(config, data_handler, model_handler):
     """Unsteered generation on the eval test set. Independent of steering_type,
     so callers looping over steering types should compute this once per
-    dataset and pass it into run_eval() rather than letting each call redo it."""
+    dataset and pass it into run_eval() rather than letting each call redo it.
+
+    The outputs are saved to baseline_cache_path() and reloaded on later runs
+    whenever the model, split, prompts, max_new_tokens and batch size all match.
+    """
+    cache_path = baseline_cache_path(config)
+    key = _baseline_key(config, data_handler)
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path) as f:
+                cached = json.load(f)
+            if cached.get("key") == key and len(cached.get("outputs", [])) == key["n"]:
+                print(f"\nBASELINE GENERATION — skipped, loaded {cache_path}")
+                return cached["outputs"]
+            print(f"\nBaseline cache {cache_path} doesn't match this run's settings; regenerating")
+        except (OSError, ValueError) as e:
+            print(f"\nCouldn't read baseline cache {cache_path} ({e}); regenerating")
+
     model = model_handler.model
     model.eval()
     batch_handler = BatchHandler(config, data_handler)
@@ -52,9 +95,25 @@ def generate_baseline(config, data_handler, model_handler):
         original_outputs += op.cpu().numpy().tolist()
         batch_handler.update()
         print(f"  Baseline batch {batch_num}/{baseline_total} — done in {time.time()-_t0:.1f}s")
+
+    # Write to a temp file and rename, so an interrupted run never leaves a
+    # truncated cache behind for the next one to trip over.
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    tmp_path = f"{cache_path}.tmp"
+    with open(tmp_path, "w") as f:
+        json.dump({"key": key, "outputs": original_outputs}, f)
+    os.replace(tmp_path, cache_path)
+    print(f"Saved baseline: {cache_path}")
     return original_outputs
 
-def run_eval(config, data_handler, model_handler, batch_handler, N=None, original_outputs=None):
+def run_eval(config, data_handler, model_handler, batch_handler, N=None, original_outputs=None, baseline_fn=None):
+    """Steered generation for every (N, layer) condition of the current steering_type.
+
+    The baseline and the steering vector are only produced once a condition
+    actually needs them, so a run whose gen files all exist does no generation.
+    `baseline_fn` (e.g. a per-dataset memoized generate_baseline) is used instead
+    of calling generate_baseline() directly when given.
+    """
     # set_seed()
     print(f"Starting evaluation — task: {config.args.source} -> {config.args.base}, test: {config.args.test_dataset}, N={config.args.steering_n}")
 
@@ -64,8 +123,21 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
     # Whole layers are steered in both streams: a single-layer sweep over
     # -layer_range_start/-layer_range_end (default) or every layer at once (--global).
     layer_sweep = not global_steer
-    patching_reps = load_patching_reps(data_handler, model_handler)
     ablation = data_handler.config.args.ablation
+
+    def get_baseline():
+        nonlocal original_outputs
+        if original_outputs is None:
+            original_outputs = (baseline_fn() if baseline_fn is not None
+                                else generate_baseline(config, data_handler, model_handler))
+        return original_outputs
+
+    patching_reps = None
+    def get_patching_reps():
+        nonlocal patching_reps
+        if patching_reps is None:
+            patching_reps = load_patching_reps(data_handler, model_handler)
+        return patching_reps
     reps_types = ['targeted']
 
     steering_coverage = None
@@ -104,8 +176,6 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
     decoded_responses = {}
     pre_patch_logits = None
     model.eval()
-    if original_outputs is None:
-        original_outputs = generate_baseline(config, data_handler, model_handler)
     print("\nSTEERING GENERATION")
     for N in config.args.steering_n:
         config.args.N = N
@@ -132,6 +202,17 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
                     with open(f"{existing_stem}.json", 'r') as jf:
                         decoded_responses[reps_type][sweep_val] = json.load(jf)
 
+                    # A current-format file that already pairs every response with
+                    # its baseline needs nothing: skip without touching the baseline.
+                    old_key = f'old_{config.args.base}'
+                    if existing_stem == new_stem and all(old_key in item for item in decoded_responses[reps_type][sweep_val]):
+                        print(f"Skipping evaluation for {slot}, N={config.args.N} as gen files already exist.")
+                        continue
+
+                    # Legacy stem or missing baseline field: rewrite it under the
+                    # current stem with the baseline filled in (loaded from disk
+                    # when cached).
+                    original_outputs = get_baseline()
                     for item_iix, item in enumerate(decoded_responses[reps_type][sweep_val]):
                         query = item['query']
                         item[f'old_{config.args.base}'] = model.tokenizer.decode(original_outputs[item_iix], skip_special_tokens=True).split(query)[-1]
@@ -141,6 +222,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
                     continue
                 decoded_responses[reps_type][sweep_val] = []
                 gen_file = f"{new_stem}.txt"
+                original_outputs = get_baseline()
+                patching_reps = get_patching_reps()
 
                 if layer_sweep:
                     steer_layers = [sweep_val]

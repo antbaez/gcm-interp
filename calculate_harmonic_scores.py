@@ -21,15 +21,24 @@ counted in the `dropped` column.
 Reads the layout run_harmonic_tests.py saves under harmonic_results/judge_scores/
 (the default), which mirrors judge-evals/workdirs/, so --root can point at either:
 
-    <root>/<model>/<task>/<norm>/<stream>/<cache>/<scope>/<method>/N=<N>_<ablation>_layer=<L>_<test_file>/
+    <root>/<model>/<task>/<norm>/<stream>/<scope>/<method>/N=<N>_<ablation>_layer=<L>_<test_file>/
 
 One row is printed per condition, so a method with several saved (N, layer)
 configs gets one row each.
+
+Dataset variants (e.g. verse-varied, sycophancy-unaligned; see
+run_harmonic_tests.py) are reported under their tag, with their base dataset
+in the `base` column. `delta_vs_base` is the variant's harmonic mean minus its
+base dataset's at the same model, method, N and layer on the matching split
+(`-` when that base condition isn't scored, and for base datasets themselves).
+--datasets filters rows by tag (`variants` / `all` expand as in
+run_harmonic_tests.py); base rows used for the deltas are read regardless.
 
 Usage:
     python calculate_harmonic_scores.py
     python calculate_harmonic_scores.py --out harmonic_scores.csv
     python calculate_harmonic_scores.py --root judge-evals/workdirs --split heldout-test
+    python calculate_harmonic_scores.py --datasets variants
 """
 
 import argparse
@@ -41,19 +50,16 @@ REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT / "judge-evals"))
 
 from selection_utils import parse_condition_dir, read_jsonl
+from run_harmonic_tests import DATASET_TASKS, VARIANT_BASE, parse_datasets
 
 DEFAULT_ROOT = REPO_ROOT / "harmonic_results" / "judge_scores"
 
-# Task dir -> short dataset tag (mirrors run_harmonic_tests.py's DATASET_TASKS);
-# unknown tasks, e.g. dataset variants, are reported under their task dir name.
-TASK_DATASETS = {
-    "from_harmful-long_to_harmless": "harmful",
-    "from_non-sycophantic-long_to_sycophancy": "sycophancy",
-    "from_verse-long_to_prose": "verse",
-}
+# Task dir -> short dataset tag, incl. dataset variants; unknown tasks are
+# reported under their task dir name.
+TASK_DATASETS = {task: tag for tag, (task, _) in DATASET_TASKS.items()}
 
-FIELDS = ["model", "dataset", "method", "N", "layer", "test_file", "n", "unparsed", "dropped",
-          "harmonic_mean", "concept", "fluency", "relevance", "path"]
+FIELDS = ["model", "dataset", "base", "method", "N", "layer", "test_file", "n", "unparsed", "dropped",
+          "harmonic_mean", "delta_vs_base", "concept", "fluency", "relevance", "path"]
 
 
 def map_concept(rating) -> int | None:
@@ -119,39 +125,67 @@ def collect(root: Path, split: str | None) -> list[dict]:
         if split is not None and not meta["test_file"].endswith(split):
             continue
         parts = cond_dir.relative_to(root).parts
-        # <model>/<task>/<norm>/<stream>/<cache>/<scope>/<method>/<condition>
-        if len(parts) != 8:
+        # <model>/<task>/<norm>/<stream>/<scope>/<method>/<condition>
+        if len(parts) != 7:
             print(f"Skipping {cond_dir} (unexpected directory depth)", file=sys.stderr)
             continue
         scores = score_condition(cond_dir)
         if scores is None:
             continue
+        dataset = TASK_DATASETS.get(parts[1], parts[1])
         results.append({
             "model": parts[0],
-            "dataset": TASK_DATASETS.get(parts[1], parts[1]),
-            "method": parts[6],
+            "dataset": dataset,
+            "base": VARIANT_BASE.get(dataset, dataset),
+            "method": parts[5],
             "N": meta["N"],
             "layer": meta["value"],
             "test_file": meta["test_file"],
             **scores,
             "path": str(cond_dir.relative_to(root)),
         })
-    results.sort(key=lambda r: (r["model"], r["dataset"], r["method"], r["N"], r["layer"]))
+    add_base_deltas(results)
+    results.sort(key=lambda r: (r["model"], r["base"], r["dataset"] != r["base"], r["dataset"],
+                                r["method"], r["N"], r["layer"]))
     return results
+
+
+def split_suffix(r: dict) -> str:
+    """The split part of a test file stem, e.g. 'heldout-test' for prose-varied-heldout-test."""
+    base_name = DATASET_TASKS[r["dataset"]][1] if r["dataset"] in DATASET_TASKS else ""
+    return r["test_file"][len(base_name) + 1:] if r["test_file"].startswith(base_name + "-") else r["test_file"]
+
+
+def add_base_deltas(results: list[dict]):
+    """Set each variant row's harmonic-mean difference from its base dataset's matching row."""
+    key = lambda r, dataset: (r["model"], dataset, r["method"], r["N"], r["layer"], split_suffix(r))
+    base_scores = {key(r, r["dataset"]): r["harmonic_mean"]
+                   for r in results if r["dataset"] not in VARIANT_BASE}
+    for r in results:
+        base_score = (base_scores.get(key(r, r["base"])) if r["dataset"] in VARIANT_BASE else None)
+        r["delta_vs_base"] = (r["harmonic_mean"] - base_score
+                              if base_score is not None and r["harmonic_mean"] is not None else None)
 
 
 def fmt(x) -> str:
     return "-" if x is None else f"{x:.3f}"
 
 
+def fmt_delta(x) -> str:
+    return "-" if x is None else f"{x:+.3f}"
+
+
 def print_table(results: list[dict]):
-    header = (f"{'model':<22} {'dataset':<11} {'method':<11} {'N':>6} {'layer':>5} "
-              f"{'n':>4} {'unpar':>5} {'drop':>4}  {'harmonic':>8} {'concept':>7} {'fluency':>7} {'relev':>7}")
+    dw = max([11] + [len(r["dataset"]) for r in results])
+    header = (f"{'model':<22} {'dataset':<{dw}} {'method':<11} {'N':>6} {'layer':>5} "
+              f"{'n':>4} {'unpar':>5} {'drop':>4}  {'harmonic':>8} {'Δ base':>7} "
+              f"{'concept':>7} {'fluency':>7} {'relev':>7}")
     print(header)
     print("-" * len(header))
     for r in results:
-        print(f"{r['model']:<22} {r['dataset']:<11} {r['method']:<11} {r['N']:>6g} {r['layer']:>5} "
-              f"{r['n']:>4} {r['unparsed']:>5} {r['dropped']:>4}  {fmt(r['harmonic_mean']):>8} {fmt(r['concept']):>7} "
+        print(f"{r['model']:<22} {r['dataset']:<{dw}} {r['method']:<11} {r['N']:>6g} {r['layer']:>5} "
+              f"{r['n']:>4} {r['unparsed']:>5} {r['dropped']:>4}  {fmt(r['harmonic_mean']):>8} "
+              f"{fmt_delta(r['delta_vs_base']):>7} {fmt(r['concept']):>7} "
               f"{fmt(r['fluency']):>7} {fmt(r['relevance']):>7}")
 
 
@@ -162,12 +196,18 @@ def main():
     parser.add_argument("--split", default=None,
                         help="Only conditions whose test file ends with this, e.g. 'heldout-test' "
                              "(default: every condition found)")
+    parser.add_argument("--datasets", default=None,
+                        help="Comma-separated dataset tags to report, incl. variants; 'variants' = every "
+                             "variant, 'all' = base datasets + every variant (default: everything found)")
     parser.add_argument("--out", type=Path, default=None, help="Also write the table as CSV here")
     args = parser.parse_args()
 
     if not args.root.is_dir():
         raise SystemExit(f"{args.root} not found; run run_harmonic_tests.py first or pass --root")
     results = collect(args.root, args.split)
+    if args.datasets is not None:
+        wanted = set(parse_datasets(args.datasets))
+        results = [r for r in results if r["dataset"] in wanted]
     if not results:
         raise SystemExit(f"No judged conditions found under {args.root}")
 
