@@ -51,3 +51,5 @@ judge-evals/best_configs_axbench_prompts.pre-reasoning-judge-20260923.json
 judge-evals/rating_histograms.py
 judge-evals/workdirs_axbench_prompts.pre-reasoning-judge-20260923/
 judge-evals/workdirs_axbench_prompts/
+# Captured token activations (analysis/capture_activations.py)
+activations/

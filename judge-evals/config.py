@@ -168,6 +168,14 @@ SOURCE_TO_TEMPLATE = {
     "non-sycophantic-poem-long":          "sycophancy",
     "non-sycophantic-haiku-concise-long": "sycophancy",
     "non-sycophantic-poem-concise-long":  "sycophancy",
+    # Dataset variants (run_steering.sh VARIANT_DATASETS)
+    "non-sycophantic-long-more-templates":     "sycophancy",
+    "non-sycophantic-long-unaligned":          "sycophancy",
+    "non-sycophantic-long-diff-length":        "sycophancy",
+    "non-sycophantic-long-unaligned-diff-length": "sycophancy",
+    "verse-long-aligned":                      "verse",
+    "verse-long-longer":                       "verse",
+    "verse-long-varied":                       "verse",
 }
 
 # Templates that compare two responses (need old + new)

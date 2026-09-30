@@ -73,9 +73,15 @@ def main():
             batch_handler = BatchHandler(config, data_handler, 0, min(batch_size, data_handler.LEN))
 
             if config.args.steering:
-                # Baseline generation doesn't depend on steering_type — compute it once
-                # per dataset instead of once per steering_type in the loop below.
-                original_outputs = generate_baseline(config, data_handler, model_handler)
+                # Baseline generation doesn't depend on steering_type — produce it at
+                # most once per dataset, and only when some condition in the loop
+                # below still needs generating. generate_baseline() itself reloads
+                # it from disk when a matching saved baseline exists.
+                baseline = []
+                def get_baseline():
+                    if not baseline:
+                        baseline.append(generate_baseline(config, data_handler, model_handler))
+                    return baseline[0]
                 for steering_type in config.args.steering_types:
                     config.args.steering_type = steering_type
                     print(f'\n--- Steering type: {steering_type} ---')
@@ -97,7 +103,7 @@ def main():
                         print(f"Pinned from validation: N={entry['N']:g} layer={entry['layer']} "
                               f"(val w_rf={entry['val_pass_rate']:.3f})")
 
-                    run_eval(config, data_handler, model_handler, batch_handler, original_outputs=original_outputs)
+                    run_eval(config, data_handler, model_handler, batch_handler, baseline_fn=get_baseline)
 
 if __name__ == "__main__":
     main()
