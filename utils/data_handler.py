@@ -7,6 +7,48 @@ import ast
 import re
 from tqdm import tqdm
 import pandas as pd
+
+
+def content_token_positions(tokenizer, templated, contents, toks, label="prompt"):
+    """Per-row token indices locating each prompt's own content inside its chat template.
+
+    `toks` is the tokenized `templated` batch with `offset_mapping`. Returns tensors of:
+      content-start  first token of the content; everything before it is the pre-prompt
+                     chat template (or left padding)
+      last-prompt    final token of the content
+      last-EOT       first special token after the content (e.g. <|eot_id|> / <|im_end|>),
+                     or the token holding the character right after the content when the
+                     template closes the turn without one, as OLMo does
+    """
+    special_ids = {i for i, t in tokenizer.added_tokens_decoder.items() if t.special}
+    ids = toks['input_ids'].tolist()
+    mask = toks['attention_mask'].tolist()
+    offsets = toks['offset_mapping'].tolist()
+    content_start, last_prompt, last_eot = [], [], []
+    for i, (s, raw) in enumerate(zip(templated, contents)):
+        content = raw.strip()
+        start = s.rfind(content)
+        if not content or start < 0:
+            raise ValueError(f"{label} {i}: content not found in its templated prompt.")
+        end = start + len(content)
+        real = [j for j in range(len(ids[i])) if mask[i][j]]
+        cs = next(j for j in real if offsets[i][j][1] > start)
+        lp = next(j for j in real if offsets[i][j][0] <= end - 1 < offsets[i][j][1])
+        eot = next((j for j in real if j > lp and ids[i][j] in special_ids), None)
+        if eot is None:
+            eot = next(j for j in real if offsets[i][j][0] <= end < offsets[i][j][1])
+        content_start.append(cs)
+        last_prompt.append(lp)
+        last_eot.append(eot)
+    return {'content-start': torch.tensor(content_start), 'last-prompt': torch.tensor(last_prompt),
+            'last-EOT': torch.tensor(last_eot)}
+
+
+def steer_mask_from_starts(content_start, seq_len):
+    """[n, seq_len] bool: True from each row's content start onward (never the pre-prompt template or padding)."""
+    return torch.arange(seq_len)[None, :] >= content_start[:, None]
+
+
 class DataHandler:
     def __init__(self, config, model_handler):
         self.config = config
@@ -84,7 +126,11 @@ class DataHandler:
                 self.base_qs_toks = {
                     'test': self.tokenize_prompts(base_qs['test'], max_length=self.gen_max_len)
                 }
+                test_starts = self._content_positions(jsons['base_test'], self.base_qs_toks['test'], "test")['content-start']
+                self.test_steer_mask = steer_mask_from_starts(test_starts, self.gen_max_len).to(self.device)
 
+        self._steering_jsons = {'add': jsons['steering_add'], 'sub': jsons['steering_sub']}
+        self._steering_positions = None
         if steering["add_qs"] and steering["sub_qs"]:
             self.steering_qs_toks = {
                 "add": self.tokenize_prompts(steering["add_qs"], max_length=self.gen_max_len),
@@ -96,19 +142,13 @@ class DataHandler:
     def get_templated_prompts(self, prompts, _base_completion=None, only_q=False, add_generation_prompt=False):
         extra_kwargs = self.model_handler.template_kwargs
         if only_q:
-            prompt_lengths = None
-            assistant_exists = any([p['role'] == 'assistant' for p in prompts[0]['prompt']])
-            if assistant_exists:
-                prompt_lengths = [len(p['prompt']) - 1 for p in prompts]
-            else:
-                prompt_lengths = [max(len(p['prompt']), 1) for p in prompts]
             return [
                 self.model_handler.tokenizer.apply_chat_template(
-                    [p['prompt'][i] for i in range(prompt_lengths[pdx])],
+                    msgs,
                     add_generation_prompt=add_generation_prompt,
                     tokenize=False,
                     **extra_kwargs
-                ) for pdx, p in enumerate(prompts)]
+                ) for msgs in self._query_messages(prompts)]
         elif _base_completion is not None:
             assert len(prompts) == len(_base_completion), f"Length of prompts and base completion do not match: {len(prompts)} vs {len(_base_completion)}"
             return [
@@ -126,12 +166,49 @@ class DataHandler:
                     **extra_kwargs
                 ) for p in prompts]
         
-    def tokenize_prompts(self, p, max_length=None):
+    def tokenize_prompts(self, p, max_length=None, return_offsets_mapping=False):
+        kwargs = dict(truncation=False, return_tensors="pt", add_special_tokens=False,
+                      return_offsets_mapping=return_offsets_mapping)
         if max_length is None:
-            tokens = self.model_handler.tokenizer(p, padding=True, truncation=False, return_tensors="pt")
+            tokens = self.model_handler.tokenizer(p, padding=True, **kwargs)
         else:
-            tokens = self.model_handler.tokenizer(p, padding='max_length', max_length=max_length, truncation=False, return_tensors="pt")
-        return {"input_ids": tokens["input_ids"].to(self.device), "attention_mask": tokens["attention_mask"].to(self.device)}
+            tokens = self.model_handler.tokenizer(p, padding='max_length', max_length=max_length, **kwargs)
+        out = {"input_ids": tokens["input_ids"].to(self.device), "attention_mask": tokens["attention_mask"].to(self.device)}
+        if return_offsets_mapping:
+            out["offset_mapping"] = tokens["offset_mapping"]
+        return out
+
+    def _query_messages(self, prompts):
+        """The messages each only_q prompt is templated from (see get_templated_prompts)."""
+        assistant_exists = any([p['role'] == 'assistant' for p in prompts[0]['prompt']])
+        if assistant_exists:
+            prompt_lengths = [len(p['prompt']) - 1 for p in prompts]
+        else:
+            prompt_lengths = [max(len(p['prompt']), 1) for p in prompts]
+        return [p['prompt'][:prompt_lengths[pdx]] for pdx, p in enumerate(prompts)]
+
+    def steering_token_positions(self):
+        """content_token_positions() for steering_qs_toks['add'/'sub'], keyed by side."""
+        if self._steering_positions is None:
+            positions = {}
+            for side, rows in (('add', self._steering_jsons['add']), ('sub', self._steering_jsons['sub'])):
+                positions[side] = self._content_positions(rows, self.steering_qs_toks[side], f"steering {side}")
+            self._steering_positions = positions
+        return self._steering_positions
+
+    def steering_content_masks(self):
+        """[n, P] bool per side: True from each steering prompt's content start onward."""
+        positions = self.steering_token_positions()
+        return {side: steer_mask_from_starts(positions[side]['content-start'], self.gen_max_len)
+                for side in ('add', 'sub')}
+
+    def _content_positions(self, rows, expected_toks, label):
+        templated = self.get_templated_prompts(rows, only_q=True, add_generation_prompt=True)
+        toks = self.tokenize_prompts(templated, max_length=self.gen_max_len, return_offsets_mapping=True)
+        if not torch.equal(toks['input_ids'].cpu(), expected_toks['input_ids'].cpu()):
+            raise RuntimeError(f"{label} prompts re-tokenized differently; positions would not line up.")
+        contents = [msgs[-1]['content'] for msgs in self._query_messages(rows)]
+        return content_token_positions(self.model_handler.tokenizer, templated, contents, toks, label)
     
     def decode_prompts(self, p):
         return self.model_handler.tokenizer.decode(p, skip_special_tokens=True)

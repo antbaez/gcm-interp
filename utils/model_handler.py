@@ -1,9 +1,10 @@
+import os
+os.environ.setdefault('HF_XET_CHUNK_CACHE_SIZE_BYTES', '0')
 import re
 import shutil
 import tempfile
 import torch
 from transformers import BitsAndBytesConfig, AutoTokenizer, AutoModelForSequenceClassification
-import os
 from nnsight import NNsight, LanguageModel
 class ModelHandler:
     def __init__(self, config):
@@ -21,18 +22,23 @@ class ModelHandler:
         self.template_kwargs = (
             {'enable_thinking': self.thinking} if self.is_qwen3 or self.is_gemma4 else {}
         )
-        # gemma4 already routes through its own persistent cache_dir below, so
-        # --no-model-cache only applies to models that would otherwise land in
-        # the default $HF_HOME cache.
-        self.no_model_cache = getattr(config.args, 'no_model_cache', False) and not self.is_gemma4
-        self._temp_cache_dir = tempfile.mkdtemp(prefix='hf-nocache-') if self.no_model_cache else None
-        self.tokenizer = self.load_tokenizer(model_id)
-        self.model = self.load_model(model_id, self.device)
+        # By default (--model-cache opts out) the model and tokenizer are downloaded
+        # to a fresh directory under MODEL_TMP_DIR (default ~/orcd/scratch/hf-nocache,
+        # not RAM-backed /tmp) and deleted once loaded, even if loading fails.
+        self.no_model_cache = getattr(config.args, 'no_model_cache', True)
+        self._temp_cache_dir = None
+        if self.no_model_cache:
+            tmp_root = os.environ.get('MODEL_TMP_DIR', os.path.expanduser('~/orcd/scratch/hf-nocache'))
+            os.makedirs(tmp_root, exist_ok=True)
+            self._temp_cache_dir = tempfile.mkdtemp(prefix='hf-nocache-', dir=tmp_root)
+            print(f"Downloading model weights to {self._temp_cache_dir} (deleted after loading)")
+        try:
+            self.tokenizer = self.load_tokenizer(model_id)
+            self.model = self.load_model(model_id, self.device)
+        finally:
+            if self._temp_cache_dir:
+                shutil.rmtree(self._temp_cache_dir, ignore_errors=True)
         self.model.tokenizer = self.tokenizer
-        if self._temp_cache_dir:
-            # Weights are already copied onto self.device by dispatch=True, so the
-            # on-disk snapshot is safe to remove — it just frees quota-limited disk.
-            shutil.rmtree(self._temp_cache_dir, ignore_errors=True)
         model_config = self.model.config.to_dict()
         tc = model_config.get('text_config', model_config)
         hidden_size = tc['hidden_size']
@@ -80,8 +86,10 @@ class ModelHandler:
     def load_model(self, model_id, device, model_type="causal"):
         if self.is_gemma4:
             from nnsight import VisionLanguageModel
-            gemma4_cache_dir = os.path.expanduser("~/orcd/pool/huggingface")
-            os.makedirs(gemma4_cache_dir, exist_ok=True)
+            gemma4_cache_dir = self._temp_cache_dir
+            if gemma4_cache_dir is None:
+                gemma4_cache_dir = os.path.expanduser("~/orcd/pool/huggingface")
+                os.makedirs(gemma4_cache_dir, exist_ok=True)
             return VisionLanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True, cache_dir=gemma4_cache_dir)
         return LanguageModel(model_id, device_map=device, tokenizer=self.tokenizer, dtype=torch.bfloat16, token=os.environ['HF_TOKEN'], quantization_config=self.nf4_config, dispatch=True, cache_dir=self._temp_cache_dir)
     

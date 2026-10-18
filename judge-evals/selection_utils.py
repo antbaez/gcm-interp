@@ -82,7 +82,61 @@ def condition_pass_rows(cond_dir: Path) -> list[dict] | None:
     return rows
 
 
-def scan_conditions(method_root: Path, test_file: str | None = None) -> list[dict]:
+def map_concept(rating) -> int | None:
+    """1-5 concept rating -> 0-2 (1,2,3 -> 0, 4 -> 1, 5 -> 2); None if out of range."""
+    if not isinstance(rating, int) or not 1 <= rating <= 5:
+        return None
+    return max(rating - 3, 0)
+
+
+def zero_to_two(rating) -> int | None:
+    return rating if isinstance(rating, int) and 0 <= rating <= 2 else None
+
+
+def harmonic_mean(*scores: int) -> float:
+    if any(s == 0 for s in scores):
+        return 0.0
+    return len(scores) / sum(1 / s for s in scores)
+
+
+def harmonic_components(rec: dict, flu, rel) -> tuple[int | None, int | None, int | None]:
+    """0-2 (concept, fluency, relevance) for one judged prompt; None where a rating is unusable."""
+    concept_rating = rec.get("judge_rating")
+    response = rec.get("post-intervention-response", "")
+    if not isinstance(response, str) or response.strip() == "":
+        concept_rating = 1
+    return map_concept(concept_rating), zero_to_two(flu), zero_to_two(rel)
+
+
+def condition_harmonic_rows(cond_dir: Path) -> list[dict] | None:
+    """Per-prompt harmonic score for one condition dir, or None if unjudged."""
+    judge_recs = read_jsonl(cond_dir / "judge_ratings.jsonl")
+    if not judge_recs:
+        return None
+
+    flu_by_query = {
+        r.get("data_path_query"): r.get("judge_rating")
+        for r in read_jsonl(cond_dir / "fluency_ratings.jsonl")
+    }
+    rel_by_query = {
+        r.get("data_path_query"): r.get("judge_rating")
+        for r in read_jsonl(cond_dir / "relevance_ratings.jsonl")
+    }
+
+    rows = []
+    for rec in judge_recs:
+        query = rec.get("data_path_query")
+        if query not in flu_by_query or query not in rel_by_query:
+            continue
+        scores = harmonic_components(rec, flu_by_query[query], rel_by_query[query])
+        c, f, r = (0 if x is None else x for x in scores)
+        rows.append({"prompt": query, "score": harmonic_mean(c, f, r)})
+
+    return rows or None
+
+
+def scan_conditions(method_root: Path, test_file: str | None = None,
+                    metric: str = "pass") -> list[dict]:
     """Collect every judged condition under one steering method.
 
     `test_file` restricts to a single split (e.g. `harmless-test` for the
@@ -103,14 +157,17 @@ def scan_conditions(method_root: Path, test_file: str | None = None) -> list[dic
             continue
         if test_file is not None and meta["test_file"] != test_file:
             continue
-        rows = condition_pass_rows(cond_dir)
+        if metric == "harmonic":
+            rows, score_key = condition_harmonic_rows(cond_dir), "score"
+        else:
+            rows, score_key = condition_pass_rows(cond_dir), "pass"
         if rows is None:
             continue
         conditions.append({
             **meta,
             "dir": cond_dir,
             "rows": rows,
-            "rate": sum(r["pass"] for r in rows) / len(rows),
+            "rate": sum(r[score_key] for r in rows) / len(rows),
             "n": len(rows),
         })
     return conditions

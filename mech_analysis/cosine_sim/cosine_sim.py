@@ -93,7 +93,7 @@ def cache_dir(mtag, dtag):
 
 def load_cache(mtag, dtag):
     source = DATASETS[dtag][0]
-    path = cache_dir(mtag, dtag) / f"{MODELS[mtag][0]}_steering_cache_{source}_resid.pt"
+    path = cache_dir(mtag, dtag) / f"{MODELS[mtag][0]}_steering_cache_{source}_resid_content.pt"
     return torch.load(path, map_location="cpu", weights_only=True)
 
 
@@ -119,7 +119,7 @@ def real_frac(mtag, dtag, P, tokenizer):
             n = len(r["prompt"]) - 1 if assistant_exists else max(len(r["prompt"]), 1)
             text = tokenizer.apply_chat_template(r["prompt"][:n], add_generation_prompt=True,
                                                  tokenize=False, **kwargs)
-            lens.append(len(tokenizer(text)["input_ids"]))
+            lens.append(len(tokenizer(text, add_special_tokens=False)["input_ids"]))
     lens = np.array(lens)
     if lens.max() > P:
         raise ValueError(f"{mtag}/{dtag}: a {lens.max()}-token steering prompt exceeds cache "

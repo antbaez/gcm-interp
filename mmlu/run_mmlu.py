@@ -15,6 +15,8 @@ from utils.config import Config
 from utils.model_handler import ModelHandler
 import mmlu_scoring as scoring
 from selection_utils import scan_conditions
+from eval.activations import REDUCED_VARIANTS, steering_cache_path, variant_cache_path, coverage_cache_path
+from eval.generation import STEERING_TYPE_VARIANTS, WEIGHTED_POSITIONAL_TYPES, PROJECTED_STEERING_TYPES
 
 WORKDIRS_ROOT = os.path.join(REPO_ROOT, 'judge-evals', 'workdirs')
 NORM_MODE = 'normalized'
@@ -131,15 +133,42 @@ def main():
             continue
 
         resid = stream == 'residuals'
-        cache_suffix = '_resid' if resid else '_attn'
-        cache_path = f"{config.get_output_prefix()}{model_name}_steering_cache_{source}{cache_suffix}.pt"
+        cache_path = steering_cache_path(config.get_output_prefix(), model_name, source, resid)
         if not os.path.exists(cache_path):
             print(f"WARNING: steering cache not found at {cache_path}, skipping {stream} configs for {task}")
             continue
-        patch_activations = torch.load(cache_path, map_location=model.device)
+        positional_reps = torch.load(cache_path, map_location=model.device)
+        variant_reps = {}
+        for variant in REDUCED_VARIANTS:
+            path = variant_cache_path(cache_path, variant)
+            if os.path.exists(path):
+                variant_reps[variant] = torch.load(path, map_location=model.device)
+        coverage_path = coverage_cache_path(cache_path)
+        coverage = (torch.load(coverage_path, map_location=model.device)
+                    if os.path.exists(coverage_path) else None)
 
         split_dir = '' if mmlu_args.split == 'test' else 'val/'
         for steering_type, N, layer in conditions:
+            if steering_type in STEERING_TYPE_VARIANTS:
+                variant = STEERING_TYPE_VARIANTS[steering_type]
+                if variant not in variant_reps:
+                    print(f"WARNING: {variant} steering cache not found at "
+                          f"{variant_cache_path(cache_path, variant)}, skipping {steering_type} N={N:g} layer={layer}")
+                    continue
+                patch_activations = variant_reps[variant]
+            elif steering_type in WEIGHTED_POSITIONAL_TYPES and coverage is None:
+                print(f"WARNING: positional coverage not found at {coverage_path} (written by the next "
+                      f"steering run for this dataset), skipping {steering_type} N={N:g} layer={layer}")
+                continue
+            else:
+                patch_activations = positional_reps
+            projection_dirs = None
+            if steering_type in PROJECTED_STEERING_TYPES:
+                projection_dirs = variant_reps.get(PROJECTED_STEERING_TYPES[steering_type])
+                if projection_dirs is None:
+                    print(f"WARNING: {PROJECTED_STEERING_TYPES[steering_type]} steering cache not found, "
+                          f"skipping {steering_type} N={N:g} layer={layer}")
+                    continue
             # 'global' entries pin layer='all' (every layer steered at once, per
             # eval_runner.py's global_steer mode) rather than a single swept index.
             layer_ids = list(range(model_handler.num_layers)) if layer == 'all' else [layer]
@@ -154,6 +183,8 @@ def main():
                 model, batches, answer_token_ids,
                 patch_activations=patch_activations, layer_ids=layer_ids, N=N,
                 steering_type=steering_type, resid=resid, normalize=config.args.normalize,
+                coverage=coverage,
+                projection_dirs=projection_dirs,
                 print_examples=mmlu_args.print_examples,
             )
             result.update({

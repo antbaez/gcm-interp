@@ -53,6 +53,8 @@ WORKDIRS_ROOT = JUDGE_DIR / "workdirs"
 RESULTS_ROOT = REPO_ROOT / "results"
 ACCURACY_ROOT = JUDGE_DIR / "accuracy"
 DEFAULT_OUTPUT = JUDGE_DIR / "best_configs.json"
+HARMONIC_OUTPUT = JUDGE_DIR / "best_configs_harmonic.json"
+METRICS = ("pass", "harmonic")
 
 # Model tag -> results/ dir name (mirrors run_steering.sh's MODEL_ID case).
 MODEL_DIRS = {
@@ -88,8 +90,26 @@ def _same_config(meta: dict, chosen: dict) -> bool:
     return meta["N"] == chosen["N"] and str(meta["value"]) == str(chosen["value"])
 
 
+def _kept(meta: dict, keep: list[dict]) -> bool:
+    return any(_same_config(meta, c) for c in keep)
+
+
+def other_metric_selection(other_path: Path, model_dir: str, task: str, stream: str,
+                           scope: str, method: str) -> dict | None:
+    """The other metric's selection for this method, as a `_same_config`-comparable dict."""
+    if not other_path.exists():
+        return None
+    with open(other_path) as f:
+        other = json.load(f)
+    cfg = other.get(model_dir, {}).get(task, {}).get(stream, {}).get(scope, {}).get(method)
+    if cfg is None:
+        return None
+    return {"N": float(cfg["N"]), "value": str(cfg["layer"])}
+
+
 def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
-                        chosen: dict, dry_run: bool, stream: str, scope: str) -> list[Path]:
+                        chosen: dict, dry_run: bool, stream: str, scope: str,
+                        also_keep: dict | None = None) -> list[Path]:
     """Delete held-out conditions whose N/layer no longer match the selection.
 
     Works off what is on disk rather than off the previous best_configs.json, so
@@ -101,11 +121,12 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
     test_file = f"{base}-heldout-test"
     rel = Path(model_dir) / task / NORM_MODE / stream / scope / method
     removed = []
+    keep = [chosen] + ([also_keep] if also_keep else [])
 
     # results/: the generated .txt/.json pair, which is what judging discovers.
     for gen_json in sorted((RESULTS_ROOT / rel).glob(f"*_{test_file}_gen.json")):
         meta = parse_condition_dir(gen_json.name[: -len("_gen.json")])
-        if meta is None or _same_config(meta, chosen):
+        if meta is None or _kept(meta, keep):
             continue
         for path in (gen_json, gen_json.with_suffix(".txt")):
             if path.exists():
@@ -117,7 +138,7 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
     # the results/ pair would leave the stale condition visible to it.
     for cond_dir in sorted(p for p in (WORKDIRS_ROOT / rel).glob(f"*_{test_file}") if p.is_dir()):
         meta = parse_condition_dir(cond_dir.name)
-        if meta is None or _same_config(meta, chosen):
+        if meta is None or _kept(meta, keep):
             continue
         removed.append(cond_dir)
         if not dry_run:
@@ -138,7 +159,7 @@ def prune_stale_heldout(model_dir: str, task: str, base: str, method: str,
         m = ACCURACY_FILE_RE.match(acc_file.name)
         if m is None:
             continue
-        if float(m["N"]) == chosen["N"] and str(m["value"]) == str(chosen["value"]):
+        if _kept({"N": float(m["N"]), "value": m["value"]}, keep):
             continue
         removed.append(acc_file)
         if not dry_run:
@@ -231,7 +252,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--model", default="all", help=f"model tag(s) or 'all' ({', '.join(MODEL_DIRS)})")
     parser.add_argument("--dataset", default="all", help=f"dataset tag(s) or 'all' ({', '.join(DATASET_TASKS)})")
-    parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="Where to write best_configs.json")
+    parser.add_argument("--output", default=None,
+                        help="Where to write the selections (default: best_configs.json, or "
+                             "best_configs_harmonic.json with --metric harmonic)")
+    parser.add_argument("--metric", default="pass", choices=METRICS,
+                        help="'pass' (default) selects on the w_rf pass rate; 'harmonic' on the mean "
+                             "per-prompt harmonic mean of 0-2 concept/fluency/relevance. Held-out runs "
+                             "at the other metric's selection are never pruned.")
     parser.add_argument("--stream", default="residuals", choices=STREAMS,
                         help="Which steering stream to select for. The two have separate "
                              "workdir trees and separate entries in best_configs.json, so a "
@@ -254,6 +281,10 @@ def main():
 
     model_tags = expand_tags(args.model, MODEL_DIRS, "model")
     dataset_tags = expand_tags(args.dataset, DATASET_TASKS, "dataset")
+    harmonic = args.metric == "harmonic"
+    out_path = Path(args.output) if args.output else (HARMONIC_OUTPUT if harmonic else DEFAULT_OUTPUT)
+    other_path = DEFAULT_OUTPUT if harmonic else HARMONIC_OUTPUT
+    score_name = "harmonic" if harmonic else "w_rf"
 
     best = {}
     pending = []
@@ -274,7 +305,7 @@ def main():
 
             for method_dir in sorted(p for p in scope_root.iterdir() if p.is_dir()):
                 method = method_dir.name
-                conditions = scan_conditions(method_dir, test_file=val_split)
+                conditions = scan_conditions(method_dir, test_file=val_split, metric=args.metric)
                 if not conditions:
                     print(f"  {method}: no judged conditions, skipping")
                     continue
@@ -282,7 +313,7 @@ def main():
                 chosen = select_best(conditions)
                 ties = sum(1 for c in conditions if c["rate"] == chosen["rate"])
                 print(f"  {method}: {condition_label(chosen)}  "
-                      f"val w_rf = {chosen['rate']:.3f} (n={chosen['n']}, "
+                      f"val {score_name} = {chosen['rate']:.3f} (n={chosen['n']}, "
                       f"{len(conditions)} conditions, {ties} tied at best)")
 
                 # Keyed by the directory names run.py already computes
@@ -293,7 +324,8 @@ def main():
                     .setdefault(args.stream, {}).setdefault(args.scope, {})[method] = {
                     "N": chosen["N"],
                     "layer": int(chosen["value"]) if chosen["value"] != "all" else "all",
-                    "val_pass_rate": chosen["rate"],
+                    ("val_harmonic_mean" if harmonic else "val_pass_rate"): chosen["rate"],
+                    "score_mode": args.metric,
                     "val_n": chosen["n"],
                     "val_split": val_split,
                     "n_conditions": len(conditions),
@@ -305,8 +337,12 @@ def main():
                 }
 
                 if args.prune:
+                    also_keep = other_metric_selection(
+                        other_path, model_dir, task, args.stream, args.scope, method
+                    )
                     stale = prune_stale_heldout(
-                        model_dir, task, base, method, chosen, args.dry_run, args.stream, args.scope
+                        model_dir, task, base, method, chosen, args.dry_run, args.stream, args.scope,
+                        also_keep=also_keep,
                     )
                     for path in stale:
                         print(f"    {'would remove' if args.dry_run else 'removed'} stale held-out: "
@@ -338,7 +374,6 @@ def main():
         print("\n(dry run, not writing)")
         return
 
-    out_path = Path(args.output)
     merge_best_configs(out_path, best)
     n_entries = sum(
         len(methods)

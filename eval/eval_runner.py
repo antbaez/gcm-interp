@@ -1,8 +1,9 @@
 from asyncio import log
 # from setup import set_seed
-from eval.activations import steering_reps_cache
-from eval.generation import select_gen_qs_toks, generate_with_patches, decode_responses
+from eval.activations import steering_reps_cache, steering_coverage as compute_steering_coverage
+from eval.generation import select_gen_qs_toks, generate_with_patches, decode_responses, STEERING_TYPE_VARIANTS, WEIGHTED_POSITIONAL_TYPES, PROJECTED_STEERING_TYPES
 import hashlib
+import math
 import os
 import gc
 import json
@@ -13,9 +14,9 @@ import time
 sys.path.append('../')  # Adjust path to import modules correctly
 from utils.batch_handler import BatchHandler
 from utils.model_handler import ModelHandler
-def load_patching_reps(data_handler, model_handler, mean=True):
+def load_patching_reps(data_handler, model_handler, variant=None):
     model = model_handler.model
-    return steering_reps_cache(model, data_handler, mean=mean)
+    return steering_reps_cache(model, data_handler, variant=variant)
 
 def save_prompt_responses(responses, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -136,15 +137,24 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
     def get_patching_reps():
         nonlocal patching_reps
         if patching_reps is None:
-            patching_reps = load_patching_reps(data_handler, model_handler)
+            patching_reps = load_patching_reps(
+                data_handler, model_handler,
+                variant=STEERING_TYPE_VARIANTS.get(config.args.steering_type),
+            )
         return patching_reps
     reps_types = ['targeted']
 
     steering_coverage = None
-    if config.args.steering_type == 'weighted-pos':
-        steering_coverage = data_handler.steering_qs_toks['add']['attention_mask'].float().mean(0)
-        print(f"[eval] weighted-pos coverage: {steering_coverage.shape[0]} positions, "
+    if config.args.steering_type in WEIGHTED_POSITIONAL_TYPES:
+        steering_coverage = compute_steering_coverage(data_handler)
+        print(f"[eval] {config.args.steering_type} coverage: {steering_coverage.shape[0]} positions, "
               f"mean={steering_coverage.mean():.4f}, min={steering_coverage.min():.4f}")
+
+    projection_dirs = None
+    if config.args.steering_type in PROJECTED_STEERING_TYPES:
+        projection_dirs = load_patching_reps(
+            data_handler, model_handler, variant=PROJECTED_STEERING_TYPES[config.args.steering_type],
+        )
 
     if N is not None:
         config.args.N = N
@@ -160,6 +170,14 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
             # sweep entirely, so the held-out split is only ever generated once.
             sweep_vals = list(explicit_layers)
             print(f"Steering pinned layers: {sweep_vals}")
+        elif getattr(config.args, 'layer_frac', None) is not None:
+            num_layers = model_handler.num_layers
+            layer_frac = config.args.layer_frac
+            if not 0.0 <= layer_frac <= 1.0:
+                raise ValueError(f"-layer_frac must be in [0, 1], got {layer_frac}")
+            layer = min(math.floor(num_layers * layer_frac + 0.5), num_layers - 1)
+            sweep_vals = [layer]
+            print(f"Single layer: {layer} = round({layer_frac:g} * {num_layers} layers)")
         else:
             num_layers = model_handler.num_layers
             range_start = getattr(config.args, 'layer_range_start', 0.0)
@@ -236,7 +254,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
                 for batch_num, idx in enumerate(range(0, len_gen_qs, config.args.batch_size), start=1):
                     _t0 = time.time()
                     gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, steer_layers, config.args.N, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, resid=resid, coverage=steering_coverage)
+                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, steer_layers, config.args.N, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, resid=resid, coverage=steering_coverage, projection_dirs=projection_dirs, steer_mask=data_handler.test_steer_mask[idx:idx+config.args.batch_size])
                     decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
                     gc.collect()
                     torch.cuda.empty_cache()

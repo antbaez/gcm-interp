@@ -6,7 +6,8 @@ import time
 import torch
 from tqdm import tqdm
 
-from eval.generation import _get_layers, _prepare_steering_vector
+from eval.generation import _get_layers, _prepare_steering_vector, positional_weights, POSITIONAL_STEERING_TYPES
+from utils.data_handler import content_token_positions, steer_mask_from_starts
 
 LETTERS = ["A", "B", "C", "D"]
 
@@ -48,21 +49,25 @@ def build_batches(tokenizer, template_kwargs, device, rows, batch_size):
     batches = []
     for i in range(0, len(rows), batch_size):
         batch_rows = rows[i:i + batch_size]
+        contents = [build_prompt_text(r["question"], r["choices"]) for r in batch_rows]
         texts = [
             tokenizer.apply_chat_template(
-                [{"role": "user", "content": build_prompt_text(r["question"], r["choices"])}],
+                [{"role": "user", "content": content}],
                 add_generation_prompt=True,
                 tokenize=False,
                 **template_kwargs,
             )
-            for r in batch_rows
+            for content in contents
         ]
-        tokens = tokenizer(texts, padding=True, truncation=False, return_tensors="pt")
+        tokens = tokenizer(texts, padding=True, truncation=False, return_tensors="pt", add_special_tokens=False,
+                           return_offsets_mapping=True)
+        starts = content_token_positions(tokenizer, texts, contents, tokens, "MMLU prompt")["content-start"]
+        steer_mask = steer_mask_from_starts(starts, tokens["input_ids"].shape[1]).to(device)
         prompt_toks = {
             "input_ids": tokens["input_ids"].to(device),
             "attention_mask": tokens["attention_mask"].to(device),
         }
-        batches.append((batch_rows, prompt_toks))
+        batches.append((batch_rows, prompt_toks, steer_mask))
     return batches
 
 
@@ -91,7 +96,7 @@ def _align_positional(sv, target_seq_len):
 
 
 def score_batch_with_patches(model, prompt_toks, answer_token_ids, patch_activations=None,
-                              layer_ids=None, N=None, steering_type=None, resid=False, normalize=True):
+                              layer_ids=None, N=None, steering_type=None, resid=False, normalize=True, coverage=None, projection_dirs=None, steer_mask=None):
     is_gemma_tuple = (
         resid and 'gemma' in model.config._name_or_path.lower()
         and getattr(model.config, 'model_type', '') != 'gemma4_unified'
@@ -108,11 +113,15 @@ def score_batch_with_patches(model, prompt_toks, answer_token_ids, patch_activat
     with model.generate(prompt_toks, **gen_kwargs) as tracer:
         if patch_activations is not None and layer_ids:
             patch_activations_dev = patch_activations.to(model.device)
+            pos_weights = positional_weights(steering_type, coverage, patch_activations_dev)
             for layer_idx in layer_ids:
                 layer = _get_layers(model)[layer_idx]
-                sv = _prepare_steering_vector(patch_activations_dev, layer_idx, steering_type, normalize, None)
-                if steering_type in ('positional', 'weighted-pos'):
+                sv = _prepare_steering_vector(patch_activations_dev, layer_idx, steering_type, normalize, pos_weights,
+                                              projection_dirs)
+                if steering_type in POSITIONAL_STEERING_TYPES:
                     sv = _align_positional(sv, seq_len)
+                if steer_mask is not None:
+                    sv = sv * steer_mask.to(dtype=sv.dtype).unsqueeze(-1)
                 if resid:
                     if is_gemma_tuple:
                         layer.output = (layer.output[0] + N * sv,)
@@ -127,7 +136,7 @@ def score_batch_with_patches(model, prompt_toks, answer_token_ids, patch_activat
 
 
 def evaluate_mmlu(model, batches, answer_token_ids, patch_activations=None, layer_ids=None,
-                   N=None, steering_type=None, resid=False, normalize=True, print_examples=False):
+                   N=None, steering_type=None, resid=False, normalize=True, print_examples=False, coverage=None, projection_dirs=None):
     n_correct = 0
     n_total = 0
     per_subject = {}
@@ -139,12 +148,15 @@ def evaluate_mmlu(model, batches, answer_token_ids, patch_activations=None, laye
     reserved_sum = 0.0
     torch.cuda.reset_peak_memory_stats(model.device)
     pbar = tqdm(batches, total=n_batches, desc="MMLU batches")
-    for i, (batch_rows, prompt_toks) in enumerate(pbar, start=1):
+    for i, (batch_rows, prompt_toks, steer_mask) in enumerate(pbar, start=1):
         t0 = time.time()
         preds = score_batch_with_patches(
             model, prompt_toks, answer_token_ids,
             patch_activations=patch_activations, layer_ids=layer_ids, N=N,
             steering_type=steering_type, resid=resid, normalize=normalize,
+            coverage=coverage,
+            projection_dirs=projection_dirs,
+            steer_mask=steer_mask,
         )
         elapsed = time.time() - t0
         total_time += elapsed

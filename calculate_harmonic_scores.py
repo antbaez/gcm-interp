@@ -43,14 +43,15 @@ Usage:
 
 import argparse
 import csv
+import json
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT / "judge-evals"))
 
-from selection_utils import parse_condition_dir, read_jsonl
-from run_harmonic_tests import DATASET_TASKS, VARIANT_BASE, parse_datasets
+from selection_utils import parse_condition_dir, read_jsonl, harmonic_components, harmonic_mean
+from run_harmonic_tests import DATASET_TASKS, MODEL_DIRS, VARIANT_BASE, parse_datasets
 
 DEFAULT_ROOT = REPO_ROOT / "harmonic_results" / "judge_scores"
 
@@ -58,25 +59,8 @@ DEFAULT_ROOT = REPO_ROOT / "harmonic_results" / "judge_scores"
 # reported under their task dir name.
 TASK_DATASETS = {task: tag for tag, (task, _) in DATASET_TASKS.items()}
 
-FIELDS = ["model", "dataset", "base", "method", "N", "layer", "test_file", "n", "unparsed", "dropped",
-          "harmonic_mean", "delta_vs_base", "concept", "fluency", "relevance", "path"]
-
-
-def map_concept(rating) -> int | None:
-    """1-5 concept rating -> 0-2 (1,2,3 -> 0, 4 -> 1, 5 -> 2); None if out of range."""
-    if not isinstance(rating, int) or not 1 <= rating <= 5:
-        return None
-    return max(rating - 3, 0)
-
-
-def zero_to_two(rating) -> int | None:
-    return rating if isinstance(rating, int) and 0 <= rating <= 2 else None
-
-
-def harmonic_mean(*scores: int) -> float:
-    if any(s == 0 for s in scores):
-        return 0.0
-    return len(scores) / sum(1 / s for s in scores)
+FIELDS = ["model", "dataset", "base", "stream", "scope", "method", "N", "layer", "test_file", "n", "unparsed",
+          "dropped", "harmonic_mean", "delta_vs_base", "concept", "fluency", "relevance", "path"]
 
 
 def score_condition(cond_dir: Path) -> dict | None:
@@ -95,14 +79,7 @@ def score_condition(cond_dir: Path) -> dict | None:
         if query not in flu_by_query or query not in rel_by_query:
             dropped += 1
             continue
-        response = rec.get("post-intervention-response", "")
-        concept_rating = rec.get("judge_rating")
-        # Empty generations are never a successful steer, regardless of rating.
-        if not isinstance(response, str) or response.strip() == "":
-            concept_rating = 1
-        scores = (map_concept(concept_rating),
-                  zero_to_two(flu_by_query[query]),
-                  zero_to_two(rel_by_query[query]))
+        scores = harmonic_components(rec, flu_by_query[query], rel_by_query[query])
         # Unparsed / out-of-range ratings (run_judge writes -1 or None) score 0.
         if None in scores:
             unparsed += 1
@@ -137,6 +114,9 @@ def collect(root: Path, split: str | None) -> list[dict]:
             "model": parts[0],
             "dataset": dataset,
             "base": VARIANT_BASE.get(dataset, dataset),
+            "task": parts[1],
+            "stream": parts[3],
+            "scope": parts[4],
             "method": parts[5],
             "N": meta["N"],
             "layer": meta["value"],
@@ -199,6 +179,13 @@ def main():
     parser.add_argument("--datasets", default=None,
                         help="Comma-separated dataset tags to report, incl. variants; 'variants' = every "
                              "variant, 'all' = base datasets + every variant (default: everything found)")
+    parser.add_argument("--models", default=None,
+                        help=f"Comma-separated model tags to report ({', '.join(MODEL_DIRS)}; default: every model found)")
+    parser.add_argument("--stream", default=None, help="Only this stream, e.g. 'residuals' (default: every stream)")
+    parser.add_argument("--scope", default=None, help="Only this scope, e.g. 'local' (default: every scope)")
+    parser.add_argument("--best-configs", type=Path, default=None,
+                        help="Only conditions at the (N, layer) a best_configs file selected for their "
+                             "model/task/stream/scope/method, e.g. judge-evals/best_configs_harmonic.json")
     parser.add_argument("--out", type=Path, default=None, help="Also write the table as CSV here")
     args = parser.parse_args()
 
@@ -208,13 +195,35 @@ def main():
     if args.datasets is not None:
         wanted = set(parse_datasets(args.datasets))
         results = [r for r in results if r["dataset"] in wanted]
+    if args.models is not None:
+        tags = [t.strip() for t in args.models.split(",")]
+        unknown = [t for t in tags if t not in MODEL_DIRS]
+        if unknown:
+            raise SystemExit(f"--models: unknown model(s) {unknown} (one of {', '.join(MODEL_DIRS)})")
+        wanted_models = {MODEL_DIRS[t] for t in tags}
+        results = [r for r in results if r["model"] in wanted_models]
+    if args.stream is not None:
+        results = [r for r in results if r["stream"] == args.stream]
+    if args.scope is not None:
+        results = [r for r in results if r["scope"] == args.scope]
+    if args.best_configs is not None:
+        with open(args.best_configs) as f:
+            best = json.load(f)
+
+        def selected(r):
+            cfg = (best.get(r["model"], {}).get(r["task"], {}).get(r["stream"], {})
+                   .get(r["scope"], {}).get(r["method"]))
+            return cfg is not None and float(cfg["N"]) == r["N"] and str(cfg["layer"]) == r["layer"]
+
+        results = [r for r in results if selected(r)]
     if not results:
         raise SystemExit(f"No judged conditions found under {args.root}")
 
     print_table(results)
     if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
         with open(args.out, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=FIELDS)
+            writer = csv.DictWriter(f, fieldnames=FIELDS, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(results)
         print(f"\nWrote {args.out}")

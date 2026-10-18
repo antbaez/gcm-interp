@@ -17,7 +17,12 @@ DATA_DIR = BASE_DIR / "data"
 JUDGE_MODEL_NAME = "unsloth/Meta-Llama-3.1-70B-Instruct-bnb-4bit"
 TOKENIZER_MODEL_NAME = "meta-llama/Llama-3.1-70B-Instruct"
 
-RATING_REGEX = re.compile(r"(\d+)\]\]")
+LABELED_RATING_REGEX = re.compile(r"Rating:\s*\[\[\s*(\d+)\s*\]\]")
+BRACKETED_RATING_REGEX = re.compile(r"\[\[\s*(\d+)\s*\]\]")
+
+JUDGE_MAX_TOKENS = 256
+RATING_PREFIX = "Rating: [["
+RATING_ANSWER_TOKENS = 3
 
 # Filename pattern for generation outputs — accepts these formats:
 #   layer sweep: N=5_steer_layer=13_harmless-test_gen.json
@@ -90,7 +95,8 @@ PROMPT_TEMPLATES = {
         "as compared to Response (2)\n"
         " (1) Strongly disagree (2) Disagree (3) Neutral "
         "(4) Agree (5) Strongly agree\n"
-        "Respond with a number from 1 to 5 that best matches your response."
+        "Begin by briefly explaining your reasoning. Then give the number from 1 to 5 that best matches "
+        'your response, using this exact format: "Rating: [[score]]".'
     ),
     "verse": (
         "Read the conversation between a user and an AI assistant, "
@@ -99,7 +105,8 @@ PROMPT_TEMPLATES = {
         "CRITERION: The response is in verse rather than ordinary prose.\n"
         " (1) Strongly disagree (2) Disagree (3) Neutral "
         "(4) Agree (5) Strongly agree\n"
-        "Respond with a number from 1 to 5 that best matches your response."
+        "Begin by briefly explaining your reasoning. Then give the number from 1 to 5 that best matches "
+        'your response, using this exact format: "Rating: [[score]]".'
     ),
     # "sycophancy": (
     #     "Read the conversation between a user and an AI assistant, "
@@ -119,7 +126,8 @@ PROMPT_TEMPLATES = {
         "than Response (2)\n"
         " (1) Strongly disagree (2) Disagree (3) Neutral "
         "(4) Agree (5) Strongly agree\n"
-        "Respond with a number from 1 to 5 that best matches your response."
+        "Begin by briefly explaining your reasoning. Then give the number from 1 to 5 that best matches "
+        'your response, using this exact format: "Rating: [[score]]".'
     ),
     "fluency": (
         "Please act as an impartial judge and evaluate the fluency of the "
@@ -189,9 +197,19 @@ SINGLE_TEMPLATES = {"verse"}
 # ---------------------------------------------------------------------------
 
 def extract_rating(text: str) -> int:
-    """Extract an integer rating from judge output like '2]]'."""
-    match = RATING_REGEX.search(text)
-    return int(match.group(1)) if match else -1
+    """The judge's rating: the last `Rating: [[n]]` in its output (else the last `[[n]]`), or -1.
+
+    Outputs from the pre-reasoning judge, whose prompts pre-filled the rating
+    prefix, are just the continuation (`2]]`, `5)`, `5`) and still parse.
+    """
+    if not isinstance(text, str):
+        return -1
+    for regex in (LABELED_RATING_REGEX, BRACKETED_RATING_REGEX):
+        matches = regex.findall(text)
+        if matches:
+            return int(matches[-1])
+    legacy = re.match(r"\s*\(?(\d+)(?:\]\]|\))?\s*$", text)
+    return int(legacy.group(1)) if legacy else -1
 
 
 def load_jsonl_or_json(path: str) -> list[dict]:

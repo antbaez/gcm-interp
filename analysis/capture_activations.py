@@ -25,6 +25,7 @@ Outputs (under --out-dir):
     <condition>_tokens.json   decoded string per stored token (for plot hovers)
     steering_vectors.safetensors  cache_L<l> [P, H] fp32: the stacked steering
                               cache slice every method's vector is derived from
+                              (last/positional), plus <variant>_L<l> [H] for mean / last-EOT / last-prompt
     meta.json                 configs, layers, normalize flag, gen match rates
 
 Kept tokens per row: every non-padding prompt token (incl. the chat-template
@@ -78,7 +79,7 @@ def load_methods(best_configs_path):
 def emit_run_configs(methods, path):
     """Write the model/task/stream/scope/method file run.py pins configs from."""
     best = {MODEL_NAME: {TASK: {STREAM: {SCOPE: {
-        m: {**cfg, "val_pass_rate": float("nan")} for m, cfg in methods.items()}}}}}
+        m: {**cfg, "val_harmonic_mean": float("nan")} for m, cfg in methods.items()}}}}}
     with open(path, "w") as f:
         json.dump(best, f, indent=2)
     print(f"Wrote run.py best-configs for {', '.join(methods)} to {path}")
@@ -126,11 +127,12 @@ def decode_response(tokenizer, prompt_ids, full_ids):
     return tokenizer.decode(full_ids, skip_special_tokens=True).split(query)[-1]
 
 
-def capture_batch(model, layers_mod, seqs, prompt_mask, save_layers, steer):
+def capture_batch(model, layers_mod, seqs, prompt_mask, save_layers, steer, steer_mask=None):
     """Forward trace over prompt+response; returns {layer: [b, T, H]} on CPU.
 
     `steer` is None or (layer_idx, vec) with vec = N * sv, shape [H] or [P, H];
-    it's added to the first P (prompt) positions only.
+    it's added to the first P (prompt) positions only, and within those only where
+    `steer_mask` ([b, P]) is True, matching generate_with_patches.
     """
     import torch
 
@@ -143,8 +145,10 @@ def capture_batch(model, layers_mod, seqs, prompt_mask, save_layers, steer):
     delta = None
     if steer is not None:
         steer_layer, vec = steer
-        delta = torch.zeros(T, vec.shape[-1], dtype=vec.dtype, device=vec.device)
-        delta[:P] = vec
+        delta = torch.zeros(b, T, vec.shape[-1], dtype=vec.dtype, device=vec.device)
+        delta[:, :P] = vec
+        if steer_mask is not None:
+            delta[:, :P] *= steer_mask.to(device=vec.device, dtype=vec.dtype).unsqueeze(-1)
 
     hook_layers = sorted(set(save_layers) | ({steer[0]} if steer else set()))
     saved = {}
@@ -180,9 +184,9 @@ def main():
 
     import torch
     from safetensors.torch import save_file
-    from eval.activations import steering_reps_cache, _get_layers
+    from eval.activations import steering_reps_cache, steering_coverage, _get_layers
     from eval.eval_runner import generate_baseline
-    from eval.generation import generate_with_patches, _prepare_steering_vector
+    from eval.generation import generate_with_patches, _prepare_steering_vector, positional_weights, STEERING_TYPE_VARIANTS, PROJECTED_STEERING_TYPES
 
     os.chdir(REPO_ROOT)  # the pipeline's data/results paths are repo-relative
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -205,7 +209,11 @@ def main():
 
     # Built from (or loaded out of) the pipeline's steering cache: [num_layers, P, H]
     cache = steering_reps_cache(model, data_handler).to(model.device)
-    save_file({f"cache_L{l}": cache[l].float().cpu().contiguous() for l in save_layers},
+    variant_caches = {v: steering_reps_cache(model, data_handler, variant=v).to(model.device)
+                      for v in sorted(set(STEERING_TYPE_VARIANTS.values()))}
+    coverage = steering_coverage(data_handler).to(model.device)
+    save_file({**{f"cache_L{l}": cache[l].float().cpu().contiguous() for l in save_layers},
+               **{f"{v}_L{l}": c[l].float().cpu().contiguous() for v, c in variant_caches.items() for l in save_layers}},
               str(args.out_dir / "steering_vectors.safetensors"))
 
     meta_path = args.out_dir / "meta.json"
@@ -223,9 +231,14 @@ def main():
             print(f"[capture] {cond}: already captured ({out_path}), skipping")
             continue
         cfg = methods.get(cond)
+        cond_cache = (variant_caches[STEERING_TYPE_VARIANTS[cond]]
+                      if cond in STEERING_TYPE_VARIANTS else cache)
+        cond_dirs = (variant_caches[PROJECTED_STEERING_TYPES[cond]]
+                     if cond in PROJECTED_STEERING_TYPES else None)
         steer = None
         if cfg is not None:
-            sv = _prepare_steering_vector(cache, cfg["layer"], cond, normalize, None)
+            sv = _prepare_steering_vector(cond_cache, cfg["layer"], cond, normalize,
+                                          positional_weights(cond, coverage, cond_cache), cond_dirs)
             steer = (cfg["layer"], cfg["N"] * sv)
             print(f"\n[capture] {cond}: N={cfg['N']:g} layer={cfg['layer']} vector {tuple(sv.shape)}")
         else:
@@ -250,15 +263,18 @@ def main():
         for start in range(0, n_prompts, bs):
             t0 = time.time()
             gen_toks = {k: v[start:start + bs] for k, v in toks.items()}
+            batch_mask = data_handler.test_steer_mask[start:start + bs]
             if cfg is None:
                 seqs = torch.tensor(baseline_outputs[start:start + bs], device=model.device)
             else:
                 seqs = generate_with_patches(
-                    model, gen_toks, cache, [cfg["layer"]], cfg["N"],
+                    model, gen_toks, cond_cache, [cfg["layer"]], cfg["N"],
                     max_new_tokens=config.args.max_new_tokens, normalize=normalize,
-                    steering_type=cond, resid=True).to(model.device)
+                    steering_type=cond, resid=True, coverage=coverage,
+                    projection_dirs=cond_dirs, steer_mask=batch_mask).to(model.device)
 
-            saved = capture_batch(model, layers_mod, seqs, gen_toks["attention_mask"], save_layers, steer)
+            saved = capture_batch(model, layers_mod, seqs, gen_toks["attention_mask"], save_layers, steer,
+                                  steer_mask=batch_mask)
 
             seqs_cpu = seqs.cpu()
             pmask = gen_toks["attention_mask"].cpu()

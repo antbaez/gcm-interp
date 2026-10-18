@@ -20,21 +20,12 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from config import ROW_KEY_COLS, GROUP_COLS, GEN_RE, load_jsonl_or_json
+from config import ROW_KEY_COLS, GROUP_COLS, GEN_RE, extract_rating, load_jsonl_or_json
 
 
 # ---------------------------------------------------------------------------
 # Rating extraction
 # ---------------------------------------------------------------------------
-
-def extract_first_int(text) -> int | None:
-    """Extract the first integer from judge output text."""
-    if not isinstance(text, str):
-        return None
-    match = re.search(r"\b(\d+)\b", text)
-    return int(match.group(1)) if match else None
-
-
 
 def fix_empty_response_ratings(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -106,7 +97,7 @@ def _compute_and_write(
 
     # Extract / rename ratings
     if not jp_df.empty:
-        jp_df["jp_rating"] = jp_df["judge_output"].apply(extract_first_int)
+        jp_df["jp_rating"] = jp_df["judge_output"].apply(extract_rating)
 
     if not rf_flu_df.empty and "judge_rating" in rf_flu_df.columns:
         rf_flu_df = rf_flu_df.rename(columns={"judge_rating": "fluency_rating"})

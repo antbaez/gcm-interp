@@ -54,7 +54,7 @@ RATING_MAX = {"judge": 5, "fluency": 2, "relevance": 2}
 METHOD_ORDER = ["last", "mean", "positional"]
 
 # Steering methods to analyze, out of whatever's found on disk under each
-# combo's local/ scope dir (e.g. "last", "mean", "positional", "weighted-pos").
+# combo's local/ scope dir (e.g. "last", "mean", "positional", "unweighted-positional").
 # Set to None to include everything found.
 ENABLED_METHODS = ["last", "mean", "positional"]
 

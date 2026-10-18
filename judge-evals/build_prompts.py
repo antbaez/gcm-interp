@@ -45,15 +45,8 @@ def _build_paired_judge_prompt(tokenizer, template: str, new_response: str,
     assert isinstance(query, str), "query must be a string"
 
     user_msg = f"{query}\nResponse (1): {new_response}\nResponse (2): {old_response}"
-    chat = [
-        {"role": "user", "content": template.format(conversation=user_msg)},
-        {"role": "assistant", "content": "("},
-    ]
-    prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=False)
-    eot = "<|eot_id|>"
-    if prompt.endswith(eot):
-        prompt = prompt[: -len(eot)]
-    return prompt
+    chat = [{"role": "user", "content": template.format(conversation=user_msg)}]
+    return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
 
 def _build_single_judge_prompt(tokenizer, template: str,
@@ -120,16 +113,8 @@ def _build_fluency_prompt(tokenizer, sentence: str) -> str:
     chat = [
         {"role": "system", "content": PROMPT_TEMPLATES["fluency"]},
         {"role": "user", "content": user_msg},
-        {"role": "assistant", "content": "Rating: [["},
     ]
-    prompt = tokenizer.apply_chat_template(
-        chat, tokenize=False, add_generation_prompt=False
-    )
-    # Strip the trailing end-of-turn token so the model continues from "[["
-    eot = "<|eot_id|>"
-    if prompt.endswith(eot):
-        prompt = prompt[: -len(eot)]
-    return prompt
+    return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
 
 def _build_relevance_prompt(tokenizer, instruction: str, sentence: str) -> str:
@@ -140,15 +125,8 @@ def _build_relevance_prompt(tokenizer, instruction: str, sentence: str) -> str:
     chat = [
         {"role": "system", "content": PROMPT_TEMPLATES["relevance"]},
         {"role": "user", "content": user_msg},
-        {"role": "assistant", "content": "Rating: [["},
     ]
-    prompt = tokenizer.apply_chat_template(
-        chat, tokenize=False, add_generation_prompt=False
-    )
-    eot = "<|eot_id|>"
-    if prompt.endswith(eot):
-        prompt = prompt[: -len(eot)]
-    return prompt
+    return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
 
 def build_fluency_prompts(df: pd.DataFrame, tokenizer) -> pd.DataFrame:

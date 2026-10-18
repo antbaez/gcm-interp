@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|positional|mean] [--attention] [--global] [--split val|test] [--device <cuda:0>] [--no-model-cache]
+# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|last-EOT|last-prompt|mean|positional|unweighted-positional|positional-projected] [--attention] [--global] [--layer-frac <0-1>] [--split val|test] [--device <cuda:0>] [--model-cache]
 # --dataset defaults to "all" (harmful, sycophancy, verse). Dataset variants
 # (VARIANT_DATASETS below, e.g. verse-varied) can be named explicitly but are
 # never part of "all".
@@ -11,10 +11,11 @@ set -e
 # output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
 # By default steering is a single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END
 # of layers (below); --global steers all layers at once instead.
+# --layer-frac <x> steers only layer round(x * num_layers) instead of sweeping.
 
 PATCHING_BATCH_SIZE=100
 SEED=42
-MAX_NEW_TOKENS=512
+MAX_NEW_TOKENS=256
 BATCH_SIZE=50
 
 # Fraction of total layers (0.0-1.0) the single-layer sweep ranges over; ignored
@@ -23,8 +24,10 @@ BATCH_SIZE=50
 # LAYER_RANGE_START=0.333
 # LAYER_RANGE_END=0.6667
 
-LAYER_RANGE_START=0
-LAYER_RANGE_END=0.333
+# Layer sweep vs single layer: leave the line below commented to sweep
+# LAYER_RANGE_START..LAYER_RANGE_END; uncomment it to steer only layer
+# round(LAYER_FRAC * num_layers). --layer-frac <x> on the command line overrides this.
+LAYER_FRAC=0.6667
 
 # Per-model steering N sweep (edit each model's list independently).
 # Local (single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END) and global
@@ -66,12 +69,13 @@ DATASET_TAG="all"
 DEVICE="cuda:0"
 RESID=true
 GLOBAL=false
-NO_MODEL_CACHE=false
+NO_MODEL_CACHE=true
 # val: sweep N x layer on <base>-test.jsonl (the validation split).
 # test: pin the config select_best_config.py chose on validation and generate
 # once on <base>-heldout-test.jsonl, which the sweep never touched.
 SPLIT="val"
 BEST_CONFIGS="judge-evals/best_configs.json"
+METRIC=harmonic
 STEERING_TYPES=(
     last
     mean
@@ -91,11 +95,22 @@ while [[ $# -gt 0 ]]; do
         --seed)    SEED="$2";           shift 2 ;;
         --split)   SPLIT="$2";          shift 2 ;;
         --best-configs) BEST_CONFIGS="$2"; shift 2 ;;
+        --harmonic) METRIC=harmonic; shift ;;
+        --pass-rate) METRIC=pass_rate; shift ;;
         --no-model-cache) NO_MODEL_CACHE=true; shift ;;
+        --model-cache) NO_MODEL_CACHE=false; shift ;;
+        --layer-frac) LAYER_FRAC="$2";  shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
+if [ -n "$LAYER_FRAC" ] && [ "$GLOBAL" = true ]; then
+    echo "Note: --global steers every layer, so LAYER_FRAC=$LAYER_FRAC is ignored"
+    LAYER_FRAC=""
+fi
+if [ "$GLOBAL" = false ] && [ -z "$LAYER_FRAC" ] && { [ -z "$LAYER_RANGE_START" ] || [ -z "$LAYER_RANGE_END" ]; }; then
+    echo "Error: no layers chosen. Set LAYER_FRAC (single layer) or LAYER_RANGE_START and LAYER_RANGE_END (sweep) near the top of run_steering.sh, or pass --layer-frac."; exit 1
+fi
 if [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; then
     echo "Error: --split must be 'val' or 'test' (got '$SPLIT')"; exit 1
 fi
@@ -138,10 +153,90 @@ if [ "$STEERING" = true ];     then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
 if [ "$NORMALIZE" = false ];   then EVAL_FLAGS="$EVAL_FLAGS --unnormalized"; fi
 if [ "$RESID" = true ];        then EVAL_FLAGS="$EVAL_FLAGS --resid"; fi
 if [ "$GLOBAL" = true ];       then EVAL_FLAGS="$EVAL_FLAGS --global"; fi
+if [ -n "$LAYER_FRAC" ];      then EVAL_FLAGS="$EVAL_FLAGS -layer_frac $LAYER_FRAC"; fi
+if [ -n "$LAYER_RANGE_START" ]; then EVAL_FLAGS="$EVAL_FLAGS -layer_range_start $LAYER_RANGE_START"; fi
+if [ -n "$LAYER_RANGE_END" ];   then EVAL_FLAGS="$EVAL_FLAGS -layer_range_end $LAYER_RANGE_END"; fi
 # In test mode run.py reads N/layer per dataset+steering type out of best_configs.json,
 # so the swept -steering_n list passed below is ignored.
-if [ "$SPLIT" = "test" ];      then EVAL_FLAGS="$EVAL_FLAGS -split test -best_configs $BEST_CONFIGS"; fi
-if [ "$NO_MODEL_CACHE" = true ]; then EVAL_FLAGS="$EVAL_FLAGS --no-model-cache"; fi
+if [ "$SPLIT" = "test" ];      then EVAL_FLAGS="$EVAL_FLAGS -split test -best_configs $BEST_CONFIGS -metric $METRIC"; fi
+if [ "$NO_MODEL_CACHE" = false ]; then EVAL_FLAGS="$EVAL_FLAGS --model-cache"; fi
+
+n_list_name() {
+    if [ "$GLOBAL" = true ]; then
+        if [ "$RESID" = true ]; then echo "STEERING_N_GLOBAL_BY_MODEL"; else echo "STEERING_N_GLOBAL_ATTN_BY_MODEL"; fi
+    else
+        if [ "$RESID" = true ]; then echo "STEERING_N_LOCAL_BY_MODEL"; else echo "STEERING_N_LOCAL_ATTN_BY_MODEL"; fi
+    fi
+}
+
+describe_method() {
+    case "$1" in
+        last|last-token|last_token) echo "last token of the prompt (end of the generation prompt)" ;;
+        last-EOT)                   echo "end-of-turn token closing the user message" ;;
+        last-prompt)                echo "final token of the user's own text, before template tokens" ;;
+        mean|all-tokens|all_tokens) echo "mean over each prompt's non-padding tokens, then over prompts" ;;
+        positional)                 echo "one vector per position, weighted by add/sub non-padding coverage" ;;
+        unweighted-positional)      echo "one vector per position, no weighting" ;;
+        positional-projected)       echo "weighted positional, each position projected onto the mean direction" ;;
+        *)                          echo "(unknown method)" ;;
+    esac
+}
+
+print_settings() {
+    local rule="=================================================================="
+    local list_name; list_name="$(n_list_name)"
+    local -n n_table="$list_name"
+    echo "$rule"
+    echo " STEERING RUN SETTINGS"
+    echo "$rule"
+    printf '  %-20s %s\n' "Models:" "${MODELS[*]}"
+    printf '  %-20s %s\n' "Datasets:" "${DATASETS[*]}"
+    if [ "$SPLIT" = "test" ]; then
+        printf '  %-20s %s\n' "Split:" "held-out test (<base>-heldout-test.jsonl)"
+        printf '  %-20s %s\n' "N and layer:" "pinned per method from $BEST_CONFIGS (no sweep)"
+    else
+        printf '  %-20s %s\n' "Split:" "validation sweep (<base>-test.jsonl)"
+    fi
+    if [ "$RESID" = true ]; then
+        printf '  %-20s %s\n' "Steered stream:" "residual stream (layer.output)"
+    else
+        printf '  %-20s %s\n' "Steered stream:" "attention output (self_attn.o_proj.output)"
+    fi
+    if [ "$GLOBAL" = true ]; then
+        printf '  %-20s %s\n' "Layers:" "all layers at once (global)"
+    elif [ -n "$LAYER_FRAC" ]; then
+        printf '  %-20s %s\n' "Layers:" "single layer: round($LAYER_FRAC x number of layers)"
+    else
+        printf '  %-20s %s\n' "Layers:" "one at a time, sweeping ${LAYER_RANGE_START}-${LAYER_RANGE_END} of the layers"
+    fi
+    echo "  Steering methods:"
+    local T
+    for T in "${STEERING_TYPES[@]}"; do
+        printf '    %-22s %s\n' "$T" "$(describe_method "$T")"
+    done
+    if [ "$NORMALIZE" = true ]; then
+        printf '  %-20s %s\n' "Vector scaling:" "normalized to unit length, then multiplied by N"
+    else
+        printf '  %-20s %s\n' "Vector scaling:" "raw (unnormalized), multiplied by N"
+    fi
+    if [ "$SPLIT" != "test" ]; then
+        echo "  N values ($list_name):"
+        local M
+        for M in "${MODELS[@]}"; do
+            printf '    %-22s %s\n' "$M" "${n_table[$M]:-(none defined - this model will fail)}"
+        done
+    fi
+    printf '  %-20s %s\n' "Max new tokens:" "$MAX_NEW_TOKENS"
+    printf '  %-20s %s\n' "Batch sizes:" "generation $BATCH_SIZE, steering-vector activations $PATCHING_BATCH_SIZE"
+    printf '  %-20s %s\n' "Seed:" "$SEED"
+    printf '  %-20s %s\n' "Device:" "$DEVICE"
+    if [ "$NO_MODEL_CACHE" = true ]; then
+        printf '  %-20s %s\n' "Model weights:" "temporary download to ${MODEL_TMP_DIR:-~/orcd/scratch/hf-nocache}, deleted after loading"
+    else
+        printf '  %-20s %s\n' "Model weights:" "persistent Hugging Face cache"
+    fi
+    echo "$rule"
+}
 
 run_experiments_for_model() {
     local M_TAG="$1"
@@ -158,19 +253,9 @@ run_experiments_for_model() {
     esac
 
     local STEERING_N WHICH_LIST
-    if [ "$GLOBAL" = true ]; then
-        if [ "$RESID" = true ]; then
-            WHICH_LIST="STEERING_N_GLOBAL_BY_MODEL";      STEERING_N="${STEERING_N_GLOBAL_BY_MODEL[$M_TAG]}"
-        else
-            WHICH_LIST="STEERING_N_GLOBAL_ATTN_BY_MODEL"; STEERING_N="${STEERING_N_GLOBAL_ATTN_BY_MODEL[$M_TAG]}"
-        fi
-    else
-        if [ "$RESID" = true ]; then
-            WHICH_LIST="STEERING_N_LOCAL_BY_MODEL";       STEERING_N="${STEERING_N_LOCAL_BY_MODEL[$M_TAG]}"
-        else
-            WHICH_LIST="STEERING_N_LOCAL_ATTN_BY_MODEL";  STEERING_N="${STEERING_N_LOCAL_ATTN_BY_MODEL[$M_TAG]}"
-        fi
-    fi
+    WHICH_LIST="$(n_list_name)"
+    local -n N_TABLE="$WHICH_LIST"
+    STEERING_N="${N_TABLE[$M_TAG]}"
     # Not every model has all four lists filled in. Catch it here rather than letting
     # run.py fail on an empty -steering_n, which reports itself as an argparse error.
     if [ -z "$STEERING_N" ]; then
@@ -218,13 +303,13 @@ run_experiments_for_model() {
         -eval_batch_size "$BATCH_SIZE" \
         -steering_n $STEERING_N \
         -steering_types "${STEERING_TYPES[@]}" \
-        -layer_range_start "$LAYER_RANGE_START" \
-        -layer_range_end "$LAYER_RANGE_END" \
         $EVAL_FLAGS
 
     local ELAPSED=$(( SECONDS - START_TIME ))
     echo "[$M_TAG] Done in $(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s"
 }
+
+print_settings
 
 for M in "${MODELS[@]}"; do
     run_experiments_for_model "$M" "${DATASETS[@]}"

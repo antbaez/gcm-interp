@@ -4,12 +4,16 @@
 # model x dataset combo via scripts/run_preemptable_job.sh.
 #
 # Usage:
-#   bash run_preemptable.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--seed N] [--no-model-cache]
+#   bash run_preemptable.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--seed N] [--no-model-cache] [--pass-rate]
 #   Defaults: --model all --dataset all (uses steering types from scripts/run_steering.sh)
 #   Note: Residual-stream steering runs by default. Pass --attention to steer the attention
 #   output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
 #   --no-model-cache downloads the model/tokenizer to a temp directory instead of the
 #   persistent HF cache, and deletes it once loaded — avoids filling disk quota.
+#   By default, selection and the final report use the mean per-prompt harmonic mean of the 0-2
+#   concept (1-3 -> 0, 4 -> 1, 5 -> 2), fluency, and relevance ratings instead of the
+#   w_rf pass rate (selections in judge-evals/best_configs_harmonic.json). --pass-rate
+#   switches back to the w_rf pass rate and judge-evals/best_configs.json.
 
 set -e
 
@@ -22,6 +26,7 @@ RESID=true
 GLOBAL=false
 SEED=""
 NO_MODEL_CACHE=false
+HARMONIC=true
 # Which phases to run. Omitted (the default "all") runs the validation sweep,
 # selection, and the held-out split in one go. "val" stops after judging the
 # sweep; "test" selects from whatever sweep results already exist and only
@@ -40,6 +45,8 @@ while [[ $# -gt 0 ]]; do
         --seed)         SEED="$2";         shift 2 ;;
         --split)        SPLIT="$2";        shift 2 ;;
         --no-model-cache) NO_MODEL_CACHE=true; shift ;;
+        --harmonic)     HARMONIC=true;     shift ;;
+        --pass-rate)    HARMONIC=false;    shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -63,6 +70,7 @@ JOB_FLAGS=()
 [ -n "$SEED" ]             && JOB_FLAGS+=(--seed "$SEED")
 [ "$SPLIT" != "all" ]      && JOB_FLAGS+=(--split "$SPLIT")
 [ "$NO_MODEL_CACHE" = true ] && JOB_FLAGS+=(--no-model-cache)
+[ "$HARMONIC" = false ]    && JOB_FLAGS+=(--pass-rate)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

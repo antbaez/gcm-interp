@@ -13,7 +13,7 @@
 # comma-separated or "all" model/dataset values, it will not fan out.
 #
 # Usage:
-#   sbatch scripts/run_preemptable_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--no-model-cache]
+#   sbatch scripts/run_preemptable_job.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama> --dataset <harmful|sycophancy|verse|...> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--no-model-cache] [--pass-rate]
 #   Note: Residual-stream steering runs by default. Pass --attention to steer the attention
 #   output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
 #   With no --split, runs the whole pipeline: validation sweep, judging, selection,
@@ -38,6 +38,7 @@ GLOBAL=false
 SPLIT="all"
 SEED=""
 NO_MODEL_CACHE=false
+HARMONIC=true
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -51,6 +52,8 @@ while [[ $# -gt 0 ]]; do
         --split)        SPLIT="$2";        shift 2 ;;
         --seed)         SEED="$2";         shift 2 ;;
         --no-model-cache) NO_MODEL_CACHE=true; shift ;;
+        --harmonic)     HARMONIC=true;     shift ;;
+        --pass-rate)    HARMONIC=false;    shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -62,6 +65,7 @@ EXTRA_FLAGS=()
 [ "$GLOBAL" = true ]       && EXTRA_FLAGS+=(--global)
 [ -n "$SEED" ]             && EXTRA_FLAGS+=(--seed "$SEED")
 [ "$NO_MODEL_CACHE" = true ] && EXTRA_FLAGS+=(--no-model-cache)
+[ "$HARMONIC" = false ]     && EXTRA_FLAGS+=(--pass-rate)
 
 JUDGE_FLAGS=()
 [ "$UNNORMALIZED" = true ] && JUDGE_FLAGS+=(--unnormalized)
@@ -75,7 +79,14 @@ STREAM="residuals"
 SCOPE="local"
 [ "$GLOBAL" = true ] && SCOPE="global"
 
-echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  unnormalized=$UNNORMALIZED  resid=$RESID  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY  no_model_cache=$NO_MODEL_CACHE"
+SELECT_FLAGS=()
+BEST_CONFIGS="judge-evals/best_configs.json"
+if [ "$HARMONIC" = true ]; then
+    SELECT_FLAGS+=(--metric harmonic)
+    BEST_CONFIGS="judge-evals/best_configs_harmonic.json"
+fi
+
+echo "Running: model=$MODEL  dataset=$DATASET  type=${TYPE_VAL:-default}  unnormalized=$UNNORMALIZED  resid=$RESID  global=$GLOBAL  split=$SPLIT  judging_only=$JUDGING_ONLY  no_model_cache=$NO_MODEL_CACHE  harmonic=$HARMONIC"
 
 cd ~/gcm-interp
 
@@ -98,9 +109,10 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
     trap 'rm -f "$PENDING_FILE"' EXIT
 
     echo ""
+    source ~/gcm-interp/setup/setup_judging.sh
     echo "Selecting best validation config..."
     python judge-evals/select_best_config.py \
-        --model "$MODEL" --dataset "$DATASET" --stream "$STREAM" --scope "$SCOPE" --pending-out "$PENDING_FILE"
+        --model "$MODEL" --dataset "$DATASET" --stream "$STREAM" --scope "$SCOPE" --pending-out "$PENDING_FILE" "${SELECT_FLAGS[@]}"
 
     # --- Held-out split, only when the selection moved or was never run.
     # Generation would skip on its own, but not before loading the model and
@@ -111,7 +123,7 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
         cat "$PENDING_FILE"
 
         source ~/gcm-interp/setup/setup.sh
-        bash scripts/run_steering.sh --model "$MODEL" --dataset "$DATASET" --split test "${EXTRA_FLAGS[@]}"
+        bash scripts/run_steering.sh --model "$MODEL" --dataset "$DATASET" --split test --best-configs "$BEST_CONFIGS" "${EXTRA_FLAGS[@]}"
 
         source ~/gcm-interp/setup/setup_judging.sh
         bash scripts/run_judging.sh --model "$MODEL" --dataset "$DATASET" --split test "${JUDGE_FLAGS[@]}"
@@ -124,6 +136,14 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
     # the same file. run_mcnemar_test.py is deliberately not run here: it is
     # meant to be run by hand once every combination has finished.
     echo ""
-    echo "Collecting held-out pass rates..."
-    python stats/collect_pass_rates.py --split test --model "$MODEL" --dataset "$DATASET" --stream "$STREAM" --scope "$SCOPE"
+    if [ "$HARMONIC" = true ]; then
+        echo "Computing held-out harmonic scores..."
+        python calculate_harmonic_scores.py --root judge-evals/workdirs --split heldout-test \
+            --models "$MODEL" --datasets "$DATASET" --stream "$STREAM" --scope "$SCOPE" \
+            --best-configs "$BEST_CONFIGS" \
+            --out "stats/harmonic_scores/${MODEL}_${DATASET}_${STREAM}_${SCOPE}_test.csv"
+    else
+        echo "Collecting held-out pass rates..."
+        python stats/collect_pass_rates.py --split test --model "$MODEL" --dataset "$DATASET" --stream "$STREAM" --scope "$SCOPE"
+    fi
 fi

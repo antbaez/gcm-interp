@@ -100,8 +100,14 @@ def main():
                         config.args.steering_n = [entry['N']]
                         if isinstance(entry['layer'], int):
                             config.args.layers = [entry['layer']]
+                        score_key, score_label = (('val_harmonic_mean', 'harmonic') if config.args.metric == 'harmonic'
+                                                  else ('val_pass_rate', 'w_rf'))
+                        if score_key not in entry:
+                            raise SystemExit(f"{config.args.best_configs} has no '{score_key}' for "
+                                             f"{model_name}/{task}/{stream}/{scope}/{steering_type}; "
+                                             f"it was selected with a different -metric than '{config.args.metric}'")
                         print(f"Pinned from validation: N={entry['N']:g} layer={entry['layer']} "
-                              f"(val w_rf={entry['val_pass_rate']:.3f})")
+                              f"(val {score_label}={entry[score_key]:.3f})")
 
                     run_eval(config, data_handler, model_handler, batch_handler, baseline_fn=get_baseline)
 

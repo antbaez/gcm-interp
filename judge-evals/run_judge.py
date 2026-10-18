@@ -229,9 +229,8 @@ def _evaluate_all_workdirs_batched(
     Collect all prompts from all workdirs into one batch per mode, run vLLM once
     per mode, then write results back to per-workdir JSONL files.
     """
-    from evaluator import get_sampling_params, generate_in_batches
+    from evaluator import generate_in_batches
     from config import PASSTHROUGH_COLS, extract_rating
-    from compute_accuracies import extract_first_int
 
     dtype = {"post-intervention-response": str, "original-response": str,
              "query": str, "data_path_query": str}
@@ -242,7 +241,7 @@ def _evaluate_all_workdirs_batched(
     ]
     if not skip_judge:
         modes_config.append(
-            ("judge", "judge_prompt", "judge_ratings.jsonl", extract_first_int)
+            ("judge", "judge_prompt", "judge_ratings.jsonl", extract_rating)
         )
 
     for mode, prompt_col, out_filename, rate_fn in modes_config:
@@ -272,12 +271,11 @@ def _evaluate_all_workdirs_batched(
               f"{len({wd for wd, _ in all_rows})} workdirs...")
 
         prompts = [row[prompt_col] for _, row in all_rows]
-        sp = get_sampling_params()
 
         # Single large batched inference
         outputs = []
         total_batches = (len(prompts) + batch_size - 1) // batch_size
-        for batch_num, batch in enumerate(generate_in_batches(llm, prompts, sp, batch_size), start=1):
+        for batch_num, batch in enumerate(generate_in_batches(llm, prompts, batch_size), start=1):
             print(f"  [{mode}] Batch {batch_num}/{total_batches} — {len(batch)} prompts")
             outputs.extend(batch)
 

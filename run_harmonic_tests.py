@@ -419,10 +419,10 @@ def _generate_rounds(rounds, setup, device, dry_run, weights_dir, last_round, we
         for t in round_tests:
             task, _ = DATASET_TASKS[t["dataset"]]
             # run.py reads model/task/stream/scope/method (select_best_config.py's
-            # layout) and prints val_pass_rate when pinning, so the key has to exist.
+            # layout) and prints val_harmonic_mean when pinning, so the key has to exist.
             best.setdefault(MODEL_DIRS[t["model"]], {}).setdefault(task, {}) \
                 .setdefault(STREAM, {}).setdefault(SCOPE, {})[t["method"]] = {
-                "N": t["N"], "layer": t["layer"], "val_pass_rate": math.nan,
+                "N": t["N"], "layer": t["layer"], "val_harmonic_mean": math.nan,
             }
         fd, tmp = tempfile.mkstemp(prefix="run_tests_best_configs_", suffix=".json")
         try:
