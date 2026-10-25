@@ -21,7 +21,7 @@ counted in the `dropped` column.
 Reads the layout run_harmonic_tests.py saves under harmonic_results/judge_scores/
 (the default), which mirrors judge-evals/workdirs/, so --root can point at either:
 
-    <root>/<model>/<task>/<norm>/<stream>/<scope>/<method>/N=<N>_<ablation>_layer=<L>_<test_file>/
+    <root>/<model>/<task>/<norm>/<scope>/<method>/N=<N>_<ablation>_layer=<L>_<test_file>/
 
 One row is printed per condition, so a method with several saved (N, layer)
 configs gets one row each.
@@ -37,13 +37,21 @@ run_harmonic_tests.py); base rows used for the deltas are read regardless.
 Usage:
     python calculate_harmonic_scores.py
     python calculate_harmonic_scores.py --out harmonic_scores.csv
-    python calculate_harmonic_scores.py --root judge-evals/workdirs --split heldout-test
+    python calculate_harmonic_scores.py --root judge-evals/workdirs --split test
     python calculate_harmonic_scores.py --datasets variants
+    python calculate_harmonic_scores.py --root <results_dir>/judge-evals/workdirs --split test \
+        --best-configs <results_dir>/judge-evals/best_configs_harmonic.json --json <results_dir>/harmonic_scores.json
+
+--json merges one entry per model / dataset / <scope> / method into that
+file (other entries are kept, so concurrent jobs for different combos can share
+it) and rewrites a Markdown table of the whole file next to it (.md).
 """
 
 import argparse
 import csv
+import fcntl
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -59,7 +67,7 @@ DEFAULT_ROOT = REPO_ROOT / "harmonic_results" / "judge_scores"
 # reported under their task dir name.
 TASK_DATASETS = {task: tag for tag, (task, _) in DATASET_TASKS.items()}
 
-FIELDS = ["model", "dataset", "base", "stream", "scope", "method", "N", "layer", "test_file", "n", "unparsed",
+FIELDS = ["model", "dataset", "base", "scope", "method", "N", "layer", "test_file", "n", "unparsed",
           "dropped", "harmonic_mean", "delta_vs_base", "concept", "fluency", "relevance", "path"]
 
 
@@ -102,8 +110,8 @@ def collect(root: Path, split: str | None) -> list[dict]:
         if split is not None and not meta["test_file"].endswith(split):
             continue
         parts = cond_dir.relative_to(root).parts
-        # <model>/<task>/<norm>/<stream>/<scope>/<method>/<condition>
-        if len(parts) != 7:
+        # <model>/<task>/<norm>/<scope>/<method>/<condition>
+        if len(parts) != 6:
             print(f"Skipping {cond_dir} (unexpected directory depth)", file=sys.stderr)
             continue
         scores = score_condition(cond_dir)
@@ -115,9 +123,8 @@ def collect(root: Path, split: str | None) -> list[dict]:
             "dataset": dataset,
             "base": VARIANT_BASE.get(dataset, dataset),
             "task": parts[1],
-            "stream": parts[3],
-            "scope": parts[4],
-            "method": parts[5],
+            "scope": parts[3],
+            "method": parts[4],
             "N": meta["N"],
             "layer": meta["value"],
             "test_file": meta["test_file"],
@@ -131,7 +138,7 @@ def collect(root: Path, split: str | None) -> list[dict]:
 
 
 def split_suffix(r: dict) -> str:
-    """The split part of a test file stem, e.g. 'heldout-test' for prose-varied-heldout-test."""
+    """The split part of a test file stem, e.g. 'test' for prose-varied-test."""
     base_name = DATASET_TASKS[r["dataset"]][1] if r["dataset"] in DATASET_TASKS else ""
     return r["test_file"][len(base_name) + 1:] if r["test_file"].startswith(base_name + "-") else r["test_file"]
 
@@ -169,24 +176,113 @@ def print_table(results: list[dict]):
               f"{fmt(r['fluency']):>7} {fmt(r['relevance']):>7}")
 
 
+JSON_SCORE_KEYS = ("harmonic_mean", "concept", "fluency", "relevance")
+
+
+def json_entry(r: dict) -> dict:
+    return {**{k: None if r[k] is None else round(r[k], 3) for k in JSON_SCORE_KEYS},
+            "n": r["n"], "unparsed": r["unparsed"], "dropped": r["dropped"],
+            "N": r["N"], "layer": r["layer"], "test_file": r["test_file"]}
+
+
+AVERAGE_KEY = "average"
+
+
+def add_averages(scores: dict):
+    """Per model/dataset/<scope>, the unweighted mean over its methods of each score."""
+    for datasets in scores.values():
+        for settings in datasets.values():
+            for methods in settings.values():
+                entries = {m: e for m, e in methods.items() if m != AVERAGE_KEY}
+                avg = {}
+                for k in JSON_SCORE_KEYS:
+                    vals = [e[k] for e in entries.values() if e[k] is not None]
+                    avg[k] = round(sum(vals) / len(vals), 3) if vals else None
+                methods[AVERAGE_KEY] = {**avg, "methods": sorted(entries)}
+
+
+def markdown_table(scores: dict) -> str:
+    def table(header, rows):
+        return ["| " + " | ".join(header) + " |", "|" + "---|" * len(header),
+                *("| " + " | ".join(str(c) for c in row) + " |" for row in rows)]
+
+    averages, per_method = [], []
+    for model, datasets in sorted(scores.items()):
+        for dataset, settings in sorted(datasets.items()):
+            for setting, methods in sorted(settings.items()):
+                avg = methods[AVERAGE_KEY]
+                averages.append([model, dataset, setting, *(fmt(avg[k]) for k in JSON_SCORE_KEYS),
+                                 ", ".join(avg["methods"])])
+                for method, e in sorted(methods.items()):
+                    if method == AVERAGE_KEY:
+                        continue
+                    per_method.append([model, dataset, setting, method,
+                                       *(fmt(e[k]) for k in JSON_SCORE_KEYS), e["n"], e["N"], e["layer"]])
+
+    lines = ["# Harmonic scores (held-out)", "",
+             "## Average over methods", "",
+             *table(["model", "dataset", "scope", "harmonic", "concept", "fluency", "relevance",
+                     "methods"], averages),
+             "", "## Per method", "",
+             *table(["model", "dataset", "scope", "method", "harmonic", "concept", "fluency",
+                     "relevance", "n", "N", "layer"], per_method)]
+    return "\n".join(lines) + "\n"
+
+
+def merge_json(path: Path, results: list[dict]):
+    """Merge one entry per model/dataset/<scope>/method into the JSON at
+    `path` under a lock (concurrent jobs share it), then rewrite the .md table."""
+    updates = {}
+    for r in results:
+        methods = (updates.setdefault(r["model"], {}).setdefault(r["dataset"], {})
+                   .setdefault(r["scope"], {}))
+        if r["method"] in methods:
+            raise SystemExit(f"--json: several conditions for {r['model']}/{r['dataset']}/"
+                             f"{r['scope']}/{r['method']}; pass --best-configs")
+        methods[r["method"]] = json_entry(r)
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path.with_name(path.name + ".lock"), "w") as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            merged = json.loads(path.read_text()) if path.exists() else {}
+            for model, datasets in updates.items():
+                for dataset, settings in datasets.items():
+                    for setting, methods in settings.items():
+                        merged.setdefault(model, {}).setdefault(dataset, {}) \
+                              .setdefault(setting, {}).update(methods)
+            add_averages(merged)
+            for out, text in ((path, json.dumps(merged, indent=2, sort_keys=True) + "\n"),
+                              (path.with_suffix(".md"), markdown_table(merged))):
+                tmp = out.with_name(out.name + ".tmp")
+                tmp.write_text(text)
+                os.replace(tmp, out)
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+    print(f"\nUpdated {path} and {path.with_suffix('.md')}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT,
                         help="Judge-score tree to read (default: harmonic_results/judge_scores)")
     parser.add_argument("--split", default=None,
-                        help="Only conditions whose test file ends with this, e.g. 'heldout-test' "
+                        help="Only conditions whose test file ends with this, e.g. 'test' "
                              "(default: every condition found)")
     parser.add_argument("--datasets", default=None,
                         help="Comma-separated dataset tags to report, incl. variants; 'variants' = every "
                              "variant, 'all' = base datasets + every variant (default: everything found)")
     parser.add_argument("--models", default=None,
                         help=f"Comma-separated model tags to report ({', '.join(MODEL_DIRS)}; default: every model found)")
-    parser.add_argument("--stream", default=None, help="Only this stream, e.g. 'residuals' (default: every stream)")
     parser.add_argument("--scope", default=None, help="Only this scope, e.g. 'local' (default: every scope)")
     parser.add_argument("--best-configs", type=Path, default=None,
                         help="Only conditions at the (N, layer) a best_configs file selected for their "
-                             "model/task/stream/scope/method, e.g. judge-evals/best_configs_harmonic.json")
+                             "model/task/scope/method, e.g. judge-evals/best_configs_harmonic.json")
     parser.add_argument("--out", type=Path, default=None, help="Also write the table as CSV here")
+    parser.add_argument("--json", type=Path, default=None,
+                        help="Also merge per model/dataset/scope/method scores into this JSON "
+                             "(and a Markdown table beside it); needs one condition per method, "
+                             "e.g. via --best-configs")
     args = parser.parse_args()
 
     if not args.root.is_dir():
@@ -202,8 +298,6 @@ def main():
             raise SystemExit(f"--models: unknown model(s) {unknown} (one of {', '.join(MODEL_DIRS)})")
         wanted_models = {MODEL_DIRS[t] for t in tags}
         results = [r for r in results if r["model"] in wanted_models]
-    if args.stream is not None:
-        results = [r for r in results if r["stream"] == args.stream]
     if args.scope is not None:
         results = [r for r in results if r["scope"] == args.scope]
     if args.best_configs is not None:
@@ -211,7 +305,7 @@ def main():
             best = json.load(f)
 
         def selected(r):
-            cfg = (best.get(r["model"], {}).get(r["task"], {}).get(r["stream"], {})
+            cfg = (best.get(r["model"], {}).get(r["task"], {})
                    .get(r["scope"], {}).get(r["method"]))
             return cfg is not None and float(cfg["N"]) == r["N"] and str(cfg["layer"]) == r["layer"]
 
@@ -227,6 +321,8 @@ def main():
             writer.writeheader()
             writer.writerows(results)
         print(f"\nWrote {args.out}")
+    if args.json:
+        merge_json(args.json, results)
 
 
 if __name__ == "__main__":

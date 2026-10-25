@@ -29,17 +29,16 @@ from config import BASE_DIR, RUNS_DIR, DATA_DIR, GEN_RE
 
 def extract_path_metadata(path: str) -> dict:
     """Pull model/task/steering metadata from the directory structure."""
+    # Read from the end: the results root can be any directory (settings' results_dir).
     parts = Path(path).parts
-    runs_idx = parts.index("results")
 
-    model_id      = parts[runs_idx + 1]
-    from_to       = parts[runs_idx + 2]
-    _, source, _, base = from_to.split("_")
-    norm_mode     = parts[runs_idx + 3]   # "normalized" or "unnormalized"
-    stream_mode   = parts[runs_idx + 4]   # "attention" or "residuals"
-    scope         = parts[runs_idx + 5]   # "global" or "local"
-    steering_type = parts[runs_idx + 6]   # e.g. "positional", "last-token"
-    filename      = parts[runs_idx + 7]
+    model_id      = parts[-6]
+    from_to       = parts[-5]
+    _, base, _, source = from_to.split("_")
+    norm_mode     = parts[-4]   # "normalized" or "unnormalized"
+    scope         = parts[-3]   # "global" or "local"
+    steering_type = parts[-2]   # e.g. "positional", "last-token"
+    filename      = parts[-1]
 
     m = GEN_RE.match(filename)
     if not m:
@@ -50,7 +49,6 @@ def extract_path_metadata(path: str) -> dict:
         "SOURCE":        source,
         "BASE":          base,
         "NORM_MODE":     norm_mode,
-        "STREAM_MODE":   stream_mode,
         "SCOPE":         scope,
         "STEERING_TYPE": steering_type,
         **m.groupdict(),
@@ -84,13 +82,13 @@ def load_test_queries(data_dir: str, model_id: str, source: str, base: str,
     """Load the user-turn text from the test JSONL.
 
     `test_file` is the split's filename stem as parsed out of the generation
-    filename (e.g. `harmless-test` or `harmless-heldout-test`). It must be
+    filename (e.g. `harmless-valid` or `harmless-test`). It must be
     honoured: these queries are matched positionally against the generations,
     so reading the wrong split here would silently label every response with
     another split's prompt.
     """
     source_dir = SOURCE_TO_DIR.get((source, base)) or SOURCE_TO_DIR.get(source, source)
-    stem = test_file or f"{base}-test"
+    stem = test_file or f"{base}-valid"
     logits_path = f"{data_dir}/{model_id}/{source_dir}/{stem}.jsonl"
     queries = []
     with open(logits_path) as f:
@@ -121,25 +119,23 @@ def discover_gen_files(
     base: str | None = None,
     norm_mode: str | None = None,
     steering_type: str | None = None,
-    stream_mode: str | None = None,
     scope: str | None = None,
     test_file: str | None = None,
 ) -> list[str]:
     """
-    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/stream_mode/scope/steering_type.
+    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/scope/steering_type.
 
     Uses single-level wildcards (*) for each path component to avoid duplicates
     that arise from recursive (**) globbing.
     """
     model_part   = model_name or "*"
-    task_part    = f"from_{source}_to_{base}" if (source and base) else "*"
+    task_part    = f"from_{base}_to_{source}" if (source and base) else "*"
     norm_part    = norm_mode or "*"
-    stream_part  = stream_mode or "*"
     scope_part   = scope or "*"
     steer_part   = steering_type or "*"
 
     gen_files = []
-    pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{stream_part}/{scope_part}/{steer_part}/*_gen.json"
+    pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{scope_part}/{steer_part}/*_gen.json"
     gen_files.extend(glob.glob(pattern))
 
     # Deduplicate and filter by filename pattern
@@ -192,7 +188,6 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
             "SOURCE": source,
             "BASE": base,
             "NORM_MODE": meta["NORM_MODE"],
-            "STREAM_MODE": meta["STREAM_MODE"],
             "SCOPE": meta["SCOPE"],
             "STEERING_TYPE": meta["STEERING_TYPE"],
             "N": meta["N"],
@@ -218,7 +213,7 @@ def gen_to_csv(gen_path: str, data_dir: str, output_path: str):
 def default_csv_path(gen_path: str) -> str:
     """Derive the default CSV output path from a gen.json path."""
     p = Path(gen_path)
-    stem = p.stem  # e.g. "N=1_steer_layer=13_sycophancy-test_gen"
+    stem = p.stem  # e.g. "N=1_steer_layer=13_sycophancy-valid_gen"
     if stem.endswith("_gen"):
         stem = stem[:-4]
     return str(p.parent / f"{stem}_eval.csv")

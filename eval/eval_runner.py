@@ -1,6 +1,6 @@
 from asyncio import log
 # from setup import set_seed
-from eval.activations import steering_reps_cache, steering_coverage as compute_steering_coverage
+from eval.activations import steering_reps_cache, steering_coverage as compute_steering_coverage, steered_acts_path, save_steered_activations
 from eval.generation import select_gen_qs_toks, generate_with_patches, decode_responses, STEERING_TYPE_VARIANTS, WEIGHTED_POSITIONAL_TYPES, PROJECTED_STEERING_TYPES
 import hashlib
 import math
@@ -16,7 +16,7 @@ from utils.batch_handler import BatchHandler
 from utils.model_handler import ModelHandler
 def load_patching_reps(data_handler, model_handler, variant=None):
     model = model_handler.model
-    return steering_reps_cache(model, data_handler, variant=variant)
+    return steering_reps_cache(model, data_handler, batch_size=data_handler.config.args.train_batch_size, variant=variant)
 
 def save_prompt_responses(responses, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -31,7 +31,7 @@ def save_prompt_responses(responses, path):
 def baseline_cache_path(config):
     """On-disk baseline for the current dataset + eval split, beside its config.yml.
 
-    Lives at the task-dir level (not under <norm>/<stream>/<scope>/<method>/) and
+    Lives at the task-dir level (not under <norm>/<scope>/<method>/) and
     doesn't end in `_gen.json`, so neither the judge's gen-file discovery nor
     select_best_config.py's held-out pruning ever picks it up.
     """
@@ -119,9 +119,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
     print(f"Starting evaluation — task: {config.args.source} -> {config.args.base}, test: {config.args.test_dataset}, N={config.args.steering_n}")
 
     model = model_handler.model
-    resid = getattr(config.args, 'resid', False)
     global_steer = getattr(config.args, 'global_steer', False)
-    # Whole layers are steered in both streams: a single-layer sweep over
+    # Whole layers are steered: a single-layer sweep over
     # -layer_range_start/-layer_range_end (default) or every layer at once (--global).
     layer_sweep = not global_steer
     ablation = data_handler.config.args.ablation
@@ -191,6 +190,41 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
         # filename slot is a fixed `layer=all` sentinel.
         sweep_vals = ['all']
 
+    # hook_response_acts also saves the activations under steering of every condition (verse only).
+    hook_steered = getattr(config.args, 'hook_response_acts', False) and config.args.source == 'verse-long'
+    hook_batch_size = getattr(config.args, 'hook_batch_size', 9)
+
+    def steer_kwargs(steer_layers):
+        return dict(patch_activations=get_patching_reps(), layer_ids=steer_layers, N=config.args.N,
+                    normalize=config.args.normalize, steering_type=config.args.steering_type,
+                    coverage=steering_coverage, projection_dirs=projection_dirs)
+
+    def steered_outputs(steer_layers):
+        """Regenerates the current condition's steered outputs (rows of padded prompt +
+        generated tokens) for the activation hook, without touching its gen files."""
+        rows = []
+        hook_batches = BatchHandler(config, data_handler)
+        for idx in range(0, select_gen_qs_toks(config, data_handler)['input_ids'].shape[0], config.args.batch_size):
+            out = generate_with_patches(model, select_gen_qs_toks(config, hook_batches), get_patching_reps(), steer_layers,
+                                        config.args.N, max_new_tokens=config.args.max_new_tokens,
+                                        normalize=config.args.normalize, steering_type=config.args.steering_type,
+                                        coverage=steering_coverage, projection_dirs=projection_dirs,
+                                        steer_mask=data_handler.test_steer_mask[idx:idx+config.args.batch_size])
+            rows += list(out.cpu())
+            hook_batches.update()
+        return rows
+
+    def hook_existing_condition(steer_layers):
+        if not hook_steered:
+            return
+        path = steered_acts_path(config, model=model)
+        if os.path.exists(path):
+            print(f'[hook_acts] {path} exists, skipping')
+            return
+        print(f'[hook_acts] gen files exist but no steered activations; regenerating N={config.args.N:g} for the hook')
+        save_steered_activations(model, data_handler, steered_outputs(steer_layers), steer_kwargs(steer_layers),
+                                 path, batch_size=hook_batch_size)
+
     decoded_responses = {}
     pre_patch_logits = None
     model.eval()
@@ -205,10 +239,11 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
             decoded_responses[reps_type] = {}
             for sweep_val in tqdm(sweep_vals, desc=f"{sweep_axis} values"):
                 slot = f"{sweep_axis}={sweep_val}"
+                steer_layers = [sweep_val] if layer_sweep else list(range(model_handler.num_layers))
+                config.args.steer_layer = sweep_val
                 norm_dir   = "normalized" if config.args.normalize else "unnormalized"
-                stream_dir = "residuals" if resid else "attention"
                 scope_dir  = "global" if global_steer else "local"
-                steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{stream_dir}/{scope_dir}/{config.args.steering_type}"
+                steer_eval_dir = f"{config.get_output_prefix()}/{norm_dir}/{scope_dir}/{config.args.steering_type}"
                 new_stem = f"{steer_eval_dir}/N={n_str}_{ablation}_{slot}_{config.args.test_dataset}_gen"
                 old_stem = f"{steer_eval_dir}/{n_str}_{reps_type}_{ablation}_{sweep_val}_{config.args.test_dataset}_gen"
                 existing_stem = (
@@ -225,6 +260,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
                     old_key = f'old_{config.args.base}'
                     if existing_stem == new_stem and all(old_key in item for item in decoded_responses[reps_type][sweep_val]):
                         print(f"Skipping evaluation for {slot}, N={config.args.N} as gen files already exist.")
+                        hook_existing_condition(steer_layers)
                         continue
 
                     # Legacy stem or missing baseline field: rewrite it under the
@@ -237,25 +273,24 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
                     gen_file = f"{new_stem}.txt"
                     save_prompt_responses(decoded_responses[reps_type][sweep_val], gen_file)
                     print(f"Skipping evaluation for {slot}, N={config.args.N} as gen files already exist.")
+                    hook_existing_condition(steer_layers)
                     continue
                 decoded_responses[reps_type][sweep_val] = []
                 gen_file = f"{new_stem}.txt"
                 original_outputs = get_baseline()
                 patching_reps = get_patching_reps()
 
-                if layer_sweep:
-                    steer_layers = [sweep_val]
-                else:
-                    steer_layers = list(range(model_handler.num_layers))
-
+                steered_rows = []
                 batch_handler = BatchHandler(config, data_handler)
                 len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
                 steer_total = len(range(0, len_gen_qs, config.args.batch_size))
                 for batch_num, idx in enumerate(range(0, len_gen_qs, config.args.batch_size), start=1):
                     _t0 = time.time()
                     gen_qs_toks = select_gen_qs_toks(config, batch_handler)
-                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, steer_layers, config.args.N, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, resid=resid, coverage=steering_coverage, projection_dirs=projection_dirs, steer_mask=data_handler.test_steer_mask[idx:idx+config.args.batch_size])
+                    edited_outputs = generate_with_patches(model, gen_qs_toks, patching_reps, steer_layers, config.args.N, max_new_tokens=config.args.max_new_tokens, normalize=config.args.normalize, steering_type=config.args.steering_type, coverage=steering_coverage, projection_dirs=projection_dirs, steer_mask=data_handler.test_steer_mask[idx:idx+config.args.batch_size])
                     decoded = decode_responses(model, gen_qs_toks, original_outputs[idx:idx+config.args.batch_size], edited_outputs, config.args.base)
+                    if hook_steered:
+                        steered_rows += list(edited_outputs.cpu())
                     gc.collect()
                     torch.cuda.empty_cache()
                     if len(decoded_responses[reps_type][sweep_val]) == 0:
@@ -267,4 +302,11 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
 
                 os.makedirs(steer_eval_dir, exist_ok=True)
                 save_prompt_responses(decoded_responses[reps_type][sweep_val], gen_file)
+                if hook_steered:
+                    path = steered_acts_path(config, model=model)
+                    if os.path.exists(path):
+                        print(f'[hook_acts] {path} exists, skipping')
+                    else:
+                        save_steered_activations(model, data_handler, steered_rows, steer_kwargs(steer_layers),
+                                                 path, batch_size=hook_batch_size)
     print("Evaluation complete.")

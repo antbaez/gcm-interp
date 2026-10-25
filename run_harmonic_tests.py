@@ -23,17 +23,17 @@ Spec format (JSON):
 one of harmful|sycophancy|verse or a dataset variant (see below), `method` one of
 last|mean|positional. The setup
 paths are relative to the repo root; if omitted they are sourced only when they
-exist. Only the default pipeline mode is covered: normalized residual-stream,
-local (single-layer) steering.
+exist. Only the default pipeline mode is covered: normalized, local (single-layer)
+steering.
 
 A nested best-configs file is also accepted in place of a spec, one test per entry:
 
-    {"<model dir>": {"from_<source>_to_<base>": {"<stream>": {"<scope>": {
-        "<method>": {"N": 30.0, "layer": 19, ...}}}}}}
+    {"<model dir>": {"from_<base>_to_<source>": {"<scope>": {
+        "<method>": {"N": 30.0, "layer": 19, ...}}}}}
 
 e.g. best_configs_harmonic_floor.json. Method aliases (mean-padding -> mean, weighted-pos -> positional) are
-mapped; entries for tasks, streams or scopes this script can't run (e.g.
-non-residuals/non-local) are skipped with a note. Such a file has no top-level
+mapped; entries for tasks or scopes this script can't run (e.g. non-local)
+are skipped with a note. Such a file has no top-level
 options, so use --device.
 
 Dataset variants are alternate sycophancy/verse datasets, each with its own
@@ -47,7 +47,7 @@ data dir under data/<model>/ (and so its own steering vector):
 tags, plus `variants` (every variant) and `all` (the three base datasets and
 every variant); the default is harmful,sycophancy,verse. With a best-configs
 file, a variant is run at its base dataset's (N, layer) per method, looked up
-under the base's task key (e.g. from_verse-long_to_prose for verse-varied);
+under the base's task key (e.g. from_prose_to_verse-long for verse-varied);
 any entries the file has under the variant's own task key are ignored. A model
 with no base entry gets no test for that variant. With a spec file, --datasets
 only filters its tests. --models (comma-separated model tags) filters either
@@ -68,8 +68,8 @@ and judge scores (`{fluency,relevance,judge}_ratings.jsonl`) are copied into
 harmonic_results/ at the repo root, mirroring their results/ and workdirs/
 paths:
 
-    harmonic_results/generations/<model>/<task>/normalized/residuals/local/<method>/N=..._gen.{json,txt}
-    harmonic_results/judge_scores/<model>/<task>/normalized/residuals/local/<method>/<condition>/*_ratings.jsonl
+    harmonic_results/generations/<model>/<task>/normalized/local/<method>/N=..._gen.{json,txt}
+    harmonic_results/judge_scores/<model>/<task>/normalized/local/<method>/<condition>/*_ratings.jsonl
 
 Judge scores are only copied once a test is fully judged, and each run
 refreshes the copies from the current source files.
@@ -126,9 +126,9 @@ MODEL_DIRS = {
 
 # Dataset tag -> (task dir, base name). Mirrors run_steering.sh's dataset case.
 DATASET_TASKS = {
-    "harmful":    ("from_harmful-long_to_harmless",           "harmless"),
-    "sycophancy": ("from_non-sycophantic-long_to_sycophancy", "sycophancy"),
-    "verse":      ("from_verse-long_to_prose",                "prose"),
+    "harmful":    ("from_harmless_to_harmful-long",           "harmless"),
+    "sycophancy": ("from_sycophancy_to_non-sycophantic-long", "sycophancy"),
+    "verse":      ("from_prose_to_verse-long",                "prose"),
 }
 BASE_DATASETS = tuple(DATASET_TASKS)
 
@@ -142,10 +142,10 @@ VARIANT_BASE = {
 for _tag, _base in VARIANT_BASE.items():
     _suffix = _tag.split("-", 1)[1]
     if _base == "sycophancy":
-        DATASET_TASKS[_tag] = (f"from_non-sycophantic-long-{_suffix}_to_sycophancy-{_suffix}",
+        DATASET_TASKS[_tag] = (f"from_sycophancy-{_suffix}_to_non-sycophantic-long-{_suffix}",
                                f"sycophancy-{_suffix}")
     else:
-        DATASET_TASKS[_tag] = (f"from_verse-long-{_suffix}_to_prose-{_suffix}", f"prose-{_suffix}")
+        DATASET_TASKS[_tag] = (f"from_prose-{_suffix}_to_verse-long-{_suffix}", f"prose-{_suffix}")
 
 METHODS = ("last", "mean", "positional")
 
@@ -164,10 +164,10 @@ UNCACHED_MODELS = {"olmo", "qwen3", "llama"}
 HF_CACHE_VARS = ("HF_HUB_CACHE", "HUGGINGFACE_HUB_CACHE", "TRANSFORMERS_CACHE")
 
 # The only mode covered; matches select_best_config.py's constants.
-STREAM, SCOPE = "residuals", "local"
-# results/ and workdirs/ have no KV-cache segment: <norm>/<stream>/<scope>/<method>
+SCOPE = "local"
+# results/ and workdirs/ have no KV-cache segment: <norm>/<scope>/<method>
 # (eval_runner.py steer_eval_dir; merge_outputs.py extract_path_metadata).
-MODE_REL = Path("normalized") / STREAM / SCOPE
+MODE_REL = Path("normalized") / SCOPE
 
 
 def parse_datasets(value: str | None) -> list[str]:
@@ -189,7 +189,7 @@ def parse_datasets(value: str | None) -> list[str]:
 
 
 def tests_from_best_configs(best: dict, path: Path, datasets: list[str]) -> list[dict]:
-    """Flatten a nested model/task/stream/scope/method best-configs file into tests.
+    """Flatten a nested model/task/scope/method best-configs file into tests.
 
     Only base-dataset task entries are read. Each yields one test for its own
     dataset and one per requested variant of it, all at that entry's (N, layer),
@@ -205,28 +205,27 @@ def tests_from_best_configs(best: dict, path: Path, datasets: list[str]) -> list
 
     tests, skipped, ignored = [], [], set()
     for model_dir, tasks in best.items():
-        for task, streams in tasks.items():
+        for task, scopes in tasks.items():
             if task in variant_tasks:
                 ignored.add(task)
                 continue
-            for stream, scopes in streams.items():
-                for scope, methods in scopes.items():
-                    for method, entry in methods.items():
-                        where = f"{model_dir}/{task}/{stream}/{scope}/{method}"
-                        model = model_tags.get(model_dir, entry.get("model_tag"))
-                        if model not in MODEL_DIRS:
-                            skipped.append(f"{where} (unknown model)")
-                        elif task not in base_tags:
-                            skipped.append(f"{where} (unsupported task)")
-                        elif (stream, scope) != ("residuals", "local"):
-                            skipped.append(f"{where} (only residuals/local is supported)")
-                        else:
-                            for dataset in runs_at.get(base_tags[task], []):
-                                tests.append({
-                                    "model": model, "dataset": dataset,
-                                    "method": METHOD_ALIASES.get(method, method),
-                                    "N": entry["N"], "layer": entry["layer"],
-                                })
+            for scope, methods in scopes.items():
+                for method, entry in methods.items():
+                    where = f"{model_dir}/{task}/{scope}/{method}"
+                    model = model_tags.get(model_dir, entry.get("model_tag"))
+                    if model not in MODEL_DIRS:
+                        skipped.append(f"{where} (unknown model)")
+                    elif task not in base_tags:
+                        skipped.append(f"{where} (unsupported task)")
+                    elif scope != SCOPE:
+                        skipped.append(f"{where} (only local is supported)")
+                    else:
+                        for dataset in runs_at.get(base_tags[task], []):
+                            tests.append({
+                                "model": model, "dataset": dataset,
+                                "method": METHOD_ALIASES.get(method, method),
+                                "N": entry["N"], "layer": entry["layer"],
+                            })
     for s in skipped:
         print(f"{path}: skipping {s}")
     if ignored:
@@ -241,7 +240,7 @@ def tests_from_best_configs(best: dict, path: Path, datasets: list[str]) -> list
             if (model, d) not in covered:
                 base = VARIANT_BASE.get(d, d)
                 print(f"{path}: no {model} tests for {d} "
-                      f"(no residuals/local entry under {DATASET_TASKS[base][0]})")
+                      f"(no local entry under {DATASET_TASKS[base][0]})")
     return tests
 
 
@@ -286,7 +285,7 @@ def load_spec(path: Path, datasets: list[str] | None) -> dict:
 def test_paths(t: dict):
     task, base = DATASET_TASKS[t["dataset"]]
     rel = Path(MODEL_DIRS[t["model"]]) / task / MODE_REL / t["method"]
-    return rel, task, f"{base}-heldout-test"
+    return rel, task, f"{base}-test"
 
 
 def label(t: dict) -> str:
@@ -327,7 +326,7 @@ def warn_if_unselected(tests: list[dict]):
     for t in tests:
         task, _ = DATASET_TASKS[t["dataset"]]
         entry = (best.get(MODEL_DIRS[t["model"]], {}).get(task, {})
-                 .get(STREAM, {}).get(SCOPE, {}).get(t["method"]))
+                 .get(SCOPE, {}).get(t["method"]))
         if entry and not (float(entry["N"]) == t["N"] and entry["layer"] == t["layer"]):
             print(f"WARNING: {label(t)} is not the validation-selected config "
                   f"(N={entry['N']:g} layer={entry['layer']}); select_best_config.py will prune it")
@@ -418,10 +417,10 @@ def _generate_rounds(rounds, setup, device, dry_run, weights_dir, last_round, we
         best = {}
         for t in round_tests:
             task, _ = DATASET_TASKS[t["dataset"]]
-            # run.py reads model/task/stream/scope/method (select_best_config.py's
+            # run.py reads model/task/scope/method (select_best_config.py's
             # layout) and prints val_harmonic_mean when pinning, so the key has to exist.
             best.setdefault(MODEL_DIRS[t["model"]], {}).setdefault(task, {}) \
-                .setdefault(STREAM, {}).setdefault(SCOPE, {})[t["method"]] = {
+                .setdefault(SCOPE, {})[t["method"]] = {
                 "N": t["N"], "layer": t["layer"], "val_harmonic_mean": math.nan,
             }
         fd, tmp = tempfile.mkstemp(prefix="run_tests_best_configs_", suffix=".json")
@@ -469,7 +468,7 @@ def judge(tests: list[dict], spec: dict, device: str, dry_run: bool):
     print(f"\n=== Judging {len(pending)} test(s) ===")
     run_script(setup, "scripts/run_judging.sh", [
         "--model", ",".join(models), "--dataset", ",".join(datasets),
-        "--split", "test", "--normalized", "--device", device,
+        "--split", "test", "--normalized", "--device", device, "--harmonic",
     ], dry_run, f"Judge scoring ({len(pending)} test(s))")
 
 

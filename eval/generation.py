@@ -81,15 +81,15 @@ def _prepare_steering_vector(patch_activations, layer_idx, steering_type, normal
     return sv
 
 
-def generate_with_patches(model, gen_toks, patch_activations, layer_ids, N, max_new_tokens=256, normalize=True, steering_type='last_token', resid=False, coverage=None, projection_dirs=None, steer_mask=None):
+def generate_with_patches(model, gen_toks, patch_activations, layer_ids, N, max_new_tokens=256, normalize=True, steering_type='last_token', coverage=None, projection_dirs=None, steer_mask=None):
     """steer_mask: [batch, seq_len] bool, True where the vector is added (each prompt's content
     onward, never the pre-prompt chat template or padding); None steers every position."""
     patch_activations = patch_activations.to(model.device)
     mask = None if steer_mask is None else steer_mask.to(device=model.device, dtype=patch_activations.dtype).unsqueeze(-1)
     pos_weights = positional_weights(steering_type, coverage, patch_activations)
-    tuple_output = resid and 'gemma' in model.config._name_or_path.lower() and getattr(model.config, 'model_type', '') != 'gemma4_unified'
+    tuple_output = 'gemma' in model.config._name_or_path.lower() and getattr(model.config, 'model_type', '') != 'gemma4_unified'
     if steering_type not in _config_printed_types:
-        print(gen_toks['input_ids'].shape, " normalize:", normalize, " steering type:", steering_type, " resid:", resid)
+        print(gen_toks['input_ids'].shape, " normalize:", normalize, " steering type:", steering_type)
         _config_printed_types.add(steering_type)
 
     gen_kwargs = dict(pad_token_id=model.tokenizer.eos_token_id, do_sample=False,
@@ -102,16 +102,42 @@ def generate_with_patches(model, gen_toks, patch_activations, layer_ids, N, max_
             sv = _prepare_steering_vector(patch_activations, layer_idx, steering_type, normalize, pos_weights, projection_dirs)
             if mask is not None:
                 sv = sv * mask
-            if resid:
-                if tuple_output:
-                    layer.output = (layer.output[0] + N * sv,)
-                else:
-                    layer.output += N * sv
+            if tuple_output:
+                layer.output = (layer.output[0] + N * sv,)
             else:
-                layer.self_attn.o_proj.output += N * sv
+                layer.output += N * sv
         generated = model.generator.output.save()
 
     return generated
+
+def trace_with_patches(model, ids, attention_mask, patch_activations, layer_ids, N, capture_idx, normalize=True,
+                       steering_type='last_token', coverage=None, projection_dirs=None, steer_mask=None):
+    """One forward pass over `ids` [batch, S] with the same steering generate_with_patches()
+    applies at prefill (steer_mask [batch, S], False past the prompt, so generated tokens are
+    only affected through attention, as in cached decoding), returning layer capture_idx's
+    output stream [batch, S, H] on CPU, after any steering added at that layer. Positional
+    vectors ([P, H]) are zero-padded to S."""
+    patch_activations = patch_activations.to(model.device)
+    mask = None if steer_mask is None else steer_mask.to(device=model.device, dtype=patch_activations.dtype).unsqueeze(-1)
+    pos_weights = positional_weights(steering_type, coverage, patch_activations)
+    tuple_output = 'gemma' in model.config._name_or_path.lower() and getattr(model.config, 'model_type', '') != 'gemma4_unified'
+    layers = _get_layers(model)
+    with model.trace({'input_ids': ids, 'attention_mask': attention_mask}) as _:
+        for layer_idx in sorted(set(layer_ids) | {capture_idx}):
+            layer = layers[layer_idx]
+            value = layer.output[0] if tuple_output else layer.output
+            if layer_idx in layer_ids:
+                sv = _prepare_steering_vector(patch_activations, layer_idx, steering_type, normalize, pos_weights, projection_dirs)
+                if sv.dim() == 2 and sv.shape[0] < ids.shape[1]:
+                    sv = torch.cat([sv, sv.new_zeros(ids.shape[1] - sv.shape[0], sv.shape[1])])
+                if mask is not None:
+                    sv = sv * mask
+                value = value + N * sv
+                layer.output = (value,) if tuple_output else value
+            if layer_idx == capture_idx:
+                captured = value.detach().cpu().save()
+    return captured
+
 
 def decode_responses(model, inputs, originals, edited, base, answers=None):
     decoded = []

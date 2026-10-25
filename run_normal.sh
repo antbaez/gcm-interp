@@ -1,79 +1,60 @@
 #!/bin/bash
 # Dispatcher — run this with `bash`, NOT `sbatch` (it holds no GPU allocation
-# itself). Expands --model/--dataset tags and submits one sbatch job per
-# model x dataset combo via scripts/run_normal_job.sh.
+# itself). Reads a settings/*.yaml file and submits one sbatch job per
+# model x dataset x scope combo listed there via scripts/run_normal_job.sh.
 #
 # Usage:
-#   bash run_normal.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen,...|all> --dataset <harmful|sycophancy|verse|harmful,sycophancy,...|all> [--type "last mean positional"] [--unnormalized] [--attention] [--global] [--split val|test] [--judging] [--no-model-cache] [--pass-rate]
-#   Defaults: --model all --dataset all (uses steering types from scripts/run_steering.sh)
-#   Note: Residual-stream steering runs by default. Pass --attention to steer the attention
-#   output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
-#   --no-model-cache downloads the model/tokenizer to a temp directory instead of the
-#   persistent HF cache, and deletes it once loaded — avoids filling disk quota.
-#   By default, selection and the final report use the mean per-prompt harmonic mean of the 0-2
-#   concept (1-3 -> 0, 4 -> 1, 5 -> 2), fluency, and relevance ratings instead of the
-#   w_rf pass rate (selections in judge-evals/best_configs_harmonic.json). --pass-rate
-#   switches back to the w_rf pass rate and judge-evals/best_configs.json.
+#   bash run_normal.sh --settings settings/<name>.yaml
+#   --settings is required (e.g. settings/default.yaml). See that file for every available setting;
+#   scripts/load_settings.py turns it into the job script's flags. Every output
+#   lands under the settings' results_dir, which also gets a copy of the settings
+#   file as settings.yaml (earlier, different copies are kept as settings.<time>.yaml).
 
 set -e
 
-MODEL="all"
-DATASET="all"
-TYPE_VAL=""
-UNNORMALIZED=false
-JUDGING_ONLY=false
-RESID=true
-GLOBAL=false
-NO_MODEL_CACHE=false
-HARMONIC=true
-# Which phases to run. Omitted (the default "all") runs the validation sweep,
-# selection, and the held-out split in one go. "val" stops after judging the
-# sweep; "test" selects from whatever sweep results already exist and only
-# regenerates the held-out split when the winning config moved.
-SPLIT="all"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SETTINGS=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --model)        MODEL="$2";        shift 2 ;;
-        --dataset)      DATASET="$2";      shift 2 ;;
-        --type)         TYPE_VAL="$2";     shift 2 ;;
-        --unnormalized) UNNORMALIZED=true; shift ;;
-        --judging)      JUDGING_ONLY=true; shift ;;
-        --attention)    RESID=false;       shift ;;
-        --global)       GLOBAL=true;       shift ;;
-        --split)        SPLIT="$2";        shift 2 ;;
-        --no-model-cache) NO_MODEL_CACHE=true; shift ;;
-        --harmonic)     HARMONIC=true;     shift ;;
-        --pass-rate)    HARMONIC=false;    shift ;;
+        --settings) SETTINGS="$2"; shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
-if [ "$SPLIT" != "all" ] && [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; then
-    echo "Error: --split must be 'val' or 'test' (got '$SPLIT'); omit it to run both"; exit 1
+if [ -z "$SETTINGS" ]; then
+    echo "Usage: bash run_normal.sh --settings settings/<name>.yaml"; exit 1
+fi
+if [ ! -f "$SETTINGS" ]; then
+    echo "Error: settings file '$SETTINGS' not found"; exit 1
 fi
 
-ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse")
+LOADED="$(python3 "$SCRIPT_DIR/scripts/load_settings.py" "$SETTINGS" normal)"
+eval "$LOADED"
 
-if [ "$MODEL" = "all" ]; then MODELS=("${ALL_MODELS[@]}"); else IFS=',' read -ra MODELS <<< "$MODEL"; fi
-if [ "$DATASET" = "all" ]; then DATASETS=("${ALL_DATASETS[@]}"); else IFS=',' read -ra DATASETS <<< "$DATASET"; fi
+mkdir -p "$RESULTS_DIR"
+if [ -f "$RESULTS_DIR/settings.yaml" ] && ! cmp -s "$SETTINGS" "$RESULTS_DIR/settings.yaml"; then
+    PREV="$RESULTS_DIR/settings.$(date -r "$RESULTS_DIR/settings.yaml" +%Y%m%d-%H%M%S).yaml"
+    mv "$RESULTS_DIR/settings.yaml" "$PREV"
+    echo "Note: $RESULTS_DIR had different settings; kept them as $PREV"
+fi
+cp "$SETTINGS" "$RESULTS_DIR/settings.yaml"
 
-JOB_FLAGS=()
-[ -n "$TYPE_VAL" ]         && JOB_FLAGS+=(--type "$TYPE_VAL")
-[ "$UNNORMALIZED" = true ] && JOB_FLAGS+=(--unnormalized)
-[ "$JUDGING_ONLY" = true ] && JOB_FLAGS+=(--judging)
-[ "$RESID" = false ]       && JOB_FLAGS+=(--attention)
-[ "$GLOBAL" = true ]       && JOB_FLAGS+=(--global)
-[ "$SPLIT" != "all" ]      && JOB_FLAGS+=(--split "$SPLIT")
-[ "$NO_MODEL_CACHE" = true ] && JOB_FLAGS+=(--no-model-cache)
-[ "$HARMONIC" = false ]    && JOB_FLAGS+=(--pass-rate)
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-echo "Submitting $(( ${#MODELS[@]} * ${#DATASETS[@]} )) job(s) (one per model x dataset combo)..."
+echo "Settings: $SETTINGS"
+echo "Results dir: $RESULTS_DIR"
+echo "Job flags: ${JOB_FLAGS[*]}"
+echo "Scopes: ${SCOPES[*]}"
+echo "Submitting $(( ${#MODELS[@]} * ${#DATASETS[@]} * ${#SCOPES[@]} )) job(s) (one per model x dataset x scope combo)..."
 for M in "${MODELS[@]}"; do
     for D in "${DATASETS[@]}"; do
-        sbatch "$SCRIPT_DIR/scripts/run_normal_job.sh" --model "$M" --dataset "$D" "${JOB_FLAGS[@]}"
+        for S in "${SCOPES[@]}"; do
+            declare -n SCOPE_FLAGS="SCOPE_FLAGS_$S" SCOPE_N="STEERING_N_$S"
+            N_FLAGS=()
+            if [ -n "${SCOPE_N[$M]:-}" ]; then N_FLAGS=(--steering-n "${SCOPE_N[$M]}"); fi
+            JOB_ID=$(sbatch --parsable "$SCRIPT_DIR/scripts/run_normal_job.sh" \
+                --model "$M" --dataset "$D" "${JOB_FLAGS[@]}" "${SCOPE_FLAGS[@]}" "${N_FLAGS[@]}")
+            echo "  $M / $D / $S: job $JOB_ID"
+            unset -n SCOPE_FLAGS SCOPE_N
+        done
     done
 done

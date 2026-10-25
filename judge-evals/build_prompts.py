@@ -23,6 +23,8 @@ from transformers import AutoTokenizer
 from config import (
     TOKENIZER_MODEL_NAME,
     PROMPT_TEMPLATES,
+    HARMONIC_PROMPT_TEMPLATES,
+    HARMONIC_PROMPT_PLACEHOLDER,
     SOURCE_TO_TEMPLATE,
     PAIRED_TEMPLATES,
     SINGLE_TEMPLATES,
@@ -65,7 +67,8 @@ def _build_single_judge_prompt(tokenizer, template: str,
     return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
 
-def build_judge_prompts(df: pd.DataFrame, tokenizer) -> pd.DataFrame:
+def build_judge_prompts(df: pd.DataFrame, tokenizer,
+                        templates: dict = PROMPT_TEMPLATES) -> pd.DataFrame:
     """Add a 'judge_prompt' column based on each row's SOURCE."""
     prompts = []
     for idx, row in df.iterrows():
@@ -75,10 +78,18 @@ def build_judge_prompts(df: pd.DataFrame, tokenizer) -> pd.DataFrame:
         if template_key is None:
             raise ValueError(f"Row {idx}: unknown SOURCE '{source}'")
 
-        template = PROMPT_TEMPLATES[template_key]
+        template = templates[template_key]
 
         try:
-            if template_key in PAIRED_TEMPLATES:
+            if templates is HARMONIC_PROMPT_TEMPLATES:
+                response = row["post-intervention-response"]
+                original = row["original-response"]
+                assert isinstance(response, str), "new_response must be a string"
+                assert isinstance(original, str), "old_response must be a string"
+                content = template.format(original=original, sentence=response)
+                chat = [{"role": "user", "content": content}]
+                prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+            elif template_key in PAIRED_TEMPLATES:
                 prompt = _build_paired_judge_prompt(
                     tokenizer, template,
                     row["post-intervention-response"],
@@ -106,44 +117,64 @@ def build_judge_prompts(df: pd.DataFrame, tokenizer) -> pd.DataFrame:
 # Fluency / relevance prompts
 # ---------------------------------------------------------------------------
 
-def _build_fluency_prompt(tokenizer, sentence: str) -> str:
+def _build_fluency_prompt(tokenizer, sentence: str, templates: dict) -> str:
+    if templates is HARMONIC_PROMPT_TEMPLATES:
+        chat = [{"role": "user", "content": templates["fluency"].format(sentence=sentence)}]
+        return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
     user_msg = (
         f"[Sentence Fragment Start]\n{sentence}\n[Sentence Fragment End]"
     )
     chat = [
-        {"role": "system", "content": PROMPT_TEMPLATES["fluency"]},
+        {"role": "system", "content": templates["fluency"]},
         {"role": "user", "content": user_msg},
     ]
     return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
 
-def _build_relevance_prompt(tokenizer, instruction: str, sentence: str) -> str:
+def _build_relevance_prompt(tokenizer, instruction: str, sentence: str,
+                            templates: dict) -> str:
+    if templates is HARMONIC_PROMPT_TEMPLATES:
+        content = templates["relevance"].format(instruction=instruction, sentence=sentence)
+        chat = [{"role": "user", "content": content}]
+        return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
     user_msg = (
         f"[Instruction Start]\n{instruction}\n[Instruction End]\n"
         f"[Sentence Fragment Start]\n{sentence}\n[Sentence Fragment End]"
     )
     chat = [
-        {"role": "system", "content": PROMPT_TEMPLATES["relevance"]},
+        {"role": "system", "content": templates["relevance"]},
         {"role": "user", "content": user_msg},
     ]
     return tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
 
-def build_fluency_prompts(df: pd.DataFrame, tokenizer) -> pd.DataFrame:
+def build_fluency_prompts(df: pd.DataFrame, tokenizer,
+                          templates: dict = PROMPT_TEMPLATES) -> pd.DataFrame:
     df["fluency_prompt"] = df["post-intervention-response"].apply(
-        lambda x: _build_fluency_prompt(tokenizer, x)
+        lambda x: _build_fluency_prompt(tokenizer, x, templates)
     )
     return df
 
 
-def build_relevance_prompts(df: pd.DataFrame, tokenizer) -> pd.DataFrame:
+def build_relevance_prompts(df: pd.DataFrame, tokenizer,
+                            templates: dict = PROMPT_TEMPLATES) -> pd.DataFrame:
     df["relevance_prompt"] = df.apply(
         lambda row: _build_relevance_prompt(
-            tokenizer, row["data_path_query"], row["post-intervention-response"]
+            tokenizer, row["data_path_query"], row["post-intervention-response"],
+            templates,
         ),
         axis=1,
     )
     return df
+
+
+def harmonic_templates() -> dict:
+    """HARMONIC_PROMPT_TEMPLATES, refusing any entry still left as the placeholder."""
+    missing = [k for k, v in HARMONIC_PROMPT_TEMPLATES.items()
+               if v == HARMONIC_PROMPT_PLACEHOLDER]
+    if missing:
+        raise ValueError(f"Harmonic judge prompts not defined yet in config.py: {missing}")
+    return HARMONIC_PROMPT_TEMPLATES
 
 
 # ---------------------------------------------------------------------------

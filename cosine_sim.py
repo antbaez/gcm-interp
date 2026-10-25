@@ -82,11 +82,11 @@ def find_cache(model_dir, source, base):
     model_root = RESULTS_ROOT / model_dir
     if not model_root.is_dir():
         return None
-    filename = f"{model_dir}_steering_cache_{source}_resid_content.pt"
-    exact = model_root / f"from_{source}_to_{base}" / filename
+    filename = f"{model_dir}_steering_cache_{source}_content.pt"
+    exact = model_root / f"from_{base}_to_{source}" / filename
     if exact.is_file():
         return exact
-    matches = sorted(model_root.glob(f"from_{source}_to_{base}*/{filename}"))
+    matches = sorted(model_root.glob(f"from_{base}_to_{source}*/{filename}"))
     return matches[0] if matches else None
 
 

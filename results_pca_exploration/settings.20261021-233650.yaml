@@ -1,0 +1,31 @@
+# Run settings for run_normal.sh / run_preemptable.sh:
+#   bash run_normal.sh --settings settings/<name>.yaml   (e.g. this file)
+# Copy this file to define a new run. Every key is required.
+
+results_dir: results_pca_exploration        # all outputs (generations, judge-evals/, stats/) + a settings.yaml copy; relative to the repo root
+models: [llama]   # any of olmo, qwen, qwen3, gemma, gemma4, llama
+datasets: [verse] # any of harmful, sycophancy, verse
+steering_type: last, mean         # e.g. [last, mean, positional]; null = run_steering.sh default
+steering_n: [1, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250]   # N sweep: null = run_steering.sh tables, a list for every model, or {llama: [...], olmo: [...]}
+global_steering_n: [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]   # global-scope N sweep, same format as steering_n (null = run_steering.sh's STEERING_N_GLOBAL tables)
+normalization: true         # false = unnormalized steering vectors
+intervention: residual      # residual (layer.output) | attention (self_attn.o_proj.output)
+scope: [local, global]      # local = steer one layer at a time | global = every layer at once | [local, global] = both (global job runs after local)
+local_layer:                # ignored when scope is global
+  mode: single              # single | sweep
+  single: 2/3               # steer only layer round(2/3 x num_layers)
+  sweep: [1/3, 2/3]         # steer each layer in this fraction range, one at a time
+split: all                  # all | val | test
+generation: true            # false = skip generation, judge what's already on disk
+judging: true               # false = generate only, skip judging and the held-out scores
+no_model_cache: false
+metric: harmonic            # harmonic | pass_rate
+train_batch_size: 50        # steering-vector activation pass + hook_prompt_acts
+generation_batch_size: 50    # validation sweep and held-out test generation
+
+# run_preemptable.sh only (must stay null/false for run_normal.sh)
+seed: null
+hook_prompt_acts: true       # save prompt-token activations (verse only)
+hook_response_acts: true     # generate responses, save response-token activations (verse only)
+hook_target_acts: true       # generate + save prompt/response activations for verse-test / verse-heldout-test (verse only)
+hook_batch_size: 10             # batch size for all hooks (required when any is on, null otherwise)

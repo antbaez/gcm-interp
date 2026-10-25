@@ -7,15 +7,14 @@ For each model/dataset/method combo, finds the single held-out condition
 first N failing prompts + unsteered baseline + steered responses + ratings,
 in the order they appear in judge_ratings.jsonl.
 
-Writes to analysis/residuals/local/ (created if missing; --attention writes to
-analysis/attention/local/ instead):
+Writes to analysis/local/ (created if missing):
   qualitative_examples_<dataset>.txt  one per dataset, the pass/fail examples
   pass_rates.txt                      held-out pass rate per steering method
   failure_ratings.txt                 mean judge/fluency/relevance over the
                                       non-passing examples, showing which of
                                       the three criteria failures come from
 
-With --global, the same three files are written to analysis/<stream>/global/
+With --global, the same three files are written to analysis/global/
 instead, reading the held-out run for the global (every-layer-at-once) scope.
 
 The pass rule mirrors judge-evals/selection_utils.py: empty responses are
@@ -58,7 +57,7 @@ METHOD_ORDER = ["last", "mean", "positional"]
 # Set to None to include everything found.
 ENABLED_METHODS = ["last", "mean", "positional"]
 
-# Dataset "task" dirs to analyze (e.g. "from_harmful-long_to_harmless").
+# Dataset "task" dirs to analyze (e.g. "from_harmless_to_harmful-long").
 # Restricts to the canonical three even if variant dirs (e.g. an
 # "-unaligned" suffix) exist on disk. Set to None to include everything found.
 ENABLED_DATASET_TASKS = set(DATASET_TASKS.values())
@@ -145,12 +144,12 @@ def load_mmlu_accuracy(path: Path) -> float | None:
         return json.load(f).get("accuracy")
 
 
-def mmlu_accuracy_for_condition(model: str, task: str, stream_mode: str, scope: str,
+def mmlu_accuracy_for_condition(model: str, task: str, scope: str,
                                  method: str, chosen: dict) -> float | None:
     """MMLU accuracy for the held-out condition select_best() chose, mirroring
-    mmlu/results/<model>/<task>/<stream>/<scope>/<method>/<condition_label>_mmlu_accuracy.json."""
+    mmlu/results/<model>/<task>/<scope>/<method>/<condition_label>_mmlu_accuracy.json."""
     fname = f"{condition_label(chosen)}_mmlu_accuracy.json"
-    return load_mmlu_accuracy(MMLU_RESULTS_ROOT / model / task / stream_mode / scope / method / fname)
+    return load_mmlu_accuracy(MMLU_RESULTS_ROOT / model / task / scope / method / fname)
 
 
 def baseline_mmlu_accuracy(model: str) -> float | None:
@@ -290,39 +289,35 @@ def main():
                         help="Directory to write all .txt outputs to (created if missing)")
     parser.add_argument("--global", dest="global_scope", action="store_true",
                         help="Analyze the 'global' steering scope instead of 'local'.")
-    parser.add_argument("--attention", action="store_true",
-                        help="Analyze the 'attention' steering stream instead of 'residuals'.")
     args = parser.parse_args()
 
     scope = "global" if args.global_scope else SCOPE
-    stream_filter = "attention" if args.attention else "residuals"
 
     combos = discover_local_combos(
         model_filter=resolve_filter(args.model, MODEL_DIRS),
         dataset_filter=resolve_filter(args.dataset, DATASET_TASKS),
         scope=scope,
-        stream_filter=stream_filter,
     )
     combos = [c for c in combos if c[0] != "gemma-4-12B-it"]
     if ENABLED_DATASET_TASKS is not None:
         combos = [c for c in combos if c[1] in ENABLED_DATASET_TASKS]
     if not combos:
-        raise SystemExit(f"No '{scope}' scope '{stream_filter}' combinations found under "
+        raise SystemExit(f"No '{scope}' scope combinations found under "
                           f"results/ or judge-evals/workdirs/")
 
-    out_dir = Path(args.output_dir) / stream_filter / scope
+    out_dir = Path(args.output_dir) / scope
     blocks = {}
     table_rows = []
     pass_rates = {}
     mmlu_accuracies = {}
     mmlu_baselines = {}
 
-    for model, task, norm_mode, stream_mode, methods in combos:
+    for model, task, norm_mode, methods in combos:
         if ENABLED_METHODS is not None:
             methods = [m for m in methods if m in ENABLED_METHODS]
         if not methods:
             continue
-        workdir_base = WORKDIRS_ROOT / model / task / norm_mode / stream_mode / scope
+        workdir_base = WORKDIRS_ROOT / model / task / norm_mode / scope
         test_file = split_test_file(task, "test")
 
         skipped_methods = []
@@ -342,7 +337,7 @@ def main():
                 n_pass = sum(1 for ex in examples if ex["pass"])
                 pass_rates.setdefault((dataset_tag, model_tag), {})[method] = n_pass / len(examples)
 
-            mmlu_acc = mmlu_accuracy_for_condition(model, task, stream_mode, scope, method, chosen)
+            mmlu_acc = mmlu_accuracy_for_condition(model, task, scope, method, chosen)
             if mmlu_acc is not None:
                 mmlu_accuracies.setdefault((dataset_tag, model_tag), {})[method] = mmlu_acc
                 if model_tag not in mmlu_baselines:

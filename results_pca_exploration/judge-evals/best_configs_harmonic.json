@@ -1,0 +1,62 @@
+{
+  "Llama-3.1-8B-Instruct": {
+    "from_prose_to_verse-long": {
+      "global": {
+        "last": {
+          "N": 0.5,
+          "dataset_tag": "verse",
+          "layer": "all",
+          "model_tag": "llama",
+          "n_conditions": 8,
+          "n_tied_at_best": 1,
+          "scope": "global",
+          "score_mode": "harmonic",
+          "val_harmonic_mean": 1.93,
+          "val_n": 50,
+          "val_split": "prose-valid"
+        },
+        "mean": {
+          "N": 0.5,
+          "dataset_tag": "verse",
+          "layer": "all",
+          "model_tag": "llama",
+          "n_conditions": 8,
+          "n_tied_at_best": 1,
+          "scope": "global",
+          "score_mode": "harmonic",
+          "val_harmonic_mean": 1.7619999999999998,
+          "val_n": 50,
+          "val_split": "prose-valid"
+        }
+      },
+      "local": {
+        "last": {
+          "N": 200.0,
+          "dataset_tag": "verse",
+          "layer": 21,
+          "model_tag": "llama",
+          "n_conditions": 11,
+          "n_tied_at_best": 1,
+          "scope": "local",
+          "score_mode": "harmonic",
+          "val_harmonic_mean": 0.534,
+          "val_n": 50,
+          "val_split": "prose-valid"
+        },
+        "mean": {
+          "N": 125.0,
+          "dataset_tag": "verse",
+          "layer": 21,
+          "model_tag": "llama",
+          "n_conditions": 11,
+          "n_tied_at_best": 1,
+          "scope": "local",
+          "score_mode": "harmonic",
+          "val_harmonic_mean": 1.018,
+          "val_n": 50,
+          "val_split": "prose-valid"
+        }
+      }
+    }
+  }
+}

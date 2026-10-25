@@ -50,9 +50,9 @@ sys.path.insert(0, str(REPO_ROOT))
 MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
 MODEL_NAME = MODEL_ID.split("/")[-1]
 SOURCE, BASE, SOURCE_DIR = "non-sycophantic-long", "sycophancy", "sycophancy-long"
-TASK = f"from_{SOURCE}_to_{BASE}"
-STREAM, SCOPE = "residuals", "local"
-TEST_DATASET = f"{BASE}-heldout-test"
+TASK = f"from_{BASE}_to_{SOURCE}"
+SCOPE = "local"
+TEST_DATASET = f"{BASE}-test"
 # Must match run_steering.sh (BATCH_SIZE / PATCHING_BATCH_SIZE) so greedy
 # outputs and the steering cache are identical to the pipeline's.
 EVAL_BATCH_SIZE, PATCHING_BATCH_SIZE = 50, 100
@@ -64,10 +64,10 @@ METHODS = ("last", "mean", "positional")
 
 
 def load_methods(best_configs_path):
-    """{method: {"N": float, "layer": int}} for the sycophancy residual/local entry."""
+    """{method: {"N": float, "layer": int}} for the sycophancy local entry."""
     with open(best_configs_path) as f:
         best = json.load(f)
-    entries = best[MODEL_NAME][TASK][STREAM][SCOPE]
+    entries = best[MODEL_NAME][TASK][SCOPE]
     methods = {}
     for name, entry in entries.items():
         method = METHOD_ALIASES.get(name, name)
@@ -77,9 +77,9 @@ def load_methods(best_configs_path):
 
 
 def emit_run_configs(methods, path):
-    """Write the model/task/stream/scope/method file run.py pins configs from."""
-    best = {MODEL_NAME: {TASK: {STREAM: {SCOPE: {
-        m: {**cfg, "val_harmonic_mean": float("nan")} for m, cfg in methods.items()}}}}}
+    """Write the model/task/scope/method file run.py pins configs from."""
+    best = {MODEL_NAME: {TASK: {SCOPE: {
+        m: {**cfg, "val_harmonic_mean": float("nan")} for m, cfg in methods.items()}}}}
     with open(path, "w") as f:
         json.dump(best, f, indent=2)
     print(f"Wrote run.py best-configs for {', '.join(methods)} to {path}")
@@ -98,7 +98,7 @@ def build_pipeline(device):
         "-source", SOURCE, "-base", BASE, "-source_dir", SOURCE_DIR,
         "-steering_add_path", f"{data}/{SOURCE}-desired-all.jsonl",
         "-steering_sub_path", f"{data}/{BASE}-desired-all.jsonl",
-        "-eval_batch_size", str(EVAL_BATCH_SIZE), "-eval_model", "--steering", "--resid",
+        "-eval_batch_size", str(EVAL_BATCH_SIZE), "-eval_model", "--steering",
     ]
     try:
         config = Config()
@@ -117,7 +117,7 @@ def build_pipeline(device):
 
 
 def pipeline_gen_file(config, method, cfg):
-    return (Path(config.get_output_prefix()) / "normalized" / STREAM / SCOPE / method /
+    return (Path(config.get_output_prefix()) / "normalized" / SCOPE / method /
             f"N={cfg['N']:g}_steer_layer={cfg['layer']}_{TEST_DATASET}_gen.json")
 
 
@@ -270,7 +270,7 @@ def main():
                 seqs = generate_with_patches(
                     model, gen_toks, cond_cache, [cfg["layer"]], cfg["N"],
                     max_new_tokens=config.args.max_new_tokens, normalize=normalize,
-                    steering_type=cond, resid=True, coverage=coverage,
+                    steering_type=cond, coverage=coverage,
                     projection_dirs=cond_dirs, steer_mask=batch_mask).to(model.device)
 
             saved = capture_batch(model, layers_mod, seqs, gen_toks["attention_mask"], save_layers, steer,

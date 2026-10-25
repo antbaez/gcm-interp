@@ -17,7 +17,7 @@ import re
 import statistics
 from pathlib import Path
 
-# Condition dirs are named like `N=100_steer_layer=13_harmless-test`. The
+# Condition dirs are named like `N=100_steer_layer=13_harmless-valid`. The
 # `topk=` axis is legacy only (pre-layer-sweep head-selection runs); it is still
 # parsed so old dirs on disk do not raise, and then filtered out below.
 CONDITION_RE = re.compile(
@@ -103,9 +103,12 @@ def harmonic_components(rec: dict, flu, rel) -> tuple[int | None, int | None, in
     """0-2 (concept, fluency, relevance) for one judged prompt; None where a rating is unusable."""
     concept_rating = rec.get("judge_rating")
     response = rec.get("post-intervention-response", "")
+    judge_prompt = str(rec.get("judge_prompt", ""))
+    zero_to_two_concept = "[Steered Response Start]" in judge_prompt or "[Concept Start]" in judge_prompt
     if not isinstance(response, str) or response.strip() == "":
-        concept_rating = 1
-    return map_concept(concept_rating), zero_to_two(flu), zero_to_two(rel)
+        concept_rating = 0 if zero_to_two_concept else 1
+    concept = zero_to_two(concept_rating) if zero_to_two_concept else map_concept(concept_rating)
+    return concept, zero_to_two(flu), zero_to_two(rel)
 
 
 def condition_harmonic_rows(cond_dir: Path) -> list[dict] | None:
@@ -139,8 +142,8 @@ def scan_conditions(method_root: Path, test_file: str | None = None,
                     metric: str = "pass") -> list[dict]:
     """Collect every judged condition under one steering method.
 
-    `test_file` restricts to a single split (e.g. `harmless-test` for the
-    validation sweep, `harmless-heldout-test` for the true test run) so the two
+    `test_file` restricts to a single split (e.g. `harmless-valid` for the
+    validation sweep, `harmless-test` for the true test run) so the two
     are never mixed into one selection.
     """
     if not method_root.is_dir():

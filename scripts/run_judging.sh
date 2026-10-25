@@ -3,25 +3,29 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 JUDGE_DIR="$SCRIPT_DIR/judge-evals"
+RUNS_DIR="$SCRIPT_DIR/results"
+JUDGE_OUT="$JUDGE_DIR"
 
 BATCH_SIZE=128
-EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-test.jsonl
+EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-valid.jsonl
 
-# Usage: ./scripts/run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--attention] [--device <cuda:0>] [--force]
+# Usage: ./scripts/run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--results-dir <dir>] [--device <cuda:0>] [--force] [--harmonic]
+# --results-dir reads generations from <dir> and writes ratings/accuracies under <dir>/judge-evals/;
+# omitted, it uses results/ and the repo's judge-evals/.
 # --dataset defaults to "all" (harmful, sycophancy, verse). Dataset variants
 # (VARIANT_DATASETS below, e.g. verse-varied) can be named explicitly but are
 # never part of "all".
-# Residual-stream judging runs by default. Pass --attention to judge attention-head steering results instead.
 MODEL_TAG=""
 DATASET_TAG="all"
 DEVICE="cuda:0"
 NORM_MODE=""
-RESID=true
-# Which split's generations to judge: val = <base>-test, test = <base>-heldout-test.
+# Which split's generations to judge: val = <base>-valid, test = <base>-test.
 SPLIT="val"
 # By default, already-judged conditions (accuracy files present) are skipped.
 # Pass --force to re-judge everything found regardless of existing accuracy files.
 FORCE=false
+# Pass --harmonic to judge with HARMONIC_PROMPT_TEMPLATES (judge-evals/config.py).
+HARMONIC=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -30,9 +34,10 @@ while [[ $# -gt 0 ]]; do
         --device)       DEVICE="$2";      shift 2 ;;
         --normalized)   NORM_MODE="normalized";   shift ;;
         --unnormalized) NORM_MODE="unnormalized"; shift ;;
-        --attention)    RESID=false;               shift ;;
         --split)        SPLIT="$2";                shift 2 ;;
         --force)        FORCE=true;                shift ;;
+        --harmonic)     HARMONIC=true;             shift ;;
+        --results-dir)  RUNS_DIR="$(realpath -m "$2")"; JUDGE_OUT="$RUNS_DIR/judge-evals"; shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -41,10 +46,6 @@ if [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; then
     echo "Error: --split must be 'val' or 'test' (got '$SPLIT')"; exit 1
 fi
 
-STREAM_MODE="residuals"
-if [ "$RESID" = false ]; then
-    STREAM_MODE="attention"
-fi
 ACCURACY_SUBDIR="accuracy"
 
 if [ -z "$MODEL_TAG" ]; then
@@ -110,33 +111,36 @@ for M_TAG in "${MODELS[@]}"; do
 
         # The split's test-file stem is what distinguishes validation-sweep
         # generations from held-out ones inside the same results/ tree.
-        if [ "$SPLIT" = "test" ]; then TEST_FILE="${BASE}-heldout-test"; else TEST_FILE="${BASE}-test"; fi
+        if [ "$SPLIT" = "test" ]; then TEST_FILE="${BASE}-test"; else TEST_FILE="${BASE}-valid"; fi
 
         JUDGE_FLAGS=()
         [ -n "$NORM_MODE" ]  && JUDGE_FLAGS+=(--norm_mode  "$NORM_MODE")
-        JUDGE_FLAGS+=(--stream_mode "$STREAM_MODE")
         JUDGE_FLAGS+=(--test_file "$TEST_FILE")
         [ "$FORCE" = true ] && JUDGE_FLAGS+=(--force)
+        [ "$HARMONIC" = true ] && JUDGE_FLAGS+=(--harmonic_prompts)
 
         echo ""
-        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  stream=$STREAM_MODE  split=$SPLIT ($TEST_FILE)  device=$DEVICE"
+        echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  split=$SPLIT ($TEST_FILE)  device=$DEVICE"
         cd "$JUDGE_DIR" && python run_judge.py \
             --model_name "$MODEL_NAME" \
             --source "$SOURCE" \
             --base "$BASE" \
-            --runs_dir "$SCRIPT_DIR/results" \
+            --runs_dir "$RUNS_DIR" \
             --data_dir "$SCRIPT_DIR/data" \
-            --accuracy_dir "$SCRIPT_DIR/judge-evals/$ACCURACY_SUBDIR" \
-            --workdirs_root "$SCRIPT_DIR/judge-evals/workdirs" \
+            --accuracy_dir "$JUDGE_OUT/$ACCURACY_SUBDIR" \
+            --workdirs_root "$JUDGE_OUT/workdirs" \
             --batch_size "$BATCH_SIZE" \
             "${JUDGE_FLAGS[@]}"
         cd "$SCRIPT_DIR"
     done
 done
 
+if [ "$HARMONIC" = true ]; then
+    exit 0
+fi
+
 echo ""
 echo "Summarizing results..."
 python "$JUDGE_DIR/summarize_results.py" \
-    --accuracy_dir "$SCRIPT_DIR/judge-evals/$ACCURACY_SUBDIR" \
-    --workdirs_dir "$SCRIPT_DIR/judge-evals/workdirs" \
-    --stream_mode "$STREAM_MODE"
+    --accuracy_dir "$JUDGE_OUT/$ACCURACY_SUBDIR" \
+    --workdirs_dir "$JUDGE_OUT/workdirs"

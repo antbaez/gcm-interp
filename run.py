@@ -5,6 +5,7 @@ from utils.model_handler import ModelHandler
 from utils.data_handler import DataHandler
 import os
 from eval.eval_runner import *
+from eval.activations import save_prompt_activations, save_response_activations
 import logging
 logging.basicConfig(level=logging.WARNING)
 from utils.batch_handler import BatchHandler
@@ -48,16 +49,16 @@ def main():
         # test_dataset when it was unset, so every dataset after the first in a
         # multi-dataset run inherited the first one's split name.
         if config.args.split == 'test':
-            heldout = f"./data/{model_name}/{source_dir}/{base}-heldout-test.jsonl"
+            heldout = f"./data/{model_name}/{source_dir}/{base}-test.jsonl"
             if not os.path.exists(heldout):
                 raise SystemExit(
                     f"--split test needs {heldout}. Author the prompts under "
                     f"data/queries/ and run data_gen/install_heldout.py."
                 )
             config.args.eval_test = heldout
-            config.args.test_dataset = f"{base}-heldout-test"
-        elif explicit_eval_test is None:
             config.args.test_dataset = f"{base}-test"
+        elif explicit_eval_test is None:
+            config.args.test_dataset = f"{base}-valid"
 
         config.set_output_prefix()
         os.makedirs(config.get_output_prefix(), exist_ok=True)
@@ -65,6 +66,27 @@ def main():
 
         print(f'\n=== Dataset: {source} -> {base} ===')
         data_handler = DataHandler(config, model_handler)
+
+        if config.args.hook_prompt_acts or config.args.hook_response_acts or config.args.hook_target_acts:
+            if source != 'verse-long':
+                print(f'[hook_acts] only saves verse-long/prose activations, skipping {source}')
+            else:
+                # Training prompts (first 100 per side), then every prompt of the eval split
+                # this run generates on (validation, or held-out under -split test).
+                for hook_split, n in (('train', 100), ('eval', None)):
+                    if config.args.hook_prompt_acts:
+                        save_prompt_activations(model_handler.model, data_handler, n=n,
+                                                batch_size=config.args.hook_batch_size, split=hook_split)
+                    if config.args.hook_response_acts:
+                        save_response_activations(model_handler.model, data_handler, n=n,
+                                                  batch_size=config.args.hook_batch_size,
+                                                  max_new_tokens=config.args.max_new_tokens, split=hook_split)
+                if config.args.hook_target_acts:
+                    save_prompt_activations(model_handler.model, data_handler, n=None,
+                                            batch_size=config.args.hook_batch_size, split='target')
+                    save_response_activations(model_handler.model, data_handler, n=None,
+                                              batch_size=config.args.hook_batch_size,
+                                              max_new_tokens=config.args.max_new_tokens, split='target')
 
         if config.args.eval_model:
             data_handler.LEN = min(data_handler.LEN, 200)
@@ -87,13 +109,12 @@ def main():
                     print(f'\n--- Steering type: {steering_type} ---')
 
                     if best_configs is not None:
-                        task = f"from_{source}_to_{base}"
-                        stream = 'residuals' if config.args.resid else 'attention'
+                        task = f"from_{base}_to_{source}"
                         scope = 'global' if config.args.global_steer else 'local'
                         entry = (best_configs.get(model_name, {}).get(task, {})
-                                 .get(stream, {}).get(scope, {}).get(steering_type))
+                                 .get(scope, {}).get(steering_type))
                         if entry is None:
-                            print(f'No validation-selected config for {model_name}/{task}/{stream}/{scope}/{steering_type}, skipping')
+                            print(f'No validation-selected config for {model_name}/{task}/{scope}/{steering_type}, skipping')
                             continue
                         # Collapse the sweep to the single config chosen on validation,
                         # so the held-out split is never used to pick anything.
@@ -104,7 +125,7 @@ def main():
                                                   else ('val_pass_rate', 'w_rf'))
                         if score_key not in entry:
                             raise SystemExit(f"{config.args.best_configs} has no '{score_key}' for "
-                                             f"{model_name}/{task}/{stream}/{scope}/{steering_type}; "
+                                             f"{model_name}/{task}/{scope}/{steering_type}; "
                                              f"it was selected with a different -metric than '{config.args.metric}'")
                         print(f"Pinned from validation: N={entry['N']:g} layer={entry['layer']} "
                               f"(val {score_label}={entry[score_key]:.3f})")

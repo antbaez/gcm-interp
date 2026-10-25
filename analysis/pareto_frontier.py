@@ -1,9 +1,9 @@
 """
 Scatter plots of judge pass rate (x) vs. MMLU accuracy (y) on the validation
-split, one 3x3-subplot figure (model x dataset) per stream per scope, with
-steering methods (steering_type) color-coded. By default, generates one PNG
-per stream x scope combination (residuals/attention x local/global), named
-pareto_<stream>_<scope>.png, all written flat into figures_pareto/.
+split, one 3x3-subplot figure (model x dataset) per scope, with steering
+methods (steering_type) color-coded. By default, generates one PNG per scope
+(local/global), named pareto_<scope>.png, all written flat into
+figures_pareto/.
 
 Usage:
     python analysis/pareto_frontier.py [--unnormalized]
@@ -60,18 +60,15 @@ def short_source_label(source: str) -> str:
     return SOURCE_TO_TAG.get(source, re.sub(r"-(long|single)$", "", source))
 
 
-def build_merged_df(stream: str, norm_mode: str) -> pd.DataFrame | None:
-    """Join validation-split pass rates (results_summary_<stream>.csv) with
+def build_merged_df(norm_mode: str) -> pd.DataFrame | None:
+    """Join validation-split pass rates (results_summary.csv) with
     validation-split MMLU accuracy (mmlu_summary.csv) on
     model/task/scope/steering_type/split/N/layer, matching the same join keys
     as create_heatmap_mmlu.py's divide_by_mmlu_accuracy(). Only conditions
     with a matching MMLU run are kept (inner join)."""
-    csv_path = ACCURACY_DIR / f"results_summary_{stream}.csv"
+    csv_path = ACCURACY_DIR / "results_summary.csv"
     if not csv_path.exists():
-        csv_path = ACCURACY_DIR / "results_summary.csv"
-    if not csv_path.exists():
-        print(f"CSV not found: {csv_path}  —  run summarize_results.py first  "
-              f"(skipping {stream} results)")
+        print(f"CSV not found: {csv_path}  —  run summarize_results.py first")
         return None
 
     df = pd.read_csv(csv_path)
@@ -80,24 +77,22 @@ def build_merged_df(stream: str, norm_mode: str) -> pd.DataFrame | None:
         df = df[df["split"] == "val"]
     else:
         print(f"WARNING: no `split` column in {csv_path.name} — rerun summarize_results.py "
-              f"to exclude held-out-test rows from this plot.")
+              f"to exclude held-out test rows from this plot.")
 
     base_mask = df["base"].apply(lambda b: b.split("_")[-1] in CANONICAL_BASES)
     df = df[base_mask & (df["norm_mode"] == norm_mode)]
-    if "stream_mode" in df.columns:
-        df = df[df["stream_mode"] == stream]
 
     if not MMLU_SUMMARY_PATH.exists():
         print(f"MMLU summary not found: {MMLU_SUMMARY_PATH}  —  "
-              f"run mmlu/summarize_mmlu.py first. Skipping {stream}.")
+              f"run mmlu/summarize_mmlu.py first.")
         return None
 
     mmlu = pd.read_csv(MMLU_SUMMARY_PATH)
-    mmlu = mmlu[(mmlu["stream"] == stream) & (mmlu["split"] == "val")]
+    mmlu = mmlu[mmlu["split"] == "val"]
     mmlu["layer_key"] = mmlu["layer"].astype(str)
 
     df = df.copy()
-    df["task"] = "from_" + df["source"] + "_to_" + df["base"]
+    df["task"] = "from_" + df["base"] + "_to_" + df["source"]
     df["layer_key"] = df["layer"].apply(lambda v: "all" if pd.isna(v) else str(int(v)))
 
     merged = df.merge(
@@ -187,13 +182,13 @@ def _draw_edge_lines(ax, right_ends, left_ends):
     ax.set_ylim(ymin, ymax)
 
 
-def make_pareto_plots(df: pd.DataFrame, fig_path: Path, stream: str, scope: str):
+def make_pareto_plots(df: pd.DataFrame, fig_path: Path, scope: str):
     steering_types = sorted(df["steering_type"].unique())
     palette = dict(zip(steering_types, sns.color_palette("tab10", len(steering_types))))
 
     df = df.copy()
     df["model_label"] = df["model"].apply(short_model_label)
-    df["source"] = df["dataset"].apply(lambda d: d.split(" → ")[0])
+    df["source"] = df["dataset"].apply(lambda d: d.split(" → ")[1])
     df["source_label"] = df["source"].apply(short_source_label)
 
     models = _ordered(df["model_label"].unique(), MODEL_ORDER)
@@ -254,8 +249,7 @@ def make_pareto_plots(df: pd.DataFrame, fig_path: Path, stream: str, scope: str)
         fig.legend(handles, labels, loc="lower center", ncol=len(labels),
                    bbox_to_anchor=(0.5, -0.02), fontsize=13)
 
-    stream_label = "Residual Stream" if stream == "residuals" else "Attention Stream"
-    fig.suptitle(f"{stream_label}, {scope.capitalize()}", fontsize=18)
+    fig.suptitle(scope.capitalize(), fontsize=18)
     fig.tight_layout(rect=(0, 0.03, 1, 0.97))
 
     plt.savefig(fig_path, dpi=150, bbox_inches="tight")
@@ -263,18 +257,18 @@ def make_pareto_plots(df: pd.DataFrame, fig_path: Path, stream: str, scope: str)
     print(f"Saved: {fig_path}")
 
 
-def generate_for_stream(stream: str, norm_mode: str, figures_dir: Path):
-    merged = build_merged_df(stream, norm_mode)
+def generate(norm_mode: str, figures_dir: Path):
+    merged = build_merged_df(norm_mode)
     if merged is None or merged.empty:
-        print(f"No overlapping pass-rate / MMLU-accuracy rows for stream={stream} — skipping.")
+        print("No overlapping pass-rate / MMLU-accuracy rows — skipping.")
         return
 
     for scope in ("local", "global"):
         scope_df = merged[merged["scope"] == scope]
         if scope_df.empty:
             continue
-        fig_path = figures_dir / f"pareto_{stream}_{scope}.png"
-        make_pareto_plots(scope_df, fig_path, stream, scope)
+        fig_path = figures_dir / f"pareto_{scope}.png"
+        make_pareto_plots(scope_df, fig_path, scope)
 
 
 def main():
@@ -286,8 +280,7 @@ def main():
     norm_mode = "unnormalized" if args.unnormalized else "normalized"
     figures_dir = BASE_DIR / "figures_pareto"
     figures_dir.mkdir(parents=True, exist_ok=True)
-    for stream in ("residuals", "attention"):
-        generate_for_stream(stream, norm_mode, figures_dir)
+    generate(norm_mode, figures_dir)
 
 
 if __name__ == "__main__":

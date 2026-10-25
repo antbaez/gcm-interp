@@ -72,10 +72,9 @@ def _path_cols(df: pd.DataFrame) -> list[str]:
     """Columns kept alongside the merge keys because the output path is built
     from them. They are not part of ROW_KEY_COLS, so without this the merge
     projection below drops them: the accuracy tree would then lose its
-    norm/stream/scope levels (filing attention runs under `residuals`) and its
-    held-out subdir. `filename` is the fallback for ratings written before
+    norm/scope levels and its held-out subdir. `filename` is the fallback for ratings written before
     TEST_FILE / the path columns became passthroughs."""
-    return [c for c in ("NORM_MODE", "STREAM_MODE", "SCOPE", "TEST_FILE", "filename")
+    return [c for c in ("NORM_MODE", "SCOPE", "TEST_FILE", "filename")
             if c in df.columns]
 
 
@@ -159,12 +158,11 @@ def _compute_and_write(
 
     for _, group in tqdm(grouped):
         row = group.iloc[0]
-        # Norm/stream/scope come straight from the columns merge_outputs.py
+        # Norm/scope come straight from the columns merge_outputs.py
         # propagates. Older CSVs predate those columns, so fall back to the
         # defaults they were written under: the layer value is "all" only for a
-        # global run, and everything before the split was residual + normalized.
+        # global run, and everything before the split was normalized.
         norm_mode   = str(row["NORM_MODE"]) if "NORM_MODE" in row else "normalized"
-        stream_mode = str(row["STREAM_MODE"]) if "STREAM_MODE" in row else "residuals"
         if "SCOPE" in row:
             scope = str(row["SCOPE"])
         else:
@@ -172,9 +170,8 @@ def _compute_and_write(
         base_dir = os.path.join(
             output_dir,
             str(row["MODEL_ID"]),
-            f"from_{row['SOURCE']}_to_{row['BASE']}",
+            f"from_{row['BASE']}_to_{row['SOURCE']}",
             norm_mode,
-            stream_mode,
             scope,
             str(row["STEERING_TYPE"]),
         )
@@ -185,7 +182,7 @@ def _compute_and_write(
         if not test_file:
             m = GEN_RE.match(str(row.get("filename", "")))
             test_file = m.group("TEST_FILE") if m else ""
-        if test_file and test_file != f"{row['BASE']}-test":
+        if test_file and test_file != f"{row['BASE']}-valid":
             base_dir = os.path.join(base_dir, test_file)
         os.makedirs(base_dir, exist_ok=True)
         fn_base = (

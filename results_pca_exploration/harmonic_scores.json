@@ -1,0 +1,78 @@
+{
+  "Llama-3.1-8B-Instruct": {
+    "verse": {
+      "global": {
+        "average": {
+          "concept": 2.0,
+          "fluency": 1.82,
+          "harmonic_mean": 1.816,
+          "methods": [
+            "last",
+            "mean"
+          ],
+          "relevance": 1.845
+        },
+        "last": {
+          "N": 0.5,
+          "concept": 2.0,
+          "dropped": 0,
+          "fluency": 1.905,
+          "harmonic_mean": 1.948,
+          "layer": "all",
+          "n": 200,
+          "relevance": 2.0,
+          "test_file": "prose-test",
+          "unparsed": 1
+        },
+        "mean": {
+          "N": 0.5,
+          "concept": 2.0,
+          "dropped": 0,
+          "fluency": 1.735,
+          "harmonic_mean": 1.684,
+          "layer": "all",
+          "n": 200,
+          "relevance": 1.69,
+          "test_file": "prose-test",
+          "unparsed": 0
+        }
+      },
+      "local": {
+        "average": {
+          "concept": 0.682,
+          "fluency": 1.597,
+          "harmonic_mean": 0.623,
+          "methods": [
+            "last",
+            "mean"
+          ],
+          "relevance": 1.9
+        },
+        "last": {
+          "N": 200.0,
+          "concept": 0.44,
+          "dropped": 0,
+          "fluency": 1.43,
+          "harmonic_mean": 0.316,
+          "layer": "21",
+          "n": 200,
+          "relevance": 1.815,
+          "test_file": "prose-test",
+          "unparsed": 0
+        },
+        "mean": {
+          "N": 125.0,
+          "concept": 0.925,
+          "dropped": 0,
+          "fluency": 1.765,
+          "harmonic_mean": 0.93,
+          "layer": "21",
+          "n": 200,
+          "relevance": 1.985,
+          "test_file": "prose-test",
+          "unparsed": 0
+        }
+      }
+    }
+  }
+}

@@ -8,6 +8,8 @@ import re
 from tqdm import tqdm
 import pandas as pd
 
+TARGET_BASES = {'prose': 'verse'}
+
 
 def content_token_positions(tokenizer, templated, contents, toks, label="prompt"):
     """Per-row token indices locating each prompt's own content inside its chat template.
@@ -59,7 +61,7 @@ class DataHandler:
             'base_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-desired-all.jsonl",
             'source_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.source}-desired-all.jsonl",
             'base_test': (
-                f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-test.jsonl"
+                f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-valid.jsonl"
                 if isinstance(self.config.args.eval_test, bool) and self.config.args.eval_test
                 else f"{self.config.args.eval_test}"
                 if isinstance(self.config.args.eval_test, str) and self.config.args.eval_test
@@ -109,7 +111,7 @@ class DataHandler:
         # so gen_max_len — and therefore the padding baked into the steering
         # vector cache, which is shared across val/test runs by source alone —
         # stays identical regardless of which split built the cache.
-        for suffix in ('-test.jsonl', '-heldout-test.jsonl'):
+        for suffix in ('-valid.jsonl', '-test.jsonl'):
             split_path = f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}{suffix}"
             if os.path.exists(split_path):
                 gen_prompts += self.get_templated_prompts(self.load_from_jsonl(split_path), only_q=True, add_generation_prompt=True)
@@ -129,6 +131,7 @@ class DataHandler:
                 test_starts = self._content_positions(jsons['base_test'], self.base_qs_toks['test'], "test")['content-start']
                 self.test_steer_mask = steer_mask_from_starts(test_starts, self.gen_max_len).to(self.device)
 
+        self._test_json = jsons['base_test']
         self._steering_jsons = {'add': jsons['steering_add'], 'sub': jsons['steering_sub']}
         self._steering_positions = None
         if steering["add_qs"] and steering["sub_qs"]:
@@ -195,6 +198,25 @@ class DataHandler:
                 positions[side] = self._content_positions(rows, self.steering_qs_toks[side], f"steering {side}")
             self._steering_positions = positions
         return self._steering_positions
+
+    def test_token_positions(self):
+        """content_token_positions() for base_qs_toks['test'] (the active eval split)."""
+        return self._content_positions(self._test_json, self.base_qs_toks['test'], "test")
+
+    def target_split(self):
+        """(name, tokenized prompts, content-positions thunk) for the active eval split's
+        target-concept counterpart: the same prompts with the base instruction swapped for the
+        source's (prose-valid -> verse-valid, prose-test -> verse-test)."""
+        args = self.config.args
+        target = TARGET_BASES[args.base]
+        name = target + args.test_dataset[len(args.base):]
+        path = f"{args.data_path}/{args.source_dir}/{name}.jsonl"
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"--hook_target_acts needs {path}")
+        rows = self.load_from_jsonl(path)
+        toks = self.tokenize_prompts(self.get_templated_prompts(rows, only_q=True, add_generation_prompt=True),
+                                     max_length=self.gen_max_len)
+        return name, toks, lambda: self._content_positions(rows, toks, name)
 
     def steering_content_masks(self):
         """[n, P] bool per side: True from each steering prompt's content start onward."""

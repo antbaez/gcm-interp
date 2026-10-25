@@ -87,7 +87,7 @@ def filter_hidden_n(df: pd.DataFrame) -> pd.DataFrame:
     return df[mask]
 
 
-def divide_by_mmlu_accuracy(df: pd.DataFrame, stream: str) -> pd.DataFrame:
+def divide_by_mmlu_accuracy(df: pd.DataFrame) -> pd.DataFrame:
     """Merge in each condition's MMLU accuracy (from mmlu/summarize_mmlu.py's
     mmlu_summary.csv) and divide `pass_rate` by it in place. Joined on
     model/task/scope/steering_type/split/N/layer; conditions with no matching
@@ -100,11 +100,10 @@ def divide_by_mmlu_accuracy(df: pd.DataFrame, stream: str) -> pd.DataFrame:
         return df
 
     mmlu = pd.read_csv(MMLU_SUMMARY_PATH)
-    mmlu = mmlu[mmlu["stream"] == stream]
     mmlu["layer_key"] = mmlu["layer"].astype(str)
 
     df = df.copy()
-    df["task"] = "from_" + df["source"] + "_to_" + df["base"]
+    df["task"] = "from_" + df["base"] + "_to_" + df["source"]
     df["layer_key"] = df["layer"].apply(lambda v: "all" if pd.isna(v) else str(int(v)))
 
     df = df.merge(
@@ -116,7 +115,7 @@ def divide_by_mmlu_accuracy(df: pd.DataFrame, stream: str) -> pd.DataFrame:
     return df.drop(columns=["task", "layer_key", "accuracy"])
 
 
-def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_label: str = "normalized", resid: bool = False, wo_rf: bool = False):
+def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_label: str = "normalized", wo_rf: bool = False):
     """
     One figure per (model, dataset). Used for global runs (all layers steered).
     Grid rows = w_rf (default), plus a wo_rf row when wo_rf=True. Each heatmap:
@@ -136,7 +135,7 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
     vmin, vmax = (-1, 1) if diff else (0, pass_rate_max if pd.notna(pass_rate_max) else 1)
 
     def _process_group(model, dataset, group):
-        source, base = dataset.split(" → ")
+        base, source = dataset.split(" → ")
         short_model  = next(
             (label for label, needle in SHORT_MODEL_NEEDLES if needle in model.lower()),
             model.split("/")[-1],
@@ -216,7 +215,7 @@ def make_heatmaps(df: pd.DataFrame, figures_dir: Path, diff: bool = False, norm_
 
 
 def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "normalized",
-                        resid: bool = False, no_rel: bool = False, wo_rf: bool = False):
+                        no_rel: bool = False, wo_rf: bool = False):
     """
     One figure per (model, dataset) for single-layer-sweep runs.
     One subplot per steering_type, laid out in a row; each heatmap has rows = layer,
@@ -263,7 +262,7 @@ def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
     n_rows = len(row_specs)
 
     def _process_group(model, dataset, group):
-        source, base = dataset.split(" → ")
+        base, source = dataset.split(" → ")
         short_model  = next(
             (label for label, needle in SHORT_MODEL_NEEDLES if needle in model.lower()),
             model.split("/")[-1],
@@ -384,8 +383,7 @@ def make_layer_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
         _process_group(model, dataset, group)
 
 
-def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "normalized",
-                        resid: bool = False):
+def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "normalized"):
     """
     One figure per dataset, for the paper: rows stacked by model in PAPER_MODEL_ORDER
     (OLMo, Qwen3, Llama), columns = steering_type, cells = layer x N w_rf pass-rate
@@ -423,7 +421,7 @@ def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
     df = df[df["short_model"].isin(PAPER_MODEL_ORDER)]
 
     def _process_dataset(dataset, group):
-        source, base = dataset.split(" → ")
+        base, source = dataset.split(" → ")
         short_source = SOURCE_TO_TAG.get(source, re.sub(r"-(long|single)$", "", source))
 
         rows = [(label, group[group["short_model"] == label]) for label in PAPER_MODEL_ORDER]
@@ -521,19 +519,12 @@ def make_paper_heatmaps(df: pd.DataFrame, figures_dir: Path, norm_label: str = "
         _process_dataset(dataset, group)
 
 
-def generate_for_stream(args, resid: bool, norm_mode: str):
-    figures_root = BASE_DIR / "figures_mmlu"
-    stream = "residuals" if resid else "attention"
-    full_dir = figures_root / stream
-    # summarize_results.py writes one summary per stream; an explicit --csv wins,
-    # and the unsuffixed combined summary is the fallback for older trees.
-    csv_path = Path(args.csv) if args.csv else ACCURACY_DIR / f"results_summary_{stream}.csv"
-    if not csv_path.exists() and not args.csv:
-        csv_path = ACCURACY_DIR / "results_summary.csv"
+def generate(args, norm_mode: str):
+    full_dir = BASE_DIR / "figures_mmlu"
+    csv_path = Path(args.csv) if args.csv else ACCURACY_DIR / "results_summary.csv"
 
     if not csv_path.exists():
-        print(f"CSV not found: {csv_path}  —  run summarize_results.py first  "
-              f"(skipping {'residual' if resid else 'attention'} results)")
+        print(f"CSV not found: {csv_path}  —  run summarize_results.py first")
         return
 
     df = pd.read_csv(csv_path)
@@ -542,10 +533,10 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
         df = df[df["split"] == "val"]
     else:
         print(f"WARNING: no `split` column in {csv_path.name} — rerun summarize_results.py "
-              f"to exclude held-out-test rows from these heatmaps.")
+              f"to exclude held-out test rows from these heatmaps.")
     print(f"Loaded {len(df)} rows from {csv_path.name}")
 
-    df = divide_by_mmlu_accuracy(df, stream)
+    df = divide_by_mmlu_accuracy(df)
 
     full_dir.mkdir(parents=True, exist_ok=True)
 
@@ -555,17 +546,13 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
         base_mask &
         (df["norm_mode"] == norm_mode)
     ]
-    # The combined summary holds both streams, so restrict to this one; a
-    # per-stream summary is already filtered and the mask is a no-op there.
-    if "stream_mode" in base_df.columns:
-        base_df = base_df[base_df["stream_mode"] == stream]
     base_df = filter_hidden_n(base_df)
 
     # Runs are split by scope: `local` = single-layer sweep over the middle third
     # (layer-axis heatmaps), `global` = all layers at once (N × steering-type
     # heatmaps). Summaries predating the `scope` column fall back to whether a
     # layer index is present. Figures are separated on disk into
-    # `<stream>/local/` and `<stream>/global/` subdirectories.
+    # `local/` and `global/` subdirectories.
     has_scope = "scope" in base_df.columns
     local_dir  = full_dir / "local"
     global_dir = full_dir / "global"
@@ -583,12 +570,12 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
         if args.paper:
             paper_dir = full_dir / "paper"
             paper_dir.mkdir(parents=True, exist_ok=True)
-            make_paper_heatmaps(layer_source_df, paper_dir, norm_label=norm_mode, resid=resid)
+            make_paper_heatmaps(layer_source_df, paper_dir, norm_label=norm_mode)
             return
 
         local_dir.mkdir(parents=True, exist_ok=True)
         make_layer_heatmaps(layer_source_df, local_dir, norm_label=norm_mode,
-                            resid=resid, no_rel=args.no_rel, wo_rf=args.wo_rf)
+                            no_rel=args.no_rel, wo_rf=args.wo_rf)
     elif args.paper:
         return
 
@@ -604,21 +591,18 @@ def generate_for_stream(args, resid: bool, norm_mode: str):
 
     norm_label = norm_mode
     global_dir.mkdir(parents=True, exist_ok=True)
-    make_heatmaps(base_df, global_dir, diff=args.diff, norm_label=norm_label, resid=resid, wo_rf=args.wo_rf)
+    make_heatmaps(base_df, global_dir, diff=args.diff, norm_label=norm_label, wo_rf=args.wo_rf)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", default=None,
                         help="Path to a results_summary CSV from summarize_results.py "
-                             "(default: the per-stream summary for each stream plotted)")
+                             "(default: judge-evals/accuracy/results_summary.csv)")
     parser.add_argument("--diff", action="store_true",
                         help="Plot other−last difference instead of raw pass rates")
     parser.add_argument("--unnormalized", action="store_true",
                         help="Plot unnormalized data; outputs to figures_unnormalized / figures_full_unnormalized")
-    parser.add_argument("--attention", action="store_true",
-                        help="Plot attention-stream results instead of residual-stream results "
-                             "(the two are mutually exclusive; residual-stream is the default)")
     parser.add_argument("--global", dest="global_scope", action="store_true",
                         help="Also create the global (N × steering-type) heatmaps; "
                              "by default only the local layer-sweep heatmaps are created")
@@ -630,13 +614,13 @@ def main():
                         help="Add a second row (to both layer-sweep and global heatmaps) using "
                              "the wo_rf pass rate (drops both the relevance and fluency checks)")
     parser.add_argument("--paper", action="store_true",
-                        help="Only (re)generate the paper heatmaps (figures_mmlu/<stream>/paper/), "
+                        help="Only (re)generate the paper heatmaps (figures_mmlu/paper/), "
                              "skipping local/global figures")
     args = parser.parse_args()
 
     norm_mode = "unnormalized" if args.unnormalized else "normalized"
 
-    generate_for_stream(args, not args.attention, norm_mode)
+    generate(args, norm_mode)
 
 
 if __name__ == "__main__":

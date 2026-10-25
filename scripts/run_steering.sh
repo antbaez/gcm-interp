@@ -1,17 +1,17 @@
 #!/bin/bash
 set -e
 
-# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|last-EOT|last-prompt|mean|positional|unweighted-positional|positional-projected] [--attention] [--global] [--layer-frac <0-1>] [--split val|test] [--device <cuda:0>] [--model-cache]
+# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|last-EOT|last-prompt|mean|positional|unweighted-positional|positional-projected] [--global] [--layer-frac <0-1> | --layer-range <start> <end>] [--split val|test] [--results-dir <dir>] [--device <cuda:0>] [--model-cache] [--train-batch-size <n>] [--gen-batch-size <n>] [--steering-n "<N1 N2 ...>"] [--hook_prompt_acts] [--hook_response_acts] [--hook_target_acts] [--hook-batch-size <n>]
 # --dataset defaults to "all" (harmful, sycophancy, verse). Dataset variants
 # (VARIANT_DATASETS below, e.g. verse-varied) can be named explicitly but are
 # never part of "all".
 # --split val (default) sweeps N x layer on the validation split; --split test pins the
 # selection from best_configs.json and generates once on the held-out test split.
-# Residual-stream steering runs by default. Pass --attention to steer the attention
-# output (self_attn.o_proj.output) instead; the two streams differ only in hook site.
+# Steering is added to the residual stream (layer.output).
 # By default steering is a single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END
 # of layers (below); --global steers all layers at once instead.
 # --layer-frac <x> steers only layer round(x * num_layers) instead of sweeping.
+# --layer-range <start> <end> sweeps that fraction range instead, overriding LAYER_FRAC.
 
 PATCHING_BATCH_SIZE=100
 SEED=42
@@ -33,9 +33,6 @@ LAYER_FRAC=0.6667
 # Local (single-layer sweep over LAYER_RANGE_START..LAYER_RANGE_END) and global
 # (all layers at once) get independent lists — steering every layer usually needs
 # different magnitudes than steering a single one. --global selects the GLOBAL list.
-# Residual-stream and attention (--attention) each get their own pair of lists:
-# o_proj outputs are on a different scale than the residual stream, so the same N
-# does not transfer between them.
 declare -A STEERING_N_LOCAL_BY_MODEL=(
     [olmo]="1 10 20 30 40 50 60 70 80 90 100"
     [qwen3]="1 25 50 75 100 125 150 175 200 225 250"
@@ -48,18 +45,6 @@ declare -A STEERING_N_GLOBAL_BY_MODEL=(
     [llama]="0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2"
     [gemma4]="0.25 0.5 0.75 1 1.25 1.5 1.75 2 2.25 2.5 2.75 3 3.25 3.5 3.75 4 4.25 4.5 4.75 5"
 )
-declare -A STEERING_N_LOCAL_ATTN_BY_MODEL=(
-    [olmo]="1 25 50 75 100 125 150 175 200 225 250"
-    [qwen3]="1 25 50 75 100 125 150 175 200 225 250"
-    [llama]="1 25 50 75 100 125 150 175 200 225 250"
-    [gemma4]="1 25 50 75 100 125 150 175 200 225 250"
-)
-declare -A STEERING_N_GLOBAL_ATTN_BY_MODEL=(
-    [olmo]="1 2 3 4 5 6 7 8 9 10"
-    [qwen3]="1 2 3 4 5 6 7 8 9 10"
-    [llama]="1 2 3 4 5 6 7 8 9 10"
-    [gemma4]="1 2 3 4 5 6 7 8 9 10"
-)
 
 EVAL_MODEL=true
 STEERING=true
@@ -67,14 +52,20 @@ STEERING=true
 MODEL_TAG=""
 DATASET_TAG="all"
 DEVICE="cuda:0"
-RESID=true
 GLOBAL=false
 NO_MODEL_CACHE=true
-# val: sweep N x layer on <base>-test.jsonl (the validation split).
+HOOK_PROMPT_ACTS=false
+HOOK_RESPONSE_ACTS=false
+HOOK_TARGET_ACTS=false
+HOOK_BATCH_SIZE=""
+STEERING_N_OVERRIDE=""
+# val: sweep N x layer on <base>-valid.jsonl (the validation split).
 # test: pin the config select_best_config.py chose on validation and generate
-# once on <base>-heldout-test.jsonl, which the sweep never touched.
+# once on <base>-test.jsonl, which the sweep never touched.
 SPLIT="val"
 BEST_CONFIGS="judge-evals/best_configs.json"
+# Generations go under <RESULTS_DIR>/<model>/from_<base>_to_<source>/.
+RESULTS_DIR="./results"
 METRIC=harmonic
 STEERING_TYPES=(
     last
@@ -90,16 +81,24 @@ while [[ $# -gt 0 ]]; do
         --device)  DEVICE="$2";         shift 2 ;;
         --type)    IFS=' ' read -ra STEERING_TYPES <<< "$2"; shift 2 ;;
         --unnormalized) NORMALIZE=false;   shift ;;
-        --attention) RESID=false;       shift ;;
         --global)  GLOBAL=true;         shift ;;
         --seed)    SEED="$2";           shift 2 ;;
         --split)   SPLIT="$2";          shift 2 ;;
         --best-configs) BEST_CONFIGS="$2"; shift 2 ;;
+        --results-dir) RESULTS_DIR="$2"; shift 2 ;;
         --harmonic) METRIC=harmonic; shift ;;
         --pass-rate) METRIC=pass_rate; shift ;;
         --no-model-cache) NO_MODEL_CACHE=true; shift ;;
         --model-cache) NO_MODEL_CACHE=false; shift ;;
+        --train-batch-size) PATCHING_BATCH_SIZE="$2"; shift 2 ;;
+        --gen-batch-size) BATCH_SIZE="$2";   shift 2 ;;
+        --steering-n) STEERING_N_OVERRIDE="$2"; shift 2 ;;
         --layer-frac) LAYER_FRAC="$2";  shift 2 ;;
+        --layer-range) LAYER_RANGE_START="$2"; LAYER_RANGE_END="$3"; LAYER_FRAC=""; shift 3 ;;
+        --hook_prompt_acts) HOOK_PROMPT_ACTS=true;     shift ;;
+        --hook_response_acts) HOOK_RESPONSE_ACTS=true; shift ;;
+        --hook_target_acts) HOOK_TARGET_ACTS=true;     shift ;;
+        --hook-batch-size) HOOK_BATCH_SIZE="$2"; shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -151,22 +150,22 @@ EVAL_FLAGS=""
 if [ "$EVAL_MODEL" = true ];   then EVAL_FLAGS="$EVAL_FLAGS -eval_model"; fi
 if [ "$STEERING" = true ];     then EVAL_FLAGS="$EVAL_FLAGS --steering"; fi
 if [ "$NORMALIZE" = false ];   then EVAL_FLAGS="$EVAL_FLAGS --unnormalized"; fi
-if [ "$RESID" = true ];        then EVAL_FLAGS="$EVAL_FLAGS --resid"; fi
 if [ "$GLOBAL" = true ];       then EVAL_FLAGS="$EVAL_FLAGS --global"; fi
 if [ -n "$LAYER_FRAC" ];      then EVAL_FLAGS="$EVAL_FLAGS -layer_frac $LAYER_FRAC"; fi
 if [ -n "$LAYER_RANGE_START" ]; then EVAL_FLAGS="$EVAL_FLAGS -layer_range_start $LAYER_RANGE_START"; fi
 if [ -n "$LAYER_RANGE_END" ];   then EVAL_FLAGS="$EVAL_FLAGS -layer_range_end $LAYER_RANGE_END"; fi
+EVAL_FLAGS="$EVAL_FLAGS -results_dir $RESULTS_DIR"
 # In test mode run.py reads N/layer per dataset+steering type out of best_configs.json,
 # so the swept -steering_n list passed below is ignored.
 if [ "$SPLIT" = "test" ];      then EVAL_FLAGS="$EVAL_FLAGS -split test -best_configs $BEST_CONFIGS -metric $METRIC"; fi
 if [ "$NO_MODEL_CACHE" = false ]; then EVAL_FLAGS="$EVAL_FLAGS --model-cache"; fi
+if [ "$HOOK_PROMPT_ACTS" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --hook_prompt_acts"; fi
+if [ "$HOOK_RESPONSE_ACTS" = true ]; then EVAL_FLAGS="$EVAL_FLAGS --hook_response_acts"; fi
+if [ "$HOOK_TARGET_ACTS" = true ];   then EVAL_FLAGS="$EVAL_FLAGS --hook_target_acts"; fi
+if [ -n "$HOOK_BATCH_SIZE" ];       then EVAL_FLAGS="$EVAL_FLAGS -hook_batch_size $HOOK_BATCH_SIZE"; fi
 
 n_list_name() {
-    if [ "$GLOBAL" = true ]; then
-        if [ "$RESID" = true ]; then echo "STEERING_N_GLOBAL_BY_MODEL"; else echo "STEERING_N_GLOBAL_ATTN_BY_MODEL"; fi
-    else
-        if [ "$RESID" = true ]; then echo "STEERING_N_LOCAL_BY_MODEL"; else echo "STEERING_N_LOCAL_ATTN_BY_MODEL"; fi
-    fi
+    if [ "$GLOBAL" = true ]; then echo "STEERING_N_GLOBAL_BY_MODEL"; else echo "STEERING_N_LOCAL_BY_MODEL"; fi
 }
 
 describe_method() {
@@ -192,15 +191,10 @@ print_settings() {
     printf '  %-20s %s\n' "Models:" "${MODELS[*]}"
     printf '  %-20s %s\n' "Datasets:" "${DATASETS[*]}"
     if [ "$SPLIT" = "test" ]; then
-        printf '  %-20s %s\n' "Split:" "held-out test (<base>-heldout-test.jsonl)"
+        printf '  %-20s %s\n' "Split:" "held-out test (<base>-test.jsonl)"
         printf '  %-20s %s\n' "N and layer:" "pinned per method from $BEST_CONFIGS (no sweep)"
     else
-        printf '  %-20s %s\n' "Split:" "validation sweep (<base>-test.jsonl)"
-    fi
-    if [ "$RESID" = true ]; then
-        printf '  %-20s %s\n' "Steered stream:" "residual stream (layer.output)"
-    else
-        printf '  %-20s %s\n' "Steered stream:" "attention output (self_attn.o_proj.output)"
+        printf '  %-20s %s\n' "Split:" "validation sweep (<base>-valid.jsonl)"
     fi
     if [ "$GLOBAL" = true ]; then
         printf '  %-20s %s\n' "Layers:" "all layers at once (global)"
@@ -220,14 +214,19 @@ print_settings() {
         printf '  %-20s %s\n' "Vector scaling:" "raw (unnormalized), multiplied by N"
     fi
     if [ "$SPLIT" != "test" ]; then
-        echo "  N values ($list_name):"
-        local M
-        for M in "${MODELS[@]}"; do
-            printf '    %-22s %s\n' "$M" "${n_table[$M]:-(none defined - this model will fail)}"
-        done
+        if [ -n "$STEERING_N_OVERRIDE" ]; then
+            echo "  N values (--steering-n, every model):"
+            printf '    %s\n' "$STEERING_N_OVERRIDE"
+        else
+            echo "  N values ($list_name):"
+            local M
+            for M in "${MODELS[@]}"; do
+                printf '    %-22s %s\n' "$M" "${n_table[$M]:-(none defined - this model will fail)}"
+            done
+        fi
     fi
     printf '  %-20s %s\n' "Max new tokens:" "$MAX_NEW_TOKENS"
-    printf '  %-20s %s\n' "Batch sizes:" "generation $BATCH_SIZE, steering-vector activations $PATCHING_BATCH_SIZE"
+    printf '  %-20s %s\n' "Batch sizes:" "generation $BATCH_SIZE, train (steering vectors) $PATCHING_BATCH_SIZE${HOOK_BATCH_SIZE:+, hooking $HOOK_BATCH_SIZE}"
     printf '  %-20s %s\n' "Seed:" "$SEED"
     printf '  %-20s %s\n' "Device:" "$DEVICE"
     if [ "$NO_MODEL_CACHE" = true ]; then
@@ -256,6 +255,7 @@ run_experiments_for_model() {
     WHICH_LIST="$(n_list_name)"
     local -n N_TABLE="$WHICH_LIST"
     STEERING_N="${N_TABLE[$M_TAG]}"
+    if [ -n "$STEERING_N_OVERRIDE" ]; then STEERING_N="$STEERING_N_OVERRIDE"; WHICH_LIST="--steering-n"; fi
     # Not every model has all four lists filled in. Catch it here rather than letting
     # run.py fail on an empty -steering_n, which reports itself as an argparse error.
     if [ -z "$STEERING_N" ]; then
@@ -285,8 +285,7 @@ run_experiments_for_model() {
     done
 
     echo ""
-    local STREAM="residuals"; [ "$RESID" = false ] && STREAM="attention"
-    echo "[$M_TAG] split=$SPLIT  datasets=[${D_TAGS[*]}]  stream=$STREAM  steering_types=[${STEERING_TYPES[*]}]  N=[$STEERING_N]"
+    echo "[$M_TAG] split=$SPLIT  datasets=[${D_TAGS[*]}]  steering_types=[${STEERING_TYPES[*]}]  N=[$STEERING_N]"
     local START_TIME=$SECONDS
 
     python -u run.py \

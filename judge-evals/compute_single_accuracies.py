@@ -85,12 +85,11 @@ def compute_accuracy_for_file(
 
     model_id      = parts[results_idx + 1]
     from_to       = parts[results_idx + 2]
-    _, source, _, base = from_to.split("_")
+    _, base, _, source = from_to.split("_")
     norm_mode     = parts[results_idx + 3]
-    stream_mode   = parts[results_idx + 4]
-    scope         = parts[results_idx + 5]
-    steering_type = parts[results_idx + 6]
-    filename      = parts[results_idx + 7]
+    scope         = parts[results_idx + 4]
+    steering_type = parts[results_idx + 5]
+    filename      = parts[results_idx + 6]
 
     m = GEN_RE.match(filename)
     if not m:
@@ -104,8 +103,8 @@ def compute_accuracy_for_file(
     fn_base = f"{N}_{reps}_{steer}_layer_{layer}"
 
     acc_dir = (
-        output_dir / model_id / f"from_{source}_to_{base}"
-        / norm_mode / stream_mode / scope / steering_type
+        output_dir / model_id / f"from_{base}_to_{source}"
+        / norm_mode / scope / steering_type
     )
     wo_rf_path = acc_dir / f"{fn_base}_gen_accuracy_wo_rf.json.accuracy.json"
     w_rf_path  = acc_dir / f"{fn_base}_gen_accuracy_w_rf.json.accuracy.json"
@@ -136,7 +135,7 @@ def compute_accuracy_for_file(
             json.dump(payload, f, indent=2)
 
     print(
-        f"  {model_id} | from_{source}_to_{base} | {method} "
+        f"  {model_id} | from_{base}_to_{source} | {method} "
         f"| {eval_subdir} | {steer_subdir} | {fn_base}"
         f"  token='{correct_token}'  acc={accuracy:.3f}"
     )

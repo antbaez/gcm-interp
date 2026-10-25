@@ -45,7 +45,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import BASE_DIR, RUNS_DIR, DATA_DIR, TOKENIZER_MODEL_NAME
+from config import BASE_DIR, RUNS_DIR, DATA_DIR, TOKENIZER_MODEL_NAME, PROMPT_TEMPLATES
 from merge_outputs import (
     discover_gen_files,
     extract_path_metadata,
@@ -56,6 +56,7 @@ from build_prompts import (
     build_fluency_prompts,
     build_relevance_prompts,
     build_judge_prompts,
+    harmonic_templates,
 )
 from compute_single_accuracies import compute_accuracy_for_file
 from compute_accuracies import compute_accuracy_for_workdir
@@ -82,23 +83,22 @@ def gen_workdir(gen_path: str) -> Path:
 
 
 def accuracy_paths(meta: dict) -> tuple[Path, Path]:
-    # Mirrors the results/ and workdirs/ layout, so residual and attention runs
-    # at the same N/layer land in separate trees instead of overwriting each
-    # other. compute_accuracies.py builds the identical path — the two used to
+    # Mirrors the results/ and workdirs/ layout, so local and global runs at the
+    # same N land in separate trees instead of overwriting each other.
+    # compute_accuracies.py builds the identical path — the two used to
     # disagree, which made accuracy_exists() never match and re-judge everything.
     base_dir = (
         ACCURACY_DIR
         / meta["MODEL_ID"]
-        / f"from_{meta['SOURCE']}_to_{meta['BASE']}"
+        / f"from_{meta['BASE']}_to_{meta['SOURCE']}"
         / meta["NORM_MODE"]
-        / meta["STREAM_MODE"]
         / meta["SCOPE"]
         / meta["STEERING_TYPE"]
     )
     # Held-out (true test) runs get their own subdir so their accuracies never
     # overwrite the validation sweep's.
     test_file = meta.get("TEST_FILE") or ""
-    if test_file and test_file != f"{meta['BASE']}-test":
+    if test_file and test_file != f"{meta['BASE']}-valid":
         base_dir = base_dir / test_file
     # Current filenames carry no reps segment, so REPS parses as None; gen_to_csv
     # defaults it to "targeted" and compute_accuracies names files from that, so
@@ -115,6 +115,17 @@ def accuracy_exists(meta: dict) -> bool:
     return wo_rf.exists() and w_rf.exists()
 
 
+HARMONIC_RATING_FILES = ("fluency_ratings.jsonl", "relevance_ratings.jsonl", "judge_ratings.jsonl")
+
+
+def harmonic_judged(gen_path: str) -> bool:
+    """Harmonic mode writes no accuracy files, so a condition counts as judged once
+    its workdir holds all three non-empty rating files."""
+    workdir = gen_workdir(gen_path)
+    return all((workdir / f).is_file() and (workdir / f).stat().st_size > 0
+               for f in HARMONIC_RATING_FILES)
+
+
 def is_single_eval(meta: dict) -> bool:
     return "single" in meta.get("TEST_FILE", "")
 
@@ -128,6 +139,7 @@ def phase1_prepare(
     data_dir: str,
     skip_judge: bool,
     force: bool,
+    harmonic_prompts: bool = False,
 ) -> list[tuple[Path, dict, str]]:
     """
     For each gen file: convert to CSV and build prompt CSVs.
@@ -143,7 +155,8 @@ def phase1_prepare(
         except ValueError as e:
             print(f"Skipping {gen_path}: {e}")
             continue
-        if not force and accuracy_exists(meta):
+        done = harmonic_judged(gen_path) if harmonic_prompts else accuracy_exists(meta)
+        if not force and done:
             print(f"  Skip (done): {Path(gen_path).name}")
             continue
         to_process.append((gen_path, meta))
@@ -153,6 +166,7 @@ def phase1_prepare(
 
     # Only need tokenizer for long-eval files
     long_files = [(gp, m) for gp, m in to_process if not is_single_eval(m)]
+    templates = harmonic_templates() if harmonic_prompts and long_files else PROMPT_TEMPLATES
     tokenizer = None
     if long_files:
         print(f"\nPhase 1: {len(to_process)} files to prepare "
@@ -194,15 +208,15 @@ def phase1_prepare(
 
         rf_csv = workdir / "relevance_fluency_prompts.csv"
         if not rf_csv.exists():
-            rf_df = build_fluency_prompts(df.copy(), tokenizer)
-            rf_df = build_relevance_prompts(rf_df, tokenizer)
+            rf_df = build_fluency_prompts(df.copy(), tokenizer, templates)
+            rf_df = build_relevance_prompts(rf_df, tokenizer, templates)
             rf_df.to_csv(rf_csv, index=False)
 
         if not skip_judge:
             jp_csv = workdir / "judge_prompts.csv"
             if not jp_csv.exists():
                 try:
-                    jp_df = build_judge_prompts(df.copy(), tokenizer)
+                    jp_df = build_judge_prompts(df.copy(), tokenizer, templates)
                     jp_df.to_csv(jp_csv, index=False)
                 except (ValueError, AssertionError) as e:
                     print(f"  ERROR building judge prompts for {name}: {e}")
@@ -358,12 +372,15 @@ def _delete_intermediate_csvs(workdir: Path):
             f.unlink()
 
 
-def phase3_accuracies(long_items: list[tuple[Path, dict, str]], skip_judge: bool):
-    """Compute per-condition accuracies for all long-eval workdirs."""
+def phase3_accuracies(long_items: list[tuple[Path, dict, str]], skip_judge: bool,
+                      harmonic_prompts: bool = False):
+    """Compute per-condition accuracies for all long-eval workdirs. Harmonic mode
+    writes none (its scores come from the rating JSONLs) and only clears scratch CSVs."""
     print(f"\nPhase 3: Computing accuracies for {len(long_items)} long-eval workdirs")
     for wd, _meta, _gp in long_items:
         print(f"  {wd.name}")
-        compute_accuracy_for_workdir(wd, ACCURACY_DIR, skip_judge)
+        if not harmonic_prompts:
+            compute_accuracy_for_workdir(wd, ACCURACY_DIR, skip_judge)
         _delete_intermediate_csvs(wd)
 
 
@@ -400,18 +417,18 @@ def parse_args():
     p.add_argument("--base",         default=None)
     p.add_argument("--norm_mode",     default=None,
                    help="normalized or unnormalized")
-    p.add_argument("--stream_mode",   default=None,
-                   help="attention or residuals")
     p.add_argument("--steering_type", default=None,
                    help="e.g. positional, last-token, all-tokens")
     p.add_argument("--test_file",     default=None,
-                   help="Only judge generations from this split, e.g. 'harmless-test' "
-                        "(validation) or 'harmless-heldout-test' (true test)")
+                   help="Only judge generations from this split, e.g. 'harmless-valid' "
+                        "(validation) or 'harmless-test' (true test)")
     p.add_argument("--all",          action="store_true")
     p.add_argument("--skip_judge",   action="store_true",
                    help="Skip behavioral judge (fluency + relevance only)")
     p.add_argument("--force",        action="store_true",
                    help="Re-process even if accuracy files exist")
+    p.add_argument("--harmonic_prompts", action="store_true",
+                   help="Build judge prompts from HARMONIC_PROMPT_TEMPLATES")
     p.add_argument("--batch_size",   type=int, default=16)
     p.add_argument("--plots",        action="store_true")
     p.add_argument("--plots_args",   nargs="*", default=None)
@@ -423,14 +440,15 @@ def parse_args():
 
 
 def main():
-    global ACCURACY_DIR, WORKDIRS_ROOT
+    global ACCURACY_DIR, WORKDIRS_ROOT, RUNS_DIR
     args = parse_args()
+    RUNS_DIR = Path(args.runs_dir)
     ACCURACY_DIR = Path(args.accuracy_dir)
     WORKDIRS_ROOT = Path(args.workdirs_root)
 
     if not args.all and not any([
         args.model_name, args.source, args.base,
-        args.steering_type, args.stream_mode,
+        args.steering_type,
     ]):
         print("Error: specify at least one filter or --all. Run --help for examples.")
         sys.exit(1)
@@ -438,7 +456,7 @@ def main():
     gen_files = discover_gen_files(
         args.runs_dir, args.model_name, args.source, args.base,
         args.norm_mode, args.steering_type,
-        args.stream_mode, test_file=args.test_file,
+        test_file=args.test_file,
     )
     print(f"Found {len(gen_files)} gen files")
     print(f"Accuracy dir: {ACCURACY_DIR}\n")
@@ -447,7 +465,8 @@ def main():
     print("=" * 60)
     print("  PHASE 1: Convert gen files + build prompt CSVs")
     print("=" * 60)
-    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force)
+    prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force,
+                              args.harmonic_prompts)
 
     if not prepared:
         print("Nothing to evaluate.")
@@ -463,7 +482,7 @@ def main():
             print("\n" + "=" * 60)
             print("  PHASE 3: Compute accuracies")
             print("=" * 60)
-            phase3_accuracies(long_items, args.skip_judge)
+            phase3_accuracies(long_items, args.skip_judge, args.harmonic_prompts)
 
     print(f"\nPipeline complete. Accuracy files: {ACCURACY_DIR}")
 

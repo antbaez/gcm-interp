@@ -1,0 +1,3 @@
+model,dataset,base,scope,method,N,layer,test_file,n,unparsed,dropped,harmonic_mean,delta_vs_base,concept,fluency,relevance,path
+Llama-3.1-8B-Instruct,verse,verse,local,last,200.0,21,prose-test,200,0,0,0.3155,,0.44,1.43,1.815,Llama-3.1-8B-Instruct/from_prose_to_verse-long/normalized/local/last/N=200_steer_layer=21_prose-test
+Llama-3.1-8B-Instruct,verse,verse,local,mean,125.0,21,prose-test,200,0,0,0.93,,0.925,1.765,1.985,Llama-3.1-8B-Instruct/from_prose_to_verse-long/normalized/local/mean/N=125_steer_layer=21_prose-test
