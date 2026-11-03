@@ -68,8 +68,8 @@ def main():
         data_handler = DataHandler(config, model_handler)
 
         if config.args.hook_prompt_acts or config.args.hook_response_acts or config.args.hook_target_acts:
-            if source != 'verse-long':
-                print(f'[hook_acts] only saves verse-long/prose activations, skipping {source}')
+            if source != 'verse':
+                print(f'[hook_acts] only saves verse/prose activations, skipping {source}')
             else:
                 # Training prompts (first 100 per side), then every prompt of the eval split
                 # this run generates on (validation, or held-out under -split test).

@@ -1,0 +1,32 @@
+results_dir: results_refusal_jacobian
+models: [llama]
+datasets: [refusal-help-hurt]
+steering_type: [last, mean]
+jacobian:
+  fit: [prose, both]
+  pooling: [mean, sum]
+  solver: [ridge, pinv, trunc]
+steering_n: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+global_steering_n: null
+normalization: true
+scope: local
+local_layer:
+  mode: single
+  single: 11/32
+  sweep: [1/3, 2/3]
+split: val
+generation: true
+judging: true
+judge: [gpt-6-luna]
+api_judge_layers: null
+api_judge_n: null
+no_model_cache: false
+metric: harmonic
+train_batch_size: 100
+generation_batch_size: 50
+
+seed: null
+hook_prompt_acts: false
+hook_response_acts: false
+hook_target_acts: false
+hook_batch_size: null

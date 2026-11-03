@@ -1,0 +1,36 @@
+{
+  "model": "Llama-3.1-8B-Instruct",
+  "task": "from_prose_to_verse",
+  "layer": 21,
+  "target_layer": 31,
+  "fit_set": "prose",
+  "n_fit": 100,
+  "directions": {
+    "first-token": {
+      "delta_span": "first",
+      "lambda": 0.004596135389517226,
+      "ridge": 0.001,
+      "norm": 22.637117363462963,
+      "residual": 0.032927241480565826,
+      "cos_Jv_delta": 0.999459772613948,
+      "J_cond": 884339.2347213965,
+      "J_sigma_max": 19.642862007165487,
+      "J_sigma_min": 2.2211908321984384e-05
+    }
+  },
+  "cosines": {
+    "first-token": {
+      "first-token": 0.9999999403953552,
+      "steered-sum": 0.0532158687710762,
+      "prefix-mean": 0.1941201537847519,
+      "last-token diff": 0.47391968965530396,
+      "mean diff": 0.32142841815948486,
+      "response diff": 0.24601037800312042
+    }
+  },
+  "baseline_norms": {
+    "last-token diff": 10.814762115478516,
+    "mean diff": 3.348716974258423,
+    "response diff": 7.334301471710205
+  }
+}

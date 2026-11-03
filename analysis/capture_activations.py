@@ -49,7 +49,9 @@ sys.path.insert(0, str(REPO_ROOT))
 
 MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
 MODEL_NAME = MODEL_ID.split("/")[-1]
-SOURCE, BASE, SOURCE_DIR = "non-sycophantic-long", "sycophancy", "sycophancy-long"
+from utils.dataset_registry import DATASETS
+
+SOURCE, BASE, SOURCE_DIR = (DATASETS["sycophancy"][k] for k in ("add", "sub", "dir"))
 TASK = f"from_{BASE}_to_{SOURCE}"
 SCOPE = "local"
 TEST_DATASET = f"{BASE}-test"
@@ -96,8 +98,8 @@ def build_pipeline(device):
         sys.argv[0], "-d", device, "-model_id", MODEL_ID,
         "-batch_size", str(PATCHING_BATCH_SIZE), "-seed", "42", "-max_new_tokens", "512",
         "-source", SOURCE, "-base", BASE, "-source_dir", SOURCE_DIR,
-        "-steering_add_path", f"{data}/{SOURCE}-desired-all.jsonl",
-        "-steering_sub_path", f"{data}/{BASE}-desired-all.jsonl",
+        "-steering_add_path", f"{data}/{SOURCE}-train.jsonl",
+        "-steering_sub_path", f"{data}/{BASE}-train.jsonl",
         "-eval_batch_size", str(EVAL_BATCH_SIZE), "-eval_model", "--steering",
     ]
     try:

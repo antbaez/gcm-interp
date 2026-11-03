@@ -58,8 +58,8 @@ class DataHandler:
         self.device = self.config.args.device
 
         file_paths = {
-            'base_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-desired-all.jsonl",
-            'source_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.source}-desired-all.jsonl",
+            'base_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-train.jsonl",
+            'source_desired': f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.source}-train.jsonl",
             'base_test': (
                 f"{self.config.args.data_path}/{self.config.args.source_dir}/{self.config.args.base}-valid.jsonl"
                 if isinstance(self.config.args.eval_test, bool) and self.config.args.eval_test

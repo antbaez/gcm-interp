@@ -1,7 +1,7 @@
 from asyncio import log
 # from setup import set_seed
-from eval.activations import steering_reps_cache, steering_coverage as compute_steering_coverage, steered_acts_path, save_steered_activations
-from eval.generation import select_gen_qs_toks, generate_with_patches, decode_responses, STEERING_TYPE_VARIANTS, WEIGHTED_POSITIONAL_TYPES, PROJECTED_STEERING_TYPES
+from eval.activations import steering_reps_cache, steering_coverage as compute_steering_coverage, pending_steered_acts_paths, save_steered_activations
+from eval.generation import _get_layers, select_gen_qs_toks, generate_with_patches, decode_responses, STEERING_TYPE_VARIANTS, JACOBIAN_STEERING_TYPES, WEIGHTED_POSITIONAL_TYPES, PROJECTED_STEERING_TYPES
 import hashlib
 import math
 import os
@@ -11,9 +11,28 @@ from tqdm import tqdm
 import sys
 import torch
 import time
+from pathlib import Path
 sys.path.append('../')  # Adjust path to import modules correctly
 from utils.batch_handler import BatchHandler
 from utils.model_handler import ModelHandler
+def load_jacobian_reps(config, model_handler):
+    variant = config.args.steering_type[len('jacobian-'):]
+    model_name = config.args.model_id.split('/')[-1]
+    task = f"from_{config.args.base}_to_{config.args.source}"
+    paths = sorted(Path('jacobian', model_name, task).glob(f'layer=*/direction_{variant}.pt'))
+    if not paths:
+        raise FileNotFoundError(f"no jacobian/{model_name}/{task}/layer=*/direction_{variant}.pt (run jacobian/run_fit_lens.sh)")
+    num_layers = len(_get_layers(model_handler.model))
+    reps = None
+    for path in paths:
+        saved = torch.load(path, map_location='cpu')
+        if reps is None:
+            reps = torch.full((num_layers, saved['direction'].shape[-1]), float('nan'))
+        reps[saved['layer']] = saved['direction'].float()
+        print(f"[eval] {config.args.steering_type}: layer {saved['layer']} from {path}, norm={saved['direction'].norm():.3f}")
+    return reps.to(next(model_handler.model._model.parameters()).dtype)
+
+
 def load_patching_reps(data_handler, model_handler, variant=None):
     model = model_handler.model
     return steering_reps_cache(model, data_handler, batch_size=data_handler.config.args.train_batch_size, variant=variant)
@@ -135,7 +154,9 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
     patching_reps = None
     def get_patching_reps():
         nonlocal patching_reps
-        if patching_reps is None:
+        if patching_reps is None and config.args.steering_type in JACOBIAN_STEERING_TYPES:
+            patching_reps = load_jacobian_reps(config, model_handler)
+        elif patching_reps is None:
             patching_reps = load_patching_reps(
                 data_handler, model_handler,
                 variant=STEERING_TYPE_VARIANTS.get(config.args.steering_type),
@@ -191,7 +212,7 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
         sweep_vals = ['all']
 
     # hook_response_acts also saves the activations under steering of every condition (verse only).
-    hook_steered = getattr(config.args, 'hook_response_acts', False) and config.args.source == 'verse-long'
+    hook_steered = getattr(config.args, 'hook_response_acts', False) and config.args.source == 'verse'
     hook_batch_size = getattr(config.args, 'hook_batch_size', 9)
 
     def steer_kwargs(steer_layers):
@@ -217,13 +238,12 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
     def hook_existing_condition(steer_layers):
         if not hook_steered:
             return
-        path = steered_acts_path(config, model=model)
-        if os.path.exists(path):
-            print(f'[hook_acts] {path} exists, skipping')
+        paths = pending_steered_acts_paths(config, model)
+        if not paths:
             return
         print(f'[hook_acts] gen files exist but no steered activations; regenerating N={config.args.N:g} for the hook')
         save_steered_activations(model, data_handler, steered_outputs(steer_layers), steer_kwargs(steer_layers),
-                                 path, batch_size=hook_batch_size)
+                                 paths, batch_size=hook_batch_size)
 
     decoded_responses = {}
     pre_patch_logits = None
@@ -303,10 +323,8 @@ def run_eval(config, data_handler, model_handler, batch_handler, N=None, origina
                 os.makedirs(steer_eval_dir, exist_ok=True)
                 save_prompt_responses(decoded_responses[reps_type][sweep_val], gen_file)
                 if hook_steered:
-                    path = steered_acts_path(config, model=model)
-                    if os.path.exists(path):
-                        print(f'[hook_acts] {path} exists, skipping')
-                    else:
+                    paths = pending_steered_acts_paths(config, model)
+                    if paths:
                         save_steered_activations(model, data_handler, steered_rows, steer_kwargs(steer_layers),
-                                                 path, batch_size=hook_batch_size)
+                                                 paths, batch_size=hook_batch_size)
     print("Evaluation complete.")

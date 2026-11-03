@@ -26,9 +26,9 @@ from config import BASE_DIR
 ACCURACY_DIR = BASE_DIR / "judge-evals" / "accuracy"
 
 SOURCE_TO_TAG = {
-    "harmful-long":                    "harmful",
-    "non-sycophantic-long":            "sycophancy",
-    "verse-long":                      "verse",
+    "harmful":                    "harmful",
+    "non-sycophantic":            "sycophancy",
+    "verse":                      "verse",
 }
 
 LAST_TOKEN_NAMES = {"last", "last-token", "last_token"}

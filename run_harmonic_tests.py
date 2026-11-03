@@ -47,7 +47,7 @@ data dir under data/<model>/ (and so its own steering vector):
 tags, plus `variants` (every variant) and `all` (the three base datasets and
 every variant); the default is harmful,sycophancy,verse. With a best-configs
 file, a variant is run at its base dataset's (N, layer) per method, looked up
-under the base's task key (e.g. from_prose_to_verse-long for verse-varied);
+under the base's task key (e.g. from_prose_to_verse for verse-varied);
 any entries the file has under the variant's own task key are ignored. A model
 with no base entry gets no test for that variant. With a spec file, --datasets
 only filters its tests. --models (comma-separated model tags) filters either
@@ -107,6 +107,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT / "judge-evals"))
 
 from selection_utils import parse_condition_dir
+from utils.dataset_registry import BASE_DATASETS, DATASETS, TASK_DATASETS, VARIANT_DATASETS, task_dir
 
 RESULTS_ROOT = REPO_ROOT / "results"
 WORKDIRS_ROOT = REPO_ROOT / "judge-evals" / "workdirs"
@@ -124,28 +125,13 @@ MODEL_DIRS = {
     "llama": "Llama-3.1-8B-Instruct",
 }
 
-# Dataset tag -> (task dir, base name). Mirrors run_steering.sh's dataset case.
-DATASET_TASKS = {
-    "harmful":    ("from_harmless_to_harmful-long",           "harmless"),
-    "sycophancy": ("from_sycophancy_to_non-sycophantic-long", "sycophancy"),
-    "verse":      ("from_prose_to_verse-long",                "prose"),
-}
-BASE_DATASETS = tuple(DATASET_TASKS)
+# Dataset tag -> (task dir, base name), from utils/dataset_registry.py.
+DATASET_TASKS = {tag: (task_dir(tag), DATASETS[tag]["sub"]) for tag in BASE_DATASETS}
 
-# Dataset variant tag -> the base dataset whose best config it's run at
-# (mirrors run_steering.sh's VARIANT_DATASETS).
-VARIANT_BASE = {
-    **{f"sycophancy-{v}": "sycophancy"
-       for v in ("more-templates", "unaligned", "diff-length", "unaligned-diff-length")},
-    **{f"verse-{v}": "verse" for v in ("aligned", "longer", "varied")},
-}
-for _tag, _base in VARIANT_BASE.items():
-    _suffix = _tag.split("-", 1)[1]
-    if _base == "sycophancy":
-        DATASET_TASKS[_tag] = (f"from_sycophancy-{_suffix}_to_non-sycophantic-long-{_suffix}",
-                               f"sycophancy-{_suffix}")
-    else:
-        DATASET_TASKS[_tag] = (f"from_prose-{_suffix}_to_verse-long-{_suffix}", f"prose-{_suffix}")
+# Dataset variant tag -> the base dataset whose best config it's run at.
+VARIANT_BASE = {tag: DATASETS[tag]["variant_of"] for tag in VARIANT_DATASETS}
+for _tag in TASK_DATASETS:
+    DATASET_TASKS.setdefault(_tag, (task_dir(_tag), DATASETS[_tag]["sub"]))
 
 METHODS = ("last", "mean", "positional")
 

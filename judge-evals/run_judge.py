@@ -13,13 +13,13 @@ Strategy:
 
 Usage examples:
 
-  # All verse-long eval for atp
-  python run_judge.py --eval_subdir verse-long_eval --algos atp
+  # All verse eval for atp
+  python run_judge.py --eval_subdir verse_eval --algos atp
 
   # Specific model + task
   python run_judge.py \\
       --model_name Qwen1.5-14B-Chat \\
-      --source sycophancy-long \\
+      --source sycophancy \\
       --base non-sycophantic \\
       --eval_subdir sycophancy-single_eval \\
       --algos atp
@@ -31,10 +31,10 @@ Usage examples:
   python run_judge.py --all
 
   # Skip behavioral judge (only fluency + relevance)
-  python run_judge.py --eval_subdir sycophancy-long_eval --skip_judge
+  python run_judge.py --eval_subdir sycophancy_eval --skip_judge
 
   # Generate plots after evaluation
-  python run_judge.py --eval_subdir verse-long_eval --plots
+  python run_judge.py --eval_subdir verse_eval --plots
 """
 
 import argparse
@@ -45,7 +45,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import BASE_DIR, RUNS_DIR, DATA_DIR, TOKENIZER_MODEL_NAME, PROMPT_TEMPLATES
+from config import BASE_DIR, RUNS_DIR, DATA_DIR, TOKENIZER_MODEL_NAME, PROMPT_TEMPLATES, GEN_RE
 from merge_outputs import (
     discover_gen_files,
     extract_path_metadata,
@@ -140,6 +140,7 @@ def phase1_prepare(
     skip_judge: bool,
     force: bool,
     harmonic_prompts: bool = False,
+    judge_model: str | None = None,
 ) -> list[tuple[Path, dict, str]]:
     """
     For each gen file: convert to CSV and build prompt CSVs.
@@ -169,10 +170,14 @@ def phase1_prepare(
     templates = harmonic_templates() if harmonic_prompts and long_files else PROMPT_TEMPLATES
     tokenizer = None
     if long_files:
-        print(f"\nPhase 1: {len(to_process)} files to prepare "
-              f"({len(long_files)} long-eval). Loading tokenizer once...")
-        tokenizer = load_tokenizer(TOKENIZER_MODEL_NAME)
-        print("Tokenizer loaded.\n")
+        print(f"\nPhase 1: {len(to_process)} files to prepare ({len(long_files)} long-eval).")
+        if judge_model:
+            from api_evaluator import ChatJSONTokenizer
+            tokenizer = ChatJSONTokenizer()
+        else:
+            print("Loading tokenizer once...")
+            tokenizer = load_tokenizer(TOKENIZER_MODEL_NAME)
+            print("Tokenizer loaded.\n")
     else:
         print(f"\nPhase 1: {len(to_process)} files to prepare (all single-eval, no tokenizer needed).\n")
 
@@ -234,16 +239,16 @@ def phase1_prepare(
 # ---------------------------------------------------------------------------
 
 def _evaluate_all_workdirs_batched(
-    llm,
+    generate,
     long_items: list[tuple[Path, dict, str]],
     batch_size: int,
     skip_judge: bool,
 ):
     """
-    Collect all prompts from all workdirs into one batch per mode, run vLLM once
-    per mode, then write results back to per-workdir JSONL files.
+    Collect all prompts from all workdirs into one batch per mode, run the judge's
+    generate(prompts, batch_size) once per mode, then write results back to per-workdir
+    JSONL files.
     """
-    from evaluator import generate_in_batches
     from config import PASSTHROUGH_COLS, extract_rating
 
     dtype = {"post-intervention-response": str, "original-response": str,
@@ -289,7 +294,7 @@ def _evaluate_all_workdirs_batched(
         # Single large batched inference
         outputs = []
         total_batches = (len(prompts) + batch_size - 1) // batch_size
-        for batch_num, batch in enumerate(generate_in_batches(llm, prompts, batch_size), start=1):
+        for batch_num, batch in enumerate(generate(prompts, batch_size), start=1):
             print(f"  [{mode}] Batch {batch_num}/{total_batches} — {len(batch)} prompts")
             outputs.extend(batch)
 
@@ -320,6 +325,8 @@ def phase2_evaluate(
     data_dir: str,
     batch_size: int,
     skip_judge: bool,
+    judge_model: str | None = None,
+    api_concurrency: int = 16,
 ) -> list[tuple[Path, dict, str]]:
     """
     Evaluate all files.
@@ -341,9 +348,14 @@ def phase2_evaluate(
     # --- Long-eval: load model once, batch all prompts across workdirs ---
     if long_items:
         print(f"\nPhase 2b: Judge model evaluation for {len(long_items)} long-eval files")
-        from evaluator import make_llm
-        llm = make_llm()
-        _evaluate_all_workdirs_batched(llm, long_items, batch_size, skip_judge)
+        if judge_model:
+            from api_evaluator import make_api_generate_fn
+            generate = make_api_generate_fn(judge_model, WORKDIRS_ROOT.parent / "api_cache", api_concurrency)
+        else:
+            from evaluator import make_llm, generate_in_batches
+            llm = make_llm()
+            generate = lambda prompts, size: generate_in_batches(llm, prompts, size)
+        _evaluate_all_workdirs_batched(generate, long_items, batch_size, skip_judge)
 
     return long_items
 
@@ -417,8 +429,8 @@ def parse_args():
     p.add_argument("--base",         default=None)
     p.add_argument("--norm_mode",     default=None,
                    help="normalized or unnormalized")
-    p.add_argument("--steering_type", default=None,
-                   help="e.g. positional, last-token, all-tokens")
+    p.add_argument("--steering_type", default=None, nargs="+",
+                   help="one or more, e.g. positional last-token all-tokens")
     p.add_argument("--test_file",     default=None,
                    help="Only judge generations from this split, e.g. 'harmless-valid' "
                         "(validation) or 'harmless-test' (true test)")
@@ -429,6 +441,18 @@ def parse_args():
                    help="Re-process even if accuracy files exist")
     p.add_argument("--harmonic_prompts", action="store_true",
                    help="Build judge prompts from HARMONIC_PROMPT_TEMPLATES")
+    p.add_argument("--layer_range",  type=float, nargs=2, default=None, metavar=("START", "END"),
+                   help="Only judge single-layer sweep conditions at layers round(START * num_layers).."
+                        "round(END * num_layers) - 1, as run.py -layer_range_start/-layer_range_end sweeps them")
+    p.add_argument("--model_id",     default=None,
+                   help="HF repo id whose config.json gives num_layers for --layer_range")
+    p.add_argument("--layers",       nargs="+", default=None,
+                   help="Only judge single-layer conditions at these layers (global conditions are kept)")
+    p.add_argument("--n_values",     nargs="+", type=float, default=None,
+                   help="Only judge conditions at these steering N values")
+    p.add_argument("--judge_model",  default=None,
+                   help="OpenAI model to judge with through the API, instead of the local vLLM judge")
+    p.add_argument("--api_concurrency", type=int, default=16)
     p.add_argument("--batch_size",   type=int, default=16)
     p.add_argument("--plots",        action="store_true")
     p.add_argument("--plots_args",   nargs="*", default=None)
@@ -437,6 +461,39 @@ def parse_args():
     p.add_argument("--accuracy_dir",  default=str(ACCURACY_DIR))
     p.add_argument("--workdirs_root", default=str(WORKDIRS_ROOT))
     return p.parse_args()
+
+
+def filter_layer_range(gen_files, layer_range, model_id):
+    """Keeps the gen files whose swept layer lies in run.py's sweep over layer_range."""
+    from huggingface_hub import hf_hub_download
+    if not model_id:
+        sys.exit("Error: --layer_range needs --model_id")
+    with open(hf_hub_download(model_id, "config.json")) as f:
+        model_config = json.load(f)
+    num_layers = model_config.get("text_config", model_config)["num_hidden_layers"]
+    layer_lo, layer_hi = round(num_layers * layer_range[0]), round(num_layers * layer_range[1])
+    print(f"Judging layers {layer_lo}..{layer_hi - 1} of {num_layers}")
+    kept = []
+    for f in gen_files:
+        layer = GEN_RE.search(Path(f).name).group("layer")
+        if layer.isdigit() and layer_lo <= int(layer) < layer_hi:
+            kept.append(f)
+    return kept
+
+
+def filter_layers(gen_files, layers):
+    """Keeps the gen files at the listed layers, plus global ones (layer=all)."""
+    kept = []
+    for f in gen_files:
+        layer = GEN_RE.search(Path(f).name).group("layer")
+        if not layer.isdigit() or layer in layers:
+            kept.append(f)
+    return kept
+
+
+def filter_n_values(gen_files, n_values):
+    """Keeps the gen files at the listed steering N values."""
+    return [f for f in gen_files if float(GEN_RE.search(Path(f).name).group("N")) in n_values]
 
 
 def main():
@@ -458,6 +515,12 @@ def main():
         args.norm_mode, args.steering_type,
         test_file=args.test_file,
     )
+    if args.layer_range:
+        gen_files = filter_layer_range(gen_files, args.layer_range, args.model_id)
+    if args.layers:
+        gen_files = filter_layers(gen_files, args.layers)
+    if args.n_values:
+        gen_files = filter_n_values(gen_files, args.n_values)
     print(f"Found {len(gen_files)} gen files")
     print(f"Accuracy dir: {ACCURACY_DIR}\n")
 
@@ -466,7 +529,7 @@ def main():
     print("  PHASE 1: Convert gen files + build prompt CSVs")
     print("=" * 60)
     prepared = phase1_prepare(gen_files, args.data_dir, args.skip_judge, args.force,
-                              args.harmonic_prompts)
+                              args.harmonic_prompts, args.judge_model)
 
     if not prepared:
         print("Nothing to evaluate.")
@@ -475,7 +538,8 @@ def main():
         print("\n" + "=" * 60)
         print("  PHASE 2: Evaluate")
         print("=" * 60)
-        long_items = phase2_evaluate(prepared, args.data_dir, args.batch_size, args.skip_judge)
+        long_items = phase2_evaluate(prepared, args.data_dir, args.batch_size, args.skip_judge,
+                                     args.judge_model, args.api_concurrency)
 
         # Phase 3: compute per-condition accuracies for long-eval
         if long_items:

@@ -1,6 +1,6 @@
 {
   "Llama-3.1-8B-Instruct": {
-    "from_harmless_to_harmful-long": {
+    "from_harmless_to_harmful": {
       "global": {
         "last": {
           "N": 0.3,
@@ -78,7 +78,7 @@
         }
       }
     },
-    "from_prose_to_verse-long": {
+    "from_prose_to_verse": {
       "global": {
         "last": {
           "N": 0.4,
@@ -156,7 +156,7 @@
         }
       }
     },
-    "from_sycophancy_to_non-sycophantic-long": {
+    "from_sycophancy_to_non-sycophantic": {
       "global": {
         "last": {
           "N": 0.4,
@@ -236,7 +236,7 @@
     }
   },
   "OLMo-2-1124-13B-DPO": {
-    "from_harmless_to_harmful-long": {
+    "from_harmless_to_harmful": {
       "global": {
         "last": {
           "N": 2.25,
@@ -314,7 +314,7 @@
         }
       }
     },
-    "from_prose_to_verse-long": {
+    "from_prose_to_verse": {
       "global": {
         "last": {
           "N": 1.1,
@@ -392,7 +392,7 @@
         }
       }
     },
-    "from_sycophancy_to_non-sycophantic-long": {
+    "from_sycophancy_to_non-sycophantic": {
       "global": {
         "last": {
           "N": 1.5,
@@ -472,7 +472,7 @@
     }
   },
   "Qwen3-14B": {
-    "from_harmless_to_harmful-long": {
+    "from_harmless_to_harmful": {
       "global": {
         "last": {
           "N": 4.75,
@@ -550,7 +550,7 @@
         }
       }
     },
-    "from_prose_to_verse-long": {
+    "from_prose_to_verse": {
       "global": {
         "last": {
           "N": 5.0,
@@ -628,7 +628,7 @@
         }
       }
     },
-    "from_sycophancy_to_non-sycophantic-long": {
+    "from_sycophancy_to_non-sycophantic": {
       "global": {
         "last": {
           "N": 5.0,
@@ -708,7 +708,7 @@
     }
   },
   "gemma-4-12B-it": {
-    "from_harmless_to_harmful-long": {
+    "from_harmless_to_harmful": {
       "local": {
         "last": {
           "N": 50.0,
@@ -748,7 +748,7 @@
         }
       }
     },
-    "from_prose_to_verse-long": {
+    "from_prose_to_verse": {
       "local": {
         "last": {
           "N": 25.0,

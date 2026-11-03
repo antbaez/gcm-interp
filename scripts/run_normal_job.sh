@@ -1,9 +1,10 @@
 #!/bin/bash
 #SBATCH -p mit_normal_gpu
+#SBATCH --constraint=rocky8
 #SBATCH --gres=gpu:h200:1
 #SBATCH -c 8
 #SBATCH --mem=100G
-#SBATCH --time=06:00:00
+#SBATCH --time=12:00:00
 #SBATCH --output=logs/out/%j.out
 #SBATCH --error=logs/err/%j.err
 
@@ -26,6 +27,9 @@ TYPE_VAL=""
 UNNORMALIZED=false
 GENERATION=true
 JUDGING=true
+LOCAL_JUDGE=true
+API_JUDGES=()
+API_LAYER_FLAGS=()
 LAYER_FLAGS=()
 # Settings results_dir: everything this job reads and writes lives under it.
 # Omitted, the repo-level results/, judge-evals/ and stats/ trees are used.
@@ -52,6 +56,14 @@ while [[ $# -gt 0 ]]; do
         --no-generation) GENERATION=false; shift ;;
         --no-judging)   JUDGING=false;     shift ;;
         --results-dir)  RESULTS_DIR="$2"; shift 2 ;;
+        --api-judge-layers) API_LAYER_FLAGS+=(--layers "$2"); shift 2 ;;
+        --api-judge-n) API_LAYER_FLAGS+=(--n-values "$2"); shift 2 ;;
+        --judge)
+            LOCAL_JUDGE=false; API_JUDGES=()
+            for J in $2; do
+                if [ "$J" = local ]; then LOCAL_JUDGE=true; else API_JUDGES+=("$J"); fi
+            done
+            shift 2 ;;
         --layer-frac)   LAYER_FLAGS=(--layer-frac "$2"); shift 2 ;;
         --layer-range)  LAYER_FLAGS=(--layer-range "$2" "$3"); shift 3 ;;
         --global)       GLOBAL=true;       shift ;;
@@ -90,6 +102,7 @@ EXTRA_FLAGS+=("${RESULTS_FLAGS[@]}")
 JUDGE_FLAGS=("${RESULTS_FLAGS[@]}")
 [ "$UNNORMALIZED" = true ] && JUDGE_FLAGS+=(--unnormalized)
 [ "$UNNORMALIZED" = false ] && JUDGE_FLAGS+=(--normalized)
+[ -n "$TYPE_VAL" ] && JUDGE_FLAGS+=(--type "$TYPE_VAL")
 [ "$HARMONIC" = true ]     && JUDGE_FLAGS+=(--harmonic)
 
 # Selection and the pass tables are per-scope: each has a separate workdir
@@ -98,6 +111,7 @@ SCOPE="local"
 [ "$GLOBAL" = true ] && SCOPE="global"
 
 SELECT_FLAGS=("${RESULTS_FLAGS[@]}")
+[ "$UNNORMALIZED" = true ] && SELECT_FLAGS+=(--unnormalized)
 BEST_CONFIGS="$JUDGE_OUT/best_configs.json"
 if [ "$HARMONIC" = true ]; then
     SELECT_FLAGS+=(--metric harmonic)
@@ -117,7 +131,14 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "val" ]; then
 
     if [ "$JUDGING" = true ]; then
         source ~/gcm-interp/setup/setup_judging.sh
-        bash scripts/run_judging.sh --model "$MODEL" --dataset "$DATASET" "${JUDGE_FLAGS[@]}"
+        VAL_JUDGE_FLAGS=("${JUDGE_FLAGS[@]}")
+        [ "${LAYER_FLAGS[0]:-}" = --layer-range ] && VAL_JUDGE_FLAGS+=("${LAYER_FLAGS[@]}")
+        if [ "$LOCAL_JUDGE" = true ]; then
+            bash scripts/run_judging.sh --model "$MODEL" --dataset "$DATASET" "${VAL_JUDGE_FLAGS[@]}"
+        fi
+        for J in "${API_JUDGES[@]}"; do
+            bash scripts/run_judging.sh --model "$MODEL" --dataset "$DATASET" "${VAL_JUDGE_FLAGS[@]}" "${API_LAYER_FLAGS[@]}" --judge "$J"
+        done
     fi
 fi
 
@@ -156,6 +177,13 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
         echo "Held-out run already current for the selected config — skipping."
     fi
 
+    if [ "$JUDGING" = true ] && [ ${#API_JUDGES[@]} -gt 0 ]; then
+        source ~/gcm-interp/setup/setup_judging.sh
+        for J in "${API_JUDGES[@]}"; do
+            bash scripts/run_judging.sh --model "$MODEL" --dataset "$DATASET" --split test "${JUDGE_FLAGS[@]}" --judge "$J"
+        done
+    fi
+
     # --- Pass table for this combination only, so concurrent jobs never write
     # the same file. run_mcnemar_test.py is deliberately not run here: it is
     # meant to be run by hand once every combination has finished.
@@ -169,6 +197,13 @@ if [ "$SPLIT" = "all" ] || [ "$SPLIT" = "test" ]; then
             --best-configs "$BEST_CONFIGS" \
             --out "$STATS_OUT/harmonic_scores/${MODEL}_${DATASET}_${SCOPE}_test.csv" \
             --json "${RESULTS_DIR:-results}/harmonic_scores.json"
+        for J in "${API_JUDGES[@]}"; do
+            python calculate_harmonic_scores.py --root "$JUDGE_OUT/judge=$J/workdirs" --split test \
+                --models "$MODEL" --datasets "$DATASET" --scope "$SCOPE" \
+                --best-configs "$BEST_CONFIGS" \
+                --out "$STATS_OUT/harmonic_scores/judge=$J/${MODEL}_${DATASET}_${SCOPE}_test.csv" \
+                --json "${RESULTS_DIR:-results}/harmonic_scores_judge=$J.json"
+        done
     else
         echo "Collecting held-out pass rates..."
         python stats/collect_pass_rates.py --split test --model "$MODEL" --dataset "$DATASET" --scope "$SCOPE"

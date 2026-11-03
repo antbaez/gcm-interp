@@ -29,6 +29,8 @@ if [ ! -f "$SETTINGS" ]; then
     echo "Error: settings file '$SETTINGS' not found"; exit 1
 fi
 
+if [ -f "$SCRIPT_DIR/.env" ]; then set -a; source "$SCRIPT_DIR/.env"; set +a; fi
+
 LOADED="$(python3 "$SCRIPT_DIR/scripts/load_settings.py" "$SETTINGS" normal)"
 eval "$LOADED"
 
@@ -44,17 +46,45 @@ echo "Settings: $SETTINGS"
 echo "Results dir: $RESULTS_DIR"
 echo "Job flags: ${JOB_FLAGS[*]}"
 echo "Scopes: ${SCOPES[*]}"
-echo "Submitting $(( ${#MODELS[@]} * ${#DATASETS[@]} * ${#SCOPES[@]} )) job(s) (one per model x dataset x scope combo)..."
+echo "Normalizations: ${NORMS[*]}"
+if [ ${#LAYER_CHUNKS[@]} -gt 0 ]; then
+    echo "Local sweep covers every layer: split into ${#LAYER_CHUNKS[@]} validation jobs per combo, then one held-out job after them"
+fi
+echo "Submitting job(s) per model x dataset x scope x normalization x steering-type group..."
 for M in "${MODELS[@]}"; do
     for D in "${DATASETS[@]}"; do
         for S in "${SCOPES[@]}"; do
-            declare -n SCOPE_FLAGS="SCOPE_FLAGS_$S" SCOPE_N="STEERING_N_$S"
-            N_FLAGS=()
-            if [ -n "${SCOPE_N[$M]:-}" ]; then N_FLAGS=(--steering-n "${SCOPE_N[$M]}"); fi
-            JOB_ID=$(sbatch --parsable "$SCRIPT_DIR/scripts/run_normal_job.sh" \
-                --model "$M" --dataset "$D" "${JOB_FLAGS[@]}" "${SCOPE_FLAGS[@]}" "${N_FLAGS[@]}")
-            echo "  $M / $D / $S: job $JOB_ID"
-            unset -n SCOPE_FLAGS SCOPE_N
+            for NM in "${NORMS[@]}"; do
+                declare -n SCOPE_FLAGS="SCOPE_FLAGS_$S" NORM_FLAGS="NORM_FLAGS_$NM" SCOPE_N="STEERING_N_${S}_$NM"
+                declare -n TYPE_GROUPS="TYPE_GROUPS_$NM"
+                for G in "${TYPE_GROUPS[@]}"; do
+                    TYPE_FLAGS=()
+                    if [ -n "$G" ]; then TYPE_FLAGS=(--type "$G"); fi
+                    N_FLAGS=()
+                    if [ -n "${SCOPE_N[$M]:-}" ]; then N_FLAGS=(--steering-n "${SCOPE_N[$M]}"); fi
+                    if [ "$S" = local ] && [ ${#LAYER_CHUNKS[@]} -gt 0 ] && [ "$SPLIT" != test ]; then
+                        VAL_IDS=()
+                        for C in "${LAYER_CHUNKS[@]}"; do
+                            read -r C_START C_END <<< "$C"
+                            JOB_ID=$(sbatch --parsable "$SCRIPT_DIR/scripts/run_normal_job.sh" \
+                                --model "$M" --dataset "$D" "${JOB_FLAGS[@]}" "${NORM_FLAGS[@]}" "${TYPE_FLAGS[@]}" --layer-range "$C_START" "$C_END" "${N_FLAGS[@]}" --split val)
+                            echo "  $M / $D / $S / $NM / ${G:-default types} layers [$C_START, $C_END): job $JOB_ID"
+                            VAL_IDS+=("$JOB_ID")
+                        done
+                        if [ "$SPLIT" = all ]; then
+                            JOB_ID=$(sbatch --parsable --dependency="afterok:$(IFS=:; echo "${VAL_IDS[*]}")" --kill-on-invalid-dep=yes \
+                                "$SCRIPT_DIR/scripts/run_normal_job.sh" \
+                                --model "$M" --dataset "$D" "${JOB_FLAGS[@]}" "${NORM_FLAGS[@]}" "${TYPE_FLAGS[@]}" "${SCOPE_FLAGS[@]}" "${N_FLAGS[@]}" --split test)
+                            echo "  $M / $D / $S / $NM / ${G:-default types} held-out (after ${VAL_IDS[*]}): job $JOB_ID"
+                        fi
+                    else
+                        JOB_ID=$(sbatch --parsable "$SCRIPT_DIR/scripts/run_normal_job.sh" \
+                            --model "$M" --dataset "$D" "${JOB_FLAGS[@]}" "${NORM_FLAGS[@]}" "${TYPE_FLAGS[@]}" "${SCOPE_FLAGS[@]}" "${N_FLAGS[@]}")
+                        echo "  $M / $D / $S / $NM / ${G:-default types}: job $JOB_ID"
+                    fi
+                done
+                unset -n SCOPE_FLAGS NORM_FLAGS SCOPE_N TYPE_GROUPS
+            done
         done
     done
 done

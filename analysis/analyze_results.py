@@ -57,7 +57,7 @@ METHOD_ORDER = ["last", "mean", "positional"]
 # Set to None to include everything found.
 ENABLED_METHODS = ["last", "mean", "positional"]
 
-# Dataset "task" dirs to analyze (e.g. "from_harmless_to_harmful-long").
+# Dataset "task" dirs to analyze (e.g. "from_harmless_to_harmful").
 # Restricts to the canonical three even if variant dirs (e.g. an
 # "-unaligned" suffix) exist on disk. Set to None to include everything found.
 ENABLED_DATASET_TASKS = set(DATASET_TASKS.values())

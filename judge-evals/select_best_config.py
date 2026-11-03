@@ -46,8 +46,10 @@ REPO_ROOT = JUDGE_DIR.parent
 # selection_utils sits alongside this script, but the import has to work when
 # run as `python judge-evals/select_best_config.py` from the repo root too.
 sys.path.insert(0, str(JUDGE_DIR))
+sys.path.append(str(JUDGE_DIR.parent))
 
 from selection_utils import parse_condition_dir, scan_conditions, select_best, condition_label
+from utils.dataset_registry import BASE_DATASETS, DATASETS, TASK_DATASETS, task_dir
 
 WORKDIRS_ROOT = JUDGE_DIR / "workdirs"
 RESULTS_ROOT = REPO_ROOT / "results"
@@ -66,11 +68,7 @@ MODEL_DIRS = {
 }
 
 # Dataset tag -> (task dir, base name). Base names the split files.
-DATASET_TASKS = {
-    "harmful":    ("from_harmless_to_harmful-long",             "harmless"),
-    "sycophancy": ("from_sycophancy_to_non-sycophantic-long",   "sycophancy"),
-    "verse":      ("from_prose_to_verse-long",                  "prose"),
-}
+DATASET_TASKS = {tag: (task_dir(tag), DATASETS[tag]["sub"]) for tag in TASK_DATASETS}
 
 NORM_MODE = "normalized"
 SCOPES = ("local", "global")
@@ -264,6 +262,8 @@ def main():
                         help="Settings results_dir: read generations from <dir>, workdirs/accuracies "
                              "from <dir>/judge-evals/, and write selections to <dir>/judge-evals/ "
                              "(default: results/ and the repo's judge-evals/)")
+    parser.add_argument("--unnormalized", action="store_true",
+                        help="select from the unnormalized/ tree instead of normalized/")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print selections and prunes without writing or deleting anything")
     parser.add_argument("--no-prune", dest="prune", action="store_false",
@@ -276,7 +276,9 @@ def main():
     parser.set_defaults(prune=True)
     args = parser.parse_args()
 
-    global WORKDIRS_ROOT, RESULTS_ROOT, ACCURACY_ROOT, DEFAULT_OUTPUT, HARMONIC_OUTPUT
+    global WORKDIRS_ROOT, RESULTS_ROOT, ACCURACY_ROOT, DEFAULT_OUTPUT, HARMONIC_OUTPUT, NORM_MODE
+    if args.unnormalized:
+        NORM_MODE = "unnormalized"
     if args.results_dir:
         RESULTS_ROOT = Path(args.results_dir).resolve()
         judge_out = RESULTS_ROOT / "judge-evals"
@@ -286,7 +288,7 @@ def main():
         HARMONIC_OUTPUT = judge_out / "best_configs_harmonic.json"
 
     model_tags = expand_tags(args.model, MODEL_DIRS, "model")
-    dataset_tags = expand_tags(args.dataset, DATASET_TASKS, "dataset")
+    dataset_tags = list(BASE_DATASETS) if args.dataset == "all" else expand_tags(args.dataset, DATASET_TASKS, "dataset")
     harmonic = args.metric == "harmonic"
     out_path = Path(args.output) if args.output else (HARMONIC_OUTPUT if harmonic else DEFAULT_OUTPUT)
     other_path = DEFAULT_OUTPUT if harmonic else HARMONIC_OUTPUT

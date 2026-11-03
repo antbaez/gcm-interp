@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|last-EOT|last-prompt|mean|positional|unweighted-positional|positional-projected] [--global] [--layer-frac <0-1> | --layer-range <start> <end>] [--split val|test] [--results-dir <dir>] [--device <cuda:0>] [--model-cache] [--train-batch-size <n>] [--gen-batch-size <n>] [--steering-n "<N1 N2 ...>"] [--hook_prompt_acts] [--hook_response_acts] [--hook_target_acts] [--hook-batch-size <n>]
+# Usage: ./scripts/run_steering.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|all> [--dataset <harmful|sycophancy|verse|all>] [--type last|last-EOT|last-prompt|mean|positional|unweighted-positional|positional-projected|jacobian-<mean|sum|both-mean|both-sum>-<ridge|pinv|trunc>] [--global] [--layer-frac <0-1> | --layer-range <start> <end>] [--split val|test] [--results-dir <dir>] [--device <cuda:0>] [--model-cache] [--train-batch-size <n>] [--gen-batch-size <n>] [--steering-n "<N1 N2 ...>"] [--hook_prompt_acts] [--hook_response_acts] [--hook_target_acts] [--hook-batch-size <n>]
 # --dataset defaults to "all" (harmful, sycophancy, verse). Dataset variants
 # (VARIANT_DATASETS below, e.g. verse-varied) can be named explicitly but are
 # never part of "all".
@@ -118,9 +118,10 @@ if [ "$SPLIT" = "test" ] && [ ! -f "$BEST_CONFIGS" ]; then
 fi
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse")
-# Variants of the sycophancy/verse datasets: accepted by --dataset, excluded from "all".
-VARIANT_DATASETS=("sycophancy-more-templates" "sycophancy-unaligned" "sycophancy-diff-length" "sycophancy-unaligned-diff-length" "verse-aligned" "verse-longer" "verse-varied")
+# Dataset tags come from utils/dataset_registry.py; extra ones are accepted by --dataset, excluded from "all".
+REGISTRY="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/utils/dataset_registry.py"
+read -ra ALL_DATASETS <<< "$(python3 "$REGISTRY" --base)"
+read -ra VARIANT_DATASETS <<< "$(python3 "$REGISTRY" --extra)"
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen,gemma")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -177,6 +178,7 @@ describe_method() {
         positional)                 echo "one vector per position, weighted by add/sub non-padding coverage" ;;
         unweighted-positional)      echo "one vector per position, no weighting" ;;
         positional-projected)       echo "weighted positional, each position projected onto the mean direction" ;;
+        jacobian-*)                 echo "Jacobian-lens direction from jacobian/fit_lens.py (${1#jacobian-})" ;;
         *)                          echo "(unknown method)" ;;
     esac
 }
@@ -265,23 +267,12 @@ run_experiments_for_model() {
 
     local SOURCES=() BASES=() DIRS=() ADD_PATHS=() SUB_PATHS=()
     for D_TAG in "${D_TAGS[@]}"; do
-        case "$D_TAG" in
-            harmful)                D_SOURCE="harmful-long";              D_BASE="harmless";               D_DIR="harmful-long" ;;
-            sycophancy)             D_SOURCE="non-sycophantic-long";      D_BASE="sycophancy";             D_DIR="sycophancy-long" ;;
-            verse)                  D_SOURCE="verse-long";                D_BASE="prose";                  D_DIR="verse-long" ;;
-            sycophancy-more-templates) D_SOURCE="non-sycophantic-long-more-templates"; D_BASE="sycophancy-more-templates"; D_DIR="sycophancy-long-more-templates" ;;
-            sycophancy-unaligned)   D_SOURCE="non-sycophantic-long-unaligned"; D_BASE="sycophancy-unaligned"; D_DIR="sycophancy-long-unaligned" ;;
-            sycophancy-diff-length) D_SOURCE="non-sycophantic-long-diff-length"; D_BASE="sycophancy-diff-length"; D_DIR="sycophancy-long-diff-length" ;;
-            sycophancy-unaligned-diff-length) D_SOURCE="non-sycophantic-long-unaligned-diff-length"; D_BASE="sycophancy-unaligned-diff-length"; D_DIR="sycophancy-long-unaligned-diff-length" ;;
-            verse-aligned)          D_SOURCE="verse-long-aligned"; D_BASE="prose-aligned"; D_DIR="verse-long-aligned" ;;
-            verse-longer)           D_SOURCE="verse-long-longer"; D_BASE="prose-longer"; D_DIR="verse-long-longer" ;;
-            verse-varied)           D_SOURCE="verse-long-varied"; D_BASE="prose-varied"; D_DIR="verse-long-varied" ;;
-        esac
+        read -r D_SOURCE D_BASE D_DIR <<< "$(python3 "$REGISTRY" "$D_TAG")"
         SOURCES+=("$D_SOURCE")
         BASES+=("$D_BASE")
         DIRS+=("$D_DIR")
-        ADD_PATHS+=("./data/${MODEL_ID##*/}/${D_DIR}/${D_SOURCE}-desired-all.jsonl")
-        SUB_PATHS+=("./data/${MODEL_ID##*/}/${D_DIR}/${D_BASE}-desired-all.jsonl")
+        ADD_PATHS+=("./data/${MODEL_ID##*/}/${D_DIR}/${D_SOURCE}-train.jsonl")
+        SUB_PATHS+=("./data/${MODEL_ID##*/}/${D_DIR}/${D_BASE}-train.jsonl")
     done
 
     echo ""

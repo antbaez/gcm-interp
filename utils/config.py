@@ -49,10 +49,10 @@ class Config:
         parser.add_argument('--normalize', action='store_true', default=True, help='L2-normalize steering vectors before applying')
         parser.add_argument('--unnormalized', dest='normalize', action='store_false', help='Disable L2 normalization of steering vectors')
         parser.add_argument('--global', dest='global_steer', action='store_true', help='Steer all layers simultaneously (default is a single-layer sweep over -layer_range_start/-layer_range_end)')
-        parser.add_argument('--hook_prompt_acts', action='store_true', help='Save layer round(2/3 * num_layers)\'s activations at all prompt tokens of the first 100 verse-long and prose training prompts to ./activations/')
+        parser.add_argument('--hook_prompt_acts', action='store_true', help='Save layer round(2/3 * num_layers)\'s activations at all prompt tokens of the first 100 verse and prose training prompts to ./activations/')
         parser.add_argument('-hook_batch_size', '--hook_batch_size', type=int, default=10, help='Batch size for --hook_prompt_acts, --hook_response_acts and --hook_target_acts')
         parser.add_argument('--hook_target_acts', action='store_true', help='Greedily generate unsteered responses to the eval split\'s target-concept counterpart (verse-valid / verse-test: the same prompts asking for verse) and save layer round(2/3 * num_layers)\'s prompt and response activations to ./activations/')
-        parser.add_argument('--hook_response_acts', action='store_true', help='Greedily generate unsteered responses to the first 100 verse-long and prose training prompts and save layer round(2/3 * num_layers)\'s activations at every response token to ./activations/')
+        parser.add_argument('--hook_response_acts', action='store_true', help='Greedily generate unsteered responses to the first 100 verse and prose training prompts and save layer round(2/3 * num_layers)\'s activations at every response token to ./activations/')
         parser.add_argument('--thinking', action='store_true', help='Enable the reasoning block for chat templates that gate one (Qwen3, Gemma 4); off by default so completions are answer-only')
         parser.add_argument('--no-model-cache', dest='no_model_cache', action='store_true', help='Download the model/tokenizer to a temporary directory and delete it once loaded into memory (the default)')
         parser.add_argument('--model-cache', dest='no_model_cache', action='store_false', help='Keep the model/tokenizer in the persistent Hugging Face cache instead of deleting it after loading')
@@ -81,8 +81,6 @@ class Config:
             # their generation outputs collide.
             args.test_dataset = os.path.splitext(os.path.basename(args.eval_test))[0]
             print(f"Steering dataset set to: {args.test_dataset}")
-
-        args.max_new_tokens = 512
 
         return args
 

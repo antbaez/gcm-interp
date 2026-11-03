@@ -6,6 +6,7 @@ results_dir: results_pca_exploration        # all outputs (generations, judge-ev
 models: [llama]   # any of olmo, qwen, qwen3, gemma, gemma4, llama
 datasets: [verse] # any of harmful, sycophancy, verse
 steering_type: last, mean         # e.g. [last, mean, positional]; null = run_steering.sh default
+jacobian: null              # Jacobian-lens steering aspects (see jacobian/verse_llama_jacobian.yaml); null = none
 steering_n: [1, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250]   # N sweep: null = run_steering.sh tables, a list for every model, or {llama: [...], olmo: [...]}
 global_steering_n: [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]   # global-scope N sweep, same format as steering_n (null = run_steering.sh's STEERING_N_GLOBAL tables)
 normalization: true         # false = unnormalized steering vectors
@@ -17,6 +18,9 @@ local_layer:                # ignored when scope is global
 split: all                  # all | val | test
 generation: true            # false = skip generation, judge what's already on disk
 judging: true               # false = generate only, skip judging and the held-out scores
+judge: [local]              # local (vLLM judge) and/or OpenAI model names judged through the API, e.g. [local, gpt-6-luna]; needs OPENAI_API_KEY; API ratings go to judge-evals/judge=<model>/
+api_judge_layers: null      # null = every layer | [12, 21] = API judges rate only these layers of the validation sweep (the local judge and the held-out config are unaffected)
+api_judge_n: null
 no_model_cache: false
 metric: harmonic            # harmonic | pass_rate
 train_batch_size: 50        # steering-vector activation pass + hook_prompt_acts

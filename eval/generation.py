@@ -22,11 +22,17 @@ STEERING_TYPE_VARIANTS = {
     'last-EOT': 'last_eot',
     'last-prompt': 'last_prompt',
 }
+JACOBIAN_STEERING_TYPES = tuple(f'jacobian-{v}-{s}' for v in ('mean', 'sum', 'both-mean', 'both-sum')
+                                for s in ('ridge', 'pinv', 'trunc'))
 
 
 def _get_steering_vector(patch_activations, layer_idx, sl, steering_type):
     if steering_type in ('last_token', 'last-token', 'last'):
         return patch_activations[layer_idx][-1, sl]
+    elif steering_type in JACOBIAN_STEERING_TYPES:
+        if torch.isnan(patch_activations[layer_idx]).any():
+            raise ValueError(f"no {steering_type} direction fitted at layer {layer_idx} (jacobian/fit_lens.py --layer {layer_idx})")
+        return patch_activations[layer_idx][sl]
     elif steering_type in STEERING_TYPE_VARIANTS:
         if patch_activations.dim() != 2:
             raise ValueError(
@@ -110,20 +116,22 @@ def generate_with_patches(model, gen_toks, patch_activations, layer_ids, N, max_
 
     return generated
 
-def trace_with_patches(model, ids, attention_mask, patch_activations, layer_ids, N, capture_idx, normalize=True,
+def trace_with_patches(model, ids, attention_mask, patch_activations, layer_ids, N, capture_ids, normalize=True,
                        steering_type='last_token', coverage=None, projection_dirs=None, steer_mask=None):
     """One forward pass over `ids` [batch, S] with the same steering generate_with_patches()
     applies at prefill (steer_mask [batch, S], False past the prompt, so generated tokens are
-    only affected through attention, as in cached decoding), returning layer capture_idx's
-    output stream [batch, S, H] on CPU, after any steering added at that layer. Positional
+    only affected through attention, as in cached decoding), returning {layer: output stream
+    [batch, S, H]} (on the model's device) for each of capture_ids, after any steering added
+    at that layer. Positional
     vectors ([P, H]) are zero-padded to S."""
     patch_activations = patch_activations.to(model.device)
     mask = None if steer_mask is None else steer_mask.to(device=model.device, dtype=patch_activations.dtype).unsqueeze(-1)
     pos_weights = positional_weights(steering_type, coverage, patch_activations)
     tuple_output = 'gemma' in model.config._name_or_path.lower() and getattr(model.config, 'model_type', '') != 'gemma4_unified'
     layers = _get_layers(model)
+    captured = {}
     with model.trace({'input_ids': ids, 'attention_mask': attention_mask}) as _:
-        for layer_idx in sorted(set(layer_ids) | {capture_idx}):
+        for layer_idx in sorted(set(layer_ids) | set(capture_ids)):
             layer = layers[layer_idx]
             value = layer.output[0] if tuple_output else layer.output
             if layer_idx in layer_ids:
@@ -134,9 +142,9 @@ def trace_with_patches(model, ids, attention_mask, patch_activations, layer_ids,
                     sv = sv * mask
                 value = value + N * sv
                 layer.output = (value,) if tuple_output else value
-            if layer_idx == capture_idx:
-                captured = value.detach().cpu().save()
-    return captured
+            if layer_idx in capture_ids:
+                captured[layer_idx] = value.detach().save()
+    return {idx: getattr(v, 'value', v) for idx, v in captured.items()}
 
 
 def decode_responses(model, inputs, originals, edited, base, answers=None):

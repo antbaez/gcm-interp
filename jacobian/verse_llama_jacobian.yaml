@@ -1,0 +1,49 @@
+# Run settings for run_normal.sh / run_preemptable.sh:
+#   bash run_preemptable.sh --settings jacobian/verse_llama_jacobian.yaml
+# Steers with the Jacobian-lens directions from jacobian/fit_lens.py
+# (jacobian/<model>/from_prose_to_verse/layer=<L>/direction_<variant>-<solver>.pt), next to last/mean at the same layer.
+# The directions only exist at the fitted layer, so local_layer must pin it (2/3 x 32 = layer 21 for llama).
+# Runs both normalizations as separate jobs:
+#   normalized    unit vectors, N = the L2 norm added
+#   unnormalized  each direction keeps the norm its solve gave it, so N = 1 adds the v with J v ~= Delta,
+#                 the first-order prediction of the full prose -> verse shift; N < 1 adds part of it
+# The jacobian block picks the Jacobian steering aspects; every combination fit x pooling x solver is run
+# (as steering type jacobian-[both-]<pooling>-<solver>), next to the plain steering_type methods.
+
+results_dir: results_jacobian        # all outputs (generations, judge-evals/, stats/) + a settings.yaml copy; relative to the repo root
+models: [llama]   # any of olmo, qwen, qwen3, gemma, gemma4, llama
+datasets: [verse] # any tag in utils/dataset_registry.py
+steering_type:      # non-Jacobian methods; per normalization (null / [] = none besides the Jacobian ones)
+  normalized: [last, mean]
+  unnormalized: null
+jacobian:           # null = no Jacobian steering; may also be keyed by normalized / unnormalized
+  fit: [prose, both]            # prose = J fit on prose | both = (J_prose + J_verse) / 2
+  pooling: [mean, sum]          # mean | sum of the Jacobian over the steered prompt positions
+  solver: [ridge, pinv, trunc]  # ridge | pinv (pseudoinverse) | trunc (truncated pseudoinverse)
+steering_n:
+  normalized: [20, 40, 60, 80, 100, 120, 140, 160, 180, 200]   # N = the vector's L2 norm
+  unnormalized: [0.25, 0.5, 0.75, 1]                           # fraction of each direction's own norm
+global_steering_n: null     # unused (scope is local)
+normalization: [true, false]  # true | false | [true, false] = both (one job each, in parallel)
+scope: local                # local = steer one layer at a time | global = every layer at once | [local, global] = both (one job each, in parallel)
+local_layer:                # ignored when scope is global
+  mode: single              # single | sweep
+  single: 2/3               # steer only layer round(2/3 x num_layers) = the --layer the lens was fitted at
+  sweep: [1/3, 2/3]
+split: val                  # all | val | test (val only for now: selection only reads normalized runs)
+generation: true            # false = skip generation, judge what's already on disk
+judging: true               # false = generate only, skip judging and the held-out scores
+judge: [local]              # local (vLLM judge) and/or OpenAI model names judged through the API, e.g. [local, gpt-6-luna]; needs OPENAI_API_KEY; API ratings go to judge-evals/judge=<model>/
+api_judge_layers: null      # null = every layer | [12, 21] = API judges rate only these layers of the validation sweep (the local judge and the held-out config are unaffected)
+api_judge_n: null
+no_model_cache: false
+metric: harmonic            # harmonic | pass_rate
+train_batch_size: 50        # steering-vector activation pass (last/mean)
+generation_batch_size: 50    # validation sweep and held-out test generation
+
+# run_preemptable.sh only (must stay null/false for run_normal.sh)
+seed: null
+hook_prompt_acts: false
+hook_response_acts: false     # true also saves steered activations per condition (for checking the shift against Δ)
+hook_target_acts: false
+hook_batch_size: null

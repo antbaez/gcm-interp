@@ -31,9 +31,9 @@ ACCURACY_DIR = BASE_DIR / "judge-evals" / "accuracy"
 MMLU_SUMMARY_PATH = BASE_DIR / "mmlu" / "results" / "mmlu_summary.csv"
 
 SOURCE_TO_TAG = {
-    "harmful-long":                    "harmful",
-    "non-sycophantic-long":            "sycophancy",
-    "verse-long":                      "verse",
+    "harmful":                    "harmful",
+    "non-sycophantic":            "sycophancy",
+    "verse":                      "verse",
 }
 
 LAST_TOKEN_NAMES = {"last", "last-token", "last_token"}

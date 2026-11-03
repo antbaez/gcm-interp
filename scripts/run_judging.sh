@@ -6,10 +6,12 @@ JUDGE_DIR="$SCRIPT_DIR/judge-evals"
 RUNS_DIR="$SCRIPT_DIR/results"
 JUDGE_OUT="$JUDGE_DIR"
 
-BATCH_SIZE=128
-EVAL_MODE=eval_test   # eval_train -> {base}-desired-all.jsonl, eval_test -> {base}-valid.jsonl
+if [ -f "$SCRIPT_DIR/.env" ]; then set -a; source "$SCRIPT_DIR/.env"; set +a; fi
 
-# Usage: ./scripts/run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--results-dir <dir>] [--device <cuda:0>] [--force] [--harmonic]
+BATCH_SIZE=128
+EVAL_MODE=eval_test   # eval_train -> {base}-train.jsonl, eval_test -> {base}-valid.jsonl
+
+# Usage: ./scripts/run_judging.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--normalized|--unnormalized] [--results-dir <dir>] [--device <cuda:0>] [--force] [--harmonic] [--judge <openai-model>]
 # --results-dir reads generations from <dir> and writes ratings/accuracies under <dir>/judge-evals/;
 # omitted, it uses results/ and the repo's judge-evals/.
 # --dataset defaults to "all" (harmful, sycophancy, verse). Dataset variants
@@ -24,8 +26,20 @@ SPLIT="val"
 # By default, already-judged conditions (accuracy files present) are skipped.
 # Pass --force to re-judge everything found regardless of existing accuracy files.
 FORCE=false
+# Pass --layer-range <start> <end> to judge only the single-layer sweep conditions at layers
+# round(start * num_layers)..round(end * num_layers) - 1 (the same layers run_steering.sh --layer-range sweeps).
 # Pass --harmonic to judge with HARMONIC_PROMPT_TEMPLATES (judge-evals/config.py).
 HARMONIC=false
+LAYER_RANGE=()
+# Pass --type "<t1 t2 ...>" to judge only those steering types' generations (default: every type on disk).
+TYPES=()
+# Pass --judge <openai-model> to judge through the OpenAI API instead of the local judge (needs OPENAI_API_KEY);
+# ratings and accuracies then go to <judge-evals>/judge=<openai-model>/, apart from the local judge's.
+JUDGE_MODEL=""
+API_CONCURRENCY=16
+# Pass --layers "<l1 l2 ...>" to judge only those layers' single-layer conditions.
+LAYERS=()
+N_VALUES=()
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -38,6 +52,11 @@ while [[ $# -gt 0 ]]; do
         --force)        FORCE=true;                shift ;;
         --harmonic)     HARMONIC=true;             shift ;;
         --results-dir)  RUNS_DIR="$(realpath -m "$2")"; JUDGE_OUT="$RUNS_DIR/judge-evals"; shift 2 ;;
+        --layer-range)  LAYER_RANGE=("$2" "$3"); shift 3 ;;
+        --type)         read -ra TYPES <<< "$2"; shift 2 ;;
+        --judge)        JUDGE_MODEL="$2"; shift 2 ;;
+        --layers)       read -ra LAYERS <<< "$2"; shift 2 ;;
+        --n-values)     read -ra N_VALUES <<< "$2"; shift 2 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
@@ -47,6 +66,7 @@ if [ "$SPLIT" != "val" ] && [ "$SPLIT" != "test" ]; then
 fi
 
 ACCURACY_SUBDIR="accuracy"
+[ -n "$JUDGE_MODEL" ] && JUDGE_OUT="$JUDGE_OUT/judge=$JUDGE_MODEL"
 
 if [ -z "$MODEL_TAG" ]; then
     echo "Usage: ./run_judge.sh --model <olmo|qwen|qwen3|gemma|gemma4|llama|olmo,qwen|all> [--dataset <harmful|sycophancy|verse|harmful,sycophancy|all>] [--device <cuda:0>]"
@@ -54,9 +74,9 @@ if [ -z "$MODEL_TAG" ]; then
 fi
 
 ALL_MODELS=("olmo" "qwen" "qwen3" "gemma" "gemma4" "llama")
-ALL_DATASETS=("harmful" "sycophancy" "verse")
-# Variants of the sycophancy/verse datasets: accepted by --dataset, excluded from "all".
-VARIANT_DATASETS=("sycophancy-more-templates" "sycophancy-unaligned" "sycophancy-diff-length" "sycophancy-unaligned-diff-length" "verse-aligned" "verse-longer" "verse-varied")
+# Dataset tags come from utils/dataset_registry.py; extra ones are accepted by --dataset, excluded from "all".
+read -ra ALL_DATASETS <<< "$(python3 "$SCRIPT_DIR/utils/dataset_registry.py" --base)"
+read -ra VARIANT_DATASETS <<< "$(python3 "$SCRIPT_DIR/utils/dataset_registry.py" --extra)"
 
 # Expand model tag (supports comma-separated values, e.g. "olmo,qwen")
 if [ "$MODEL_TAG" = "all" ]; then
@@ -87,27 +107,17 @@ DEVICE_IDX="${DEVICE#cuda:}"
 
 for M_TAG in "${MODELS[@]}"; do
     case "$M_TAG" in
-        olmo)  MODEL_NAME="OLMo-2-1124-13B-DPO" ;;
-        qwen)  MODEL_NAME="Qwen1.5-14B-Chat" ;;
-        qwen3) MODEL_NAME="Qwen3-14B" ;;
-        gemma) MODEL_NAME="gemma-3-12b-it" ;;
-        gemma4) MODEL_NAME="gemma-4-12B-it" ;;
-        llama) MODEL_NAME="Llama-3.1-8B-Instruct" ;;
+        olmo)  MODEL_ID="allenai/OLMo-2-1124-13B-DPO" ;;
+        qwen)  MODEL_ID="Qwen/Qwen1.5-14B-Chat" ;;
+        qwen3) MODEL_ID="Qwen/Qwen3-14B" ;;
+        gemma) MODEL_ID="google/gemma-3-12b-it" ;;
+        gemma4) MODEL_ID="google/gemma-4-12B-it" ;;
+        llama) MODEL_ID="meta-llama/Llama-3.1-8B-Instruct" ;;
     esac
+    MODEL_NAME="${MODEL_ID##*/}"
 
     for D_TAG in "${DATASETS[@]}"; do
-        case "$D_TAG" in
-            harmful)                  SOURCE="harmful-long";               BASE="harmless";                DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-            sycophancy)               SOURCE="non-sycophantic-long";       BASE="sycophancy";              DATA_SOURCE="sycophancy-long"; DATA_BASE="sycophancy" ;;
-            verse)                    SOURCE="verse-long";                 BASE="prose";                   DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-            sycophancy-more-templates) SOURCE="non-sycophantic-long-more-templates"; BASE="sycophancy-more-templates"; DATA_SOURCE="sycophancy-long-more-templates"; DATA_BASE="$BASE" ;;
-            sycophancy-unaligned)     SOURCE="non-sycophantic-long-unaligned"; BASE="sycophancy-unaligned"; DATA_SOURCE="sycophancy-long-unaligned"; DATA_BASE="$BASE" ;;
-            sycophancy-diff-length)   SOURCE="non-sycophantic-long-diff-length"; BASE="sycophancy-diff-length"; DATA_SOURCE="sycophancy-long-diff-length"; DATA_BASE="$BASE" ;;
-            sycophancy-unaligned-diff-length) SOURCE="non-sycophantic-long-unaligned-diff-length"; BASE="sycophancy-unaligned-diff-length"; DATA_SOURCE="sycophancy-long-unaligned-diff-length"; DATA_BASE="$BASE" ;;
-            verse-aligned)            SOURCE="verse-long-aligned"; BASE="prose-aligned"; DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-            verse-longer)             SOURCE="verse-long-longer"; BASE="prose-longer"; DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-            verse-varied)             SOURCE="verse-long-varied"; BASE="prose-varied"; DATA_SOURCE="$SOURCE"; DATA_BASE="$BASE" ;;
-        esac
+        read -r SOURCE BASE _ <<< "$(python3 "$SCRIPT_DIR/utils/dataset_registry.py" "$D_TAG")"
 
         # The split's test-file stem is what distinguishes validation-sweep
         # generations from held-out ones inside the same results/ tree.
@@ -118,6 +128,11 @@ for M_TAG in "${MODELS[@]}"; do
         JUDGE_FLAGS+=(--test_file "$TEST_FILE")
         [ "$FORCE" = true ] && JUDGE_FLAGS+=(--force)
         [ "$HARMONIC" = true ] && JUDGE_FLAGS+=(--harmonic_prompts)
+        [ ${#LAYER_RANGE[@]} -gt 0 ] && JUDGE_FLAGS+=(--layer_range "${LAYER_RANGE[@]}" --model_id "$MODEL_ID")
+        [ ${#TYPES[@]} -gt 0 ] && JUDGE_FLAGS+=(--steering_type "${TYPES[@]}")
+        [ ${#LAYERS[@]} -gt 0 ] && JUDGE_FLAGS+=(--layers "${LAYERS[@]}")
+        [ ${#N_VALUES[@]} -gt 0 ] && JUDGE_FLAGS+=(--n_values "${N_VALUES[@]}")
+        [ -n "$JUDGE_MODEL" ] && JUDGE_FLAGS+=(--judge_model "$JUDGE_MODEL" --api_concurrency "$API_CONCURRENCY")
 
         echo ""
         echo "[$M_TAG / $D_TAG] Judging model=$MODEL_NAME  source=$SOURCE  base=$BASE  norm=${NORM_MODE:-any}  split=$SPLIT ($TEST_FILE)  device=$DEVICE"

@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 from config import BASE_DIR, RUNS_DIR, DATA_DIR, GEN_RE
+from utils.dataset_registry import lookup
 
 
 def extract_path_metadata(path: str) -> dict:
@@ -56,27 +57,6 @@ def extract_path_metadata(path: str) -> dict:
     }
 
 
-SOURCE_TO_DIR = {
-    "harmful-long":         "harmful-long",
-    "non-sycophantic-long": "sycophancy-long",
-    "verse-long":           "verse-long",
-    ("non-sycophantic-haiku-long",         "sycophancy-haiku"):         "sycophancy-haiku-long",
-    ("non-sycophantic-haiku-long",         "sycophancy-haiku-concise"): "sycophancy-haiku-concise-long",
-    ("non-sycophantic-haiku-concise-long", "sycophancy-haiku-concise"): "sycophancy-haiku-concise-long",
-    ("non-sycophantic-poem-long",          "sycophancy-poem"):          "sycophancy-poem-long",
-    ("non-sycophantic-poem-long",          "sycophancy-poem-concise"):  "sycophancy-poem-concise-long",
-    ("non-sycophantic-poem-concise-long",  "sycophancy-poem-concise"):  "sycophancy-poem-concise-long",
-    # Dataset variants (run_steering.sh VARIANT_DATASETS)
-    "non-sycophantic-long-more-templates":        "sycophancy-long-more-templates",
-    "non-sycophantic-long-unaligned":             "sycophancy-long-unaligned",
-    "non-sycophantic-long-diff-length":           "sycophancy-long-diff-length",
-    "non-sycophantic-long-unaligned-diff-length": "sycophancy-long-unaligned-diff-length",
-    "verse-long-aligned":                         "verse-long-aligned",
-    "verse-long-longer":                          "verse-long-longer",
-    "verse-long-varied":                          "verse-long-varied",
-}
-
-
 def load_test_queries(data_dir: str, model_id: str, source: str, base: str,
                       test_file: str | None = None) -> list[str]:
     """Load the user-turn text from the test JSONL.
@@ -87,7 +67,8 @@ def load_test_queries(data_dir: str, model_id: str, source: str, base: str,
     so reading the wrong split here would silently label every response with
     another split's prompt.
     """
-    source_dir = SOURCE_TO_DIR.get((source, base)) or SOURCE_TO_DIR.get(source, source)
+    entry = lookup(source, base) or lookup(source)
+    source_dir = entry[1]["dir"] if entry else source
     stem = test_file or f"{base}-valid"
     logits_path = f"{data_dir}/{model_id}/{source_dir}/{stem}.jsonl"
     queries = []
@@ -118,12 +99,13 @@ def discover_gen_files(
     source: str | None = None,
     base: str | None = None,
     norm_mode: str | None = None,
-    steering_type: str | None = None,
+    steering_type: str | list[str] | None = None,
     scope: str | None = None,
     test_file: str | None = None,
 ) -> list[str]:
     """
-    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/scope/steering_type.
+    Glob for *_gen.json files, optionally filtered by model/task/norm_mode/scope/steering_type
+    (one type or a list of them).
 
     Uses single-level wildcards (*) for each path component to avoid duplicates
     that arise from recursive (**) globbing.
@@ -132,11 +114,12 @@ def discover_gen_files(
     task_part    = f"from_{base}_to_{source}" if (source and base) else "*"
     norm_part    = norm_mode or "*"
     scope_part   = scope or "*"
-    steer_part   = steering_type or "*"
+    steer_parts  = [steering_type] if isinstance(steering_type, str) else (steering_type or ["*"])
 
     gen_files = []
-    pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{scope_part}/{steer_part}/*_gen.json"
-    gen_files.extend(glob.glob(pattern))
+    for steer_part in steer_parts:
+        pattern = f"{runs_dir}/{model_part}/{task_part}/{norm_part}/{scope_part}/{steer_part}/*_gen.json"
+        gen_files.extend(glob.glob(pattern))
 
     # Deduplicate and filter by filename pattern
     seen = set()
@@ -234,7 +217,7 @@ def main():
     parser.add_argument("--eval_subdir", default=None,
                         help="Filter by eval subdirectory (e.g. sycophancy-single_eval)")
     parser.add_argument("--steer_subdir", default=None,
-                        help="Filter by steer subdirectory (e.g. sycophancy-long_steer)")
+                        help="Filter by steer subdirectory (e.g. sycophancy_steer)")
     parser.add_argument("--skip_existing", action="store_true",
                         help="Skip gen.json files whose CSV already exists")
     args = parser.parse_args()
