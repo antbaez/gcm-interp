@@ -1,3 +1,4 @@
+import hf_cache
 import os
 import torch
 from transformers import AutoTokenizer, BitsAndBytesConfig, AutoModelForCausalLM

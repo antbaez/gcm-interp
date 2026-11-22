@@ -1,3 +1,4 @@
+import hf_cache
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import os
 import json
@@ -23,7 +24,6 @@ args.add_argument('--batch_size', type=int, default=4)
 
 config = args.parse_args()
 print('####### CONFIG ', config)
-os.environ['HF_HOME'] = "/mnt/align4_drive2/data"
 
 MODEL_NAME = config.model_id
 

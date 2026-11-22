@@ -1,3 +1,4 @@
+import hf_cache
 import sys
 from config import Config
 from model_handler import ModelHandler

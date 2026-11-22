@@ -1,3 +1,5 @@
+import os
+os.environ.setdefault("HF_HOME", os.path.expanduser("~/orcd/pool/.cache/huggingface"))
 import pandas as pd
 from transformers import AutoTokenizer
 

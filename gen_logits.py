@@ -1,3 +1,4 @@
+import hf_cache
 import os
 import torch
 import json

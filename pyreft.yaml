@@ -1,0 +1,10 @@
+model_id: upstage/SOLAR-10.7B-Instruct-v1.0   # Hugging Face model to train ReFT on and evaluate
+judge_id: meta-llama/Llama-3.1-70B-Instruct   # model that grades the generations (optional)
+source: harmful                               # task whose activations are patched in (from_<source>)
+base: harmless                                # task they are patched into (to_<base>)
+patch_algo: atp                               # head-selection method whose top-k CSVs are used (atp, acp, probes, random, ...)
+device: cuda:0                                # GPU to run on
+batch_size: 1                                 # required by argparse; run.py overrides it during eval
+n: 0                                          # ablation strength (--N); not used by the ReFT path
+venv: ~/orcd/pool/envs/gcm                    # Python environment to activate
+repo: ~/gcm-interp                            # repo root that run.py is launched from

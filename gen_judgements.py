@@ -1,4 +1,5 @@
 # for model in Qwen1.5-14B-Chat OLMo-2-1124-13B-DPO SOLAR-10.7B-Instruct-v1.0; do     for task in gen relevance fluency; do          python gen_judgements.py --model_id ${model} --source hate --base love --device cuda:0 --which_task ${task};      done; done
+import hf_cache
 import os
 import json
 import argparse
