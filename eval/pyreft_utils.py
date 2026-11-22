@@ -46,7 +46,7 @@ class SteeringLoreftIntervention(
         self.act_fn = ACT2FN["linear"] if "act_fn" not in kwargs or kwargs["act_fn"] is None else ACT2FN[kwargs["act_fn"]]
         
     def forward(
-        self, base, source=None, subspaces=None, S=1
+        self, base, source=None, subspaces=None, S=1, prompt_mask=None
     ):
         # print(f"SteeringLoreftIntervention forward with S={S}")
         # if  S != 1:
@@ -57,6 +57,8 @@ class SteeringLoreftIntervention(
         ) # [B, 1, T, D]
         eps = 1e-12
         steering_vector  = steering_vector / (torch.norm(steering_vector , dim=-1, keepdim=True) + eps)
+        if prompt_mask is not None:
+            steering_vector = steering_vector * prompt_mask[:, None, :, None].to(steering_vector.dtype)
         output = base + S * steering_vector
         return self.dropout(output.to(base.dtype))
 
@@ -128,7 +130,7 @@ def get_intervention_locations(topk_df, input_ids):
     for head in heads]
 
 def reft_train(
-    topk_df, pv_model, cf_data, labels,
+    topk_df, pv_model, cf_data, labels, prompt_mask,
     batch_size=8, lr=0.0001, num_epochs=10, device='cuda', display_bar=True
 ):
     pv_model.train()
@@ -158,8 +160,8 @@ def reft_train(
                     'attention_mask': cf_data['attention_mask'][batch_index:batch_index+batch_size]
                 }
 
-                base_ids = torch.cat([batch['input_ids'].squeeze()], dim=0)
-                base_attn_mask = torch.cat([batch['attention_mask'].squeeze()], dim=0)
+                base_ids = batch['input_ids']
+                base_attn_mask = batch['attention_mask']
                 base = {
                     'input_ids': base_ids.to(device),
                     'attention_mask': base_attn_mask.to(device)
@@ -175,7 +177,8 @@ def reft_train(
                             base_intervention_locations  # paste to
                         )
                     },
-                    labels=batch_labels.to(device)
+                    labels=batch_labels.to(device),
+                    intervention_additional_kwargs={'prompt_mask': prompt_mask[batch_index:batch_index+batch_size].to(device)}
                 )
 
                 loss_value = cf_outputs.loss.item()

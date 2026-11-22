@@ -4,17 +4,17 @@ import torch
 from pathlib import Path
 
 def select_gen_qs_toks(config, batch_handler):
-    if config.args.eval_train:
-        print("Evaluating on training set.")
-        return batch_handler.base_qs_toks['desired']
-    elif config.args.eval_test:
+    # if config.args.eval_train:
+    #     print("Evaluating on training set.")
+    #     return batch_handler.base_qs_toks['desired']
+    if config.args.eval_test:
         print("Evaluating on test set. ", batch_handler.base_qs_toks['test']['input_ids'].shape[0])
         return batch_handler.base_qs_toks['test']
     elif config.args.eval_test_dataset:
         print("Evaluating on eval_test dataset.")
         return batch_handler.eval_test_dataset['queries']
     else:
-        raise ValueError("Either eval_train or eval_test must be True.")
+        raise ValueError("Either eval_test or eval_test_dataset must be set.")
 def generate_with_patches(model, gen_toks, patch_activations, topk_df, N, ablation_type, DIM, max_new_tokens=256, normalize=False):
     patch_activations = patch_activations['desired'].to(model.device)
     layer_ids = topk_df['layer'].unique()

@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import numpy as np
 import math
-BASE_DIR = '/mnt/align4_drive/arunas/rm-interp-minimal/'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 RUNS_DIR = f"{BASE_DIR}/normalized-results"
 DATA_DIR = f"{BASE_DIR}/data"
@@ -20,7 +20,7 @@ GEN_RE = re.compile(
     r"""
     (?P<N>\d+)_                                           # number
     (?P<REPS>targeted|random)_                           # targeted/random
-    (?P<STEERING_METHOD>steer|mean)_              # method
+    (?P<STEERING_METHOD>steer|mean|pyreft)_       # method
     topk_(?P<topk>(0\.(0[1-9]|1|5)|1))_gen\.json$           # topk values
     """,
     re.VERBOSE
@@ -36,14 +36,16 @@ def extract_path_metadata(path):
     if METHOD not in ['acp', 'atp', 'atp-zero', 'probes', 'random']:
         raise ValueError(f"Unexpected METHOD: {METHOD} in path: {path}")
     SUB_DIR = parts[runs_idx + 4]
-    if SUB_DIR not in ['eval_test']:
-        raise ValueError(f"Unexpected SUB_DIR: {SUB_DIR} in path: {path}")
 
     filename = parts[runs_idx + 5]
     m = FILENAME_RE.match(filename)
     if not m:
         raise ValueError(f"Filename does not match expected pattern: {filename}")
     md = m.groupdict()
+
+    expected_sub_dir = 'eval' if md['STEERING_METHOD'] == 'pyreft' else 'eval_test'
+    if SUB_DIR != expected_sub_dir:
+        raise ValueError(f"Unexpected SUB_DIR: {SUB_DIR} in path: {path}")
 
     return {
         "MODEL_ID": MODEL_ID,

@@ -45,7 +45,7 @@ class Config:
         parser.add_argument('-patch_model', '--patch_model', action='store_true', help='Patch the model')
         parser.add_argument('-eval_model', '--eval_model', action='store_true', help='Evaluate the model')
         parser.add_argument('-eval_test', '--eval_test', action='store_true', help='Evaluate the model on test set')
-        parser.add_argument('-eval_train', '--eval_train', action='store_true', help='Evaluate the model on train set')
+        # parser.add_argument('-eval_train', '--eval_train', action='store_true', help='Evaluate the model on train set')
         parser.add_argument('-eval_test_dataset', '--eval_test_dataset', type=str, help='Path to the test dataset for evaluation')
         parser.add_argument('--steering', action='store_true', help='Steering Eval mode')
         parser.add_argument('--pyreft', action='store_true', help='Use PyReFT Eval Mode')
@@ -77,12 +77,12 @@ class Config:
                 parser.error("-base argument is required when --patch_model is set")
 
         if args.eval_model:
-            if not args.judge_id:
+            if not args.judge_id and not args.pyreft:
                 parser.error("--judge_id argument is required when --eval_model is set")
-            if not args.eval_test:
-                args.eval_train = True
+            if not args.eval_test_dataset:
+                args.eval_test = True
 
-        return parser.parse_args()
+        return args
 
     def save_to_yaml(self, file_path, args):
         args_dict = vars(args)

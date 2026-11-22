@@ -438,11 +438,8 @@ def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
     # decoded_responses = decoded_responses["best"][f"from_{config.args.source}_to_{config.args.base}"][f"{config.args.patch_algo}"]
     # topk_vals = [decoded_responses["topk"]]
     topk_vals = [0.03, 0.05, 0.01, 0.02, 0.04, 0.06, 0.07, 0.08, 0.09, 0.1, 0.5, 1]
-    del model_handler.model
-    torch.cuda.empty_cache()
-    gc.collect()
-    model = model_handler.load_model(config.args.model_id, config.args.device)
-    model.tokenizer = model_handler.tokenizer
+    model = model_handler.model
+    model_dirty = False
     print(f"Running PyReFT evaluation with topk values: {topk_vals} and patching algorithm: {config.args.patch_algo}")
     original_outputs = []
     len_gen_qs = select_gen_qs_toks(config, data_handler)['input_ids'].shape[0]
@@ -460,22 +457,23 @@ def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
         else:
             topk_df = pd.read_csv(f"{config.get_output_prefix().replace('normalized-results', 'runs')}/eval/numerator_1_targeted_{topk}.csv")
         reps = "targeted" if config.args.patch_algo != 'random' else "random"
-        for N in range(1, 11):
-            gen_file = f"{config.get_output_prefix()}/eval/{N}_{reps}_pyreft_topk_{topk}_gen.txt"
-            print('Entering generation loop for PyReFT...')
-            if os.path.exists(gen_file) and os.path.exists(gen_file.replace('.txt', '.json')):
-            # and os.path.exists(f"{config.get_output_prefix()}/eval/{N}_{reps}_pyreft_topk_{topk}_gen_accuracy.json"):
-                print(f"Skipping generation as all relevant files exist.")
-                continue
-            else:
-                break
-        if N >= 10:
+        gen_files = [f"{config.get_output_prefix()}/eval/{N}_{reps}_pyreft_topk_{topk}_gen.txt" for N in range(1, 11)]
+        if all(os.path.exists(f) and os.path.exists(f.replace('.txt', '.json')) for f in gen_files):
             print(f"All generations for PyReFT with topk {topk} exist. Skipping to next topk.")
             continue
+        if model_dirty:
+            del reft_model
+            model_handler.model = None
+            del model
+            gc.collect()
+            torch.cuda.empty_cache()
+            model = model_handler.load_model(config.args.model_id, config.args.device)
+            model.tokenizer = model_handler.tokenizer
+            model_handler.model = model
         reft_layers_config = get_reft_layers_config(topk_df, model)
 
-        reft_model = pyreft.get_reft_model(model, reft_layers_config)
-        reft_model.set_device(config.args.device)
+        reft_model = pyreft.get_reft_model(model, reft_layers_config, set_device=False)
+        reft_model.set_device(config.args.device, set_model=False)
         reft_model.print_trainable_parameters()
         data = data_handler.pyreft_prompts
         # print('pyreft_prompts ', data[:5])
@@ -491,7 +489,9 @@ def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
             start_pos = data_handler.response_start_positions['pyreft'][i]
             labels[i, :start_pos] = -100  # Ignore tokens before the response start position
         labels[cf_data['attention_mask'] == 0] = -100
-        reft_model = reft_train(topk_df, reft_model, cf_data, labels, batch_size=10, lr=4e-3, num_epochs=100, device=config.args.device, display_bar=True)
+        response_starts = torch.tensor(data_handler.response_start_positions['pyreft'], device=labels.device)
+        prompt_mask = torch.arange(labels.shape[1], device=labels.device)[None, :] < response_starts[:, None]
+        reft_model = reft_train(topk_df, reft_model, cf_data, labels, prompt_mask, batch_size=10, lr=4e-3, num_epochs=100, device=config.args.device, display_bar=True)
         # reft_model = train_params['model']
         for N in range(1, 11):
             batch_handler = BatchHandler(config, data_handler)
@@ -518,7 +518,7 @@ def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
                             topk_heads  # paste to
                         )
                     },
-                    intervene_on_prompt=True, max_new_tokens=256, do_sample=True, 
+                    intervene_on_prompt=True, max_new_tokens=256, do_sample=False,
                     eos_token_id=model_handler.tokenizer.eos_token_id, early_stopping=True,
                     intervention_additional_kwargs={'S': N}
                 )
@@ -529,11 +529,8 @@ def run_eval_pyreft(config, data_handler, model_handler, batch_handler):
             save_prompt_responses(decoded_responses["pyreft"][reps][str(topk)], gen_file)
             # call_judge(model_handler, config, data_handler, ["pyreft"], [reps], [topk], gen_file=gen_file.replace('.txt', '.json'))
 
-        del model
-        torch.cuda.empty_cache()
-        gc.collect()
-        model = model_handler.load_model(config.args.model_id, config.args.device)
-        model.tokenizer = model_handler.tokenizer
+        model_dirty = True
+
 def run_eval_attributions(config, data_handler, model_handler, batch_handler):
     model = model_handler.model
 

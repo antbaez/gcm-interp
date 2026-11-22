@@ -182,11 +182,13 @@ class DataHandler:
             self.base_qs_toks[key] = {k: v[:L] for k, v in self.base_qs_toks[key].items()}
         for key in self.source_qs_toks:
             self.source_qs_toks[key] = {k: v[:L] for k, v in self.source_qs_toks[key].items()}
+        self.pyreft_prompts = self.pyreft_prompts[:L]
+        self.pyreft_toks = {k: v[:L] for k, v in self.pyreft_toks.items()}
         self.response_start_positions = {
             "base": {
                 key: self.response_start_positions["base"][key][:L] for key in self.response_start_positions["base"]
             },
-            "pyreft": self.get_resp_start_pos(self.pyreft_toks, self.model_handler.marker, self.model_handler.tokenizer)
+            "pyreft": self.response_start_positions["pyreft"][:L]
         }
     def filter_jsons(self, jsons):
         assert len(jsons['base_desired']) == len(jsons['base_undesired'])
